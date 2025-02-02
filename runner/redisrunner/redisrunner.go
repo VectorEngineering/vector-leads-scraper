@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Vector/vector-leads-scraper/redis"
-	"github.com/Vector/vector-leads-scraper/redis/config"
-	"github.com/Vector/vector-leads-scraper/redis/tasks"
+	"github.com/Vector/vector-leads-scraper/pkg/redis"
+	"github.com/Vector/vector-leads-scraper/pkg/redis/config"
+	"github.com/Vector/vector-leads-scraper/pkg/redis/tasks"
 	"github.com/Vector/vector-leads-scraper/runner"
 	"github.com/hibiken/asynq"
 )
