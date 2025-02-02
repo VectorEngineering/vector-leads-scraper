@@ -3,6 +3,7 @@ package logger
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -146,4 +147,18 @@ func NewLogger(cfg *runner.Config) (*zap.Logger, error) {
 	zap.ReplaceGlobals(logger)
 
 	return logger.Named(opts.ServiceName), nil
+}
+
+// NewStandardLogger creates a standard logger that wraps a Zap logger
+func NewStandardLogger(l *zap.Logger) *log.Logger {
+	return log.New(&zapWriter{l.Sugar()}, "", 0)
+}
+
+type zapWriter struct {
+	sugar *zap.SugaredLogger
+}
+
+func (w *zapWriter) Write(p []byte) (n int, err error) {
+	w.sugar.Info(string(p))
+	return len(p), nil
 } 

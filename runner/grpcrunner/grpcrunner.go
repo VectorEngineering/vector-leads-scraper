@@ -12,9 +12,10 @@ import (
 
 	"runtime/debug"
 
+	"github.com/Vector/vector-leads-scraper/internal/taskhandler"
 	pkggrpc "github.com/Vector/vector-leads-scraper/pkg/grpc"
 	"github.com/Vector/vector-leads-scraper/pkg/redis"
-	"github.com/Vector/vector-leads-scraper/pkg/redis/config"
+	"github.com/Vector/vector-leads-scraper/pkg/redis/tasks"
 	"github.com/Vector/vector-leads-scraper/runner"
 	"github.com/Vector/vector-leads-scraper/runner/grpcrunner/health"
 	"github.com/Vector/vector-leads-scraper/runner/grpcrunner/logger"
@@ -178,6 +179,7 @@ type GRPCRunner struct {
 	nrApp         *newrelic.Application
 	grpcEntry     *rkgrpc.GrpcEntry
 	grpcServer    *pkggrpc.Server
+	taskHandler   *taskhandler.Handler
 	redisClient   *redis.Client
 	shutdown      chan struct{}
 	done          chan struct{}
@@ -220,19 +222,19 @@ func New(cfg *runner.Config) (runner.Runner, error) {
 	// Initialize metrics collector
 	metricsCollector := metrics.New(log)
 
-	// Initialize Redis client if Redis is enabled
-	var redisClient *redis.Client
+	// Initialize task handler with default options
+	var taskHandler *taskhandler.Handler
 	if cfg.RedisEnabled {
-		redisCfg := &config.RedisConfig{
-			Host:     cfg.RedisHost,
-			Port:     cfg.RedisPort,
-			Password: cfg.RedisPassword,
-			DB:       cfg.RedisDB,
+		handlerOpts := &taskhandler.Options{
+			MaxRetries:    3,
+			RetryInterval: 5 * time.Second,
+			TaskTypes:     []string{tasks.TypeScrapeGMaps},
+			Logger:        logger.NewStandardLogger(log),
 		}
 
-		redisClient, err = redis.NewClient(redisCfg)
+		taskHandler, err = taskhandler.New(cfg, handlerOpts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize Redis client: %w", err)
+			return nil, fmt.Errorf("failed to create task handler: %w", err)
 		}
 	}
 
@@ -241,7 +243,7 @@ func New(cfg *runner.Config) (runner.Runner, error) {
 		MemoryThreshold:    1 << 30, // 1GB
 		GoroutineThreshold: 10000,   // 10k goroutines
 		CPUThreshold:       80.0,    // 80% CPU usage
-		RedisClient:        redisClient,
+		RedisClient:        taskHandler.GetRedisClient(),
 	})
 
 	// Configure custom logging options with recovery
@@ -315,7 +317,8 @@ func New(cfg *runner.Config) (runner.Runner, error) {
 		nrApp:       nrApp,
 		grpcEntry:   grpcEntry,
 		grpcServer:  srv,
-		redisClient: redisClient,
+		taskHandler: taskHandler,
+		redisClient: taskHandler.GetRedisClient(),
 		shutdown:    make(chan struct{}),
 		done:        make(chan struct{}),
 	}, nil
@@ -341,6 +344,16 @@ func (g *GRPCRunner) Run(ctx context.Context) error {
 
 	// Start health checks
 	go g.health.Start(ctx)
+
+	// Start task handler if enabled
+	if g.taskHandler != nil {
+		g.logger.Info("Starting task handler...")
+		go func() {
+			if err := g.taskHandler.Run(ctx, g.cfg.RedisWorkers); err != nil {
+				g.logger.Error("Task handler error", zap.Error(err))
+			}
+		}()
+	}
 
 	// Bootstrap application with timeout
 	bootstrapCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -372,10 +385,10 @@ func (g *GRPCRunner) performShutdown(ctx context.Context) error {
 	shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	// Close Redis client if it exists
-	if g.redisClient != nil {
-		if err := g.redisClient.Close(); err != nil {
-			g.logger.Error("failed to close Redis client",
+	// Close task handler if it exists
+	if g.taskHandler != nil {
+		if err := g.taskHandler.Close(shutdownCtx); err != nil {
+			g.logger.Error("failed to close task handler",
 				zap.Error(err),
 			)
 		}
