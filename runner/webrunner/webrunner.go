@@ -14,11 +14,11 @@ import (
 
 	"github.com/Vector/vector-leads-scraper/deduper"
 	"github.com/Vector/vector-leads-scraper/exiter"
+	"github.com/Vector/vector-leads-scraper/pkg/web"
+	"github.com/Vector/vector-leads-scraper/pkg/web/sqlite"
 	"github.com/Vector/vector-leads-scraper/runner"
 	"github.com/Vector/vector-leads-scraper/runner/redisrunner"
 	"github.com/Vector/vector-leads-scraper/tlmt"
-	"github.com/Vector/vector-leads-scraper/web"
-	"github.com/Vector/vector-leads-scraper/web/sqlite"
 	"github.com/gosom/scrapemate"
 	"github.com/gosom/scrapemate/adapters/writers/csvwriter"
 	"github.com/gosom/scrapemate/scrapemateapp"

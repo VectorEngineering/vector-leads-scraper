@@ -11,6 +11,7 @@ import (
 	"github.com/Vector/vector-leads-scraper/runner"
 	"github.com/Vector/vector-leads-scraper/runner/databaserunner"
 	"github.com/Vector/vector-leads-scraper/runner/filerunner"
+	"github.com/Vector/vector-leads-scraper/runner/grpcrunner"
 	"github.com/Vector/vector-leads-scraper/runner/installplaywright"
 	"github.com/Vector/vector-leads-scraper/runner/lambdaaws"
 	"github.com/Vector/vector-leads-scraper/runner/redisrunner"
@@ -80,6 +81,8 @@ func runnerFactory(cfg *runner.Config) (runner.Runner, error) {
 		return lambdaaws.NewInvoker(cfg)
 	case runner.RunModeRedis:
 		return redisrunner.New(cfg)
+	case runner.RunModeGRPC:
+		return grpcrunner.New(cfg)
 	default:
 		return nil, fmt.Errorf("%w: %d", runner.ErrInvalidRunMode, cfg.RunMode)
 	}

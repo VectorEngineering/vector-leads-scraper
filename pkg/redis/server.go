@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Vector/vector-leads-scraper/redis/config"
+	"github.com/Vector/vector-leads-scraper/pkg/redis/config"
 	"github.com/hibiken/asynq"
 )
 
