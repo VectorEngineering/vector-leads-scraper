@@ -27,5 +27,8 @@ func CreateRateLimitStreamInterceptor(limiter ratelimit.Limiter) grpc.StreamServ
 
 // NewRateLimiter creates a new rate limiter with the specified requests per second
 func NewRateLimiter(rps int) ratelimit.Limiter {
+	if rps <= 0 {
+		rps = 1 // Set a safe default minimum
+	}
 	return ratelimit.New(rps)
 } 
