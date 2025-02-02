@@ -119,8 +119,18 @@ func TestChecker(t *testing.T) {
 			// Wait for at least one health check cycle
 			time.Sleep(100 * time.Millisecond)
 
+			// Get a snapshot of component statuses under lock
+			checker.mu.RLock()
+			var components []string
+			for name := range checker.components {
+				components = append(components, name)
+			}
+			checker.mu.RUnlock()
+
 			// Verify that components have been checked
-			for _, comp := range checker.components {
+			for _, name := range components {
+				comp := checker.GetComponentStatus(name)
+				require.NotNil(t, comp, "component %s should not be nil", name)
 				assert.NotEqual(t, time.Time{}, comp.LastChecked)
 			}
 		})
