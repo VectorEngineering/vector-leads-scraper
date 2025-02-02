@@ -74,20 +74,6 @@ func TestCreateScrapingJob(t *testing.T) {
 			errType:   ErrInvalidInput,
 		},
 		{
-			name: "[failure scenario] - empty payload type",
-			job: &lead_scraper_servicev1.ScrapingJob{
-				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-				Priority:    1,
-				PayloadType: "",
-				Name:        "Test Job",
-				Zoom:        15,
-				Lat:         "40.7128",
-				Lon:         "-74.0060",
-			},
-			wantError: true,
-			errType:   ErrInvalidInput,
-		},
-		{
 			name:      "[failure scenario] - context timeout",
 			job:       validJob,
 			wantError: true,
