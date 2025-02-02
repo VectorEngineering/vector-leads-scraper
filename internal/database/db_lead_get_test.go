@@ -12,48 +12,7 @@ import (
 )
 
 func TestGetLead(t *testing.T) {
-	// Create a test scraping job first
-	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      0, // Assuming 0 is PENDING in the protobuf enum
-		Priority:    1,
-		PayloadType: "scraping_job",
-		Payload:     []byte(`{"query": "test query"}`),
-		Name:        "Test Job",
-		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        "en",
-		Zoom:        15,
-		Lat:         "40.7128",
-		Lon:         "-74.0060",
-		FastMode:    false,
-		Radius:      10000,
-		MaxTime:     3600,
-	}
-
-	createdJob, err := conn.CreateScrapingJob(context.Background(), testJob)
-	require.NoError(t, err)
-	require.NotNil(t, createdJob)
-
-	// Create a test lead
-	testLead := &lead_scraper_servicev1.Lead{
-		Name:          "Test Lead",
-		Website:       "https://test-lead.com",
-		Phone:         "+1234567890",
-		Address:       "123 Test St",
-		City:          "Test City",
-		State:         "Test State",
-		Country:       "Test Country",
-		Industry:      "Technology",
-		PlaceId:       "ChIJ_test123",
-		GoogleMapsUrl: "https://maps.google.com/?q=40.7128,-74.0060",
-		Latitude:      40.7128,
-		Longitude:     -74.0060,
-		GoogleRating:  4.5,
-		ReviewCount:   100,
-	}
-
-	createdLead, err := conn.CreateLead(context.Background(), createdJob.Id, testLead)
-	require.NoError(t, err)
-	require.NotNil(t, createdLead)
+	createdJob, createdLead := setupTestLeadAndJob(t)
 
 	// Clean up after all tests
 	defer func() {
@@ -72,10 +31,11 @@ func TestGetLead(t *testing.T) {
 		id        uint64
 		wantError bool
 		errType   error
+		setup     func(t *testing.T) uint64
 		validate  func(t *testing.T, lead *lead_scraper_servicev1.Lead)
 	}{
 		{
-			name:      "[success scenario] - valid id",
+			name:      "valid id - success",
 			id:        createdLead.Id,
 			wantError: false,
 			validate: func(t *testing.T, lead *lead_scraper_servicev1.Lead) {
@@ -98,19 +58,19 @@ func TestGetLead(t *testing.T) {
 			},
 		},
 		{
-			name:      "[failure scenario] - invalid id",
+			name:      "invalid id - failure",
 			id:        0,
 			wantError: true,
 			errType:   ErrInvalidInput,
 		},
 		{
-			name:      "[failure scenario] - non-existent id",
+			name:      "non-existent id - failure",
 			id:        999999,
 			wantError: true,
 			errType:   ErrJobDoesNotExist,
 		},
 		{
-			name:      "[failure scenario] - context timeout",
+			name:      "context timeout - failure",
 			id:        createdLead.Id,
 			wantError: true,
 		},
@@ -119,7 +79,7 @@ func TestGetLead(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			if tt.name == "[failure scenario] - context timeout" {
+			if tt.name == "context timeout - failure" {
 				var cancel context.CancelFunc
 				ctx, cancel = context.WithTimeout(ctx, 1*time.Nanosecond)
 				defer cancel()
@@ -148,48 +108,7 @@ func TestGetLead(t *testing.T) {
 }
 
 func TestGetLead_ConcurrentReads(t *testing.T) {
-	// Create a test scraping job first
-	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      0, // Assuming 0 is PENDING in the protobuf enum
-		Priority:    1,
-		PayloadType: "scraping_job",
-		Payload:     []byte(`{"query": "test query"}`),
-		Name:        "Test Job",
-		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        "en",
-		Zoom:        15,
-		Lat:         "40.7128",
-		Lon:         "-74.0060",
-		FastMode:    false,
-		Radius:      10000,
-		MaxTime:     3600,
-	}
-
-	createdJob, err := conn.CreateScrapingJob(context.Background(), testJob)
-	require.NoError(t, err)
-	require.NotNil(t, createdJob)
-
-	// Create a test lead
-	testLead := &lead_scraper_servicev1.Lead{
-		Name:          "Test Lead",
-		Website:       "https://test-lead.com",
-		Phone:         "+1234567890",
-		Address:       "123 Test St",
-		City:          "Test City",
-		State:         "Test State",
-		Country:       "Test Country",
-		Industry:      "Technology",
-		PlaceId:       "ChIJ_test123",
-		GoogleMapsUrl: "https://maps.google.com/?q=40.7128,-74.0060",
-		Latitude:      40.7128,
-		Longitude:     -74.0060,
-		GoogleRating:  4.5,
-		ReviewCount:   100,
-	}
-
-	createdLead, err := conn.CreateLead(context.Background(), createdJob.Id, testLead)
-	require.NoError(t, err)
-	require.NotNil(t, createdLead)
+	createdJob, createdLead := setupTestLeadAndJob(t)
 
 	// Clean up after test
 	defer func() {
@@ -202,6 +121,7 @@ func TestGetLead_ConcurrentReads(t *testing.T) {
 	numReads := 10
 	var wg sync.WaitGroup
 	errors := make(chan error, numReads)
+	results := make(chan *lead_scraper_servicev1.Lead, numReads)
 
 	// Perform concurrent reads
 	for i := 0; i < numReads; i++ {
@@ -213,13 +133,13 @@ func TestGetLead_ConcurrentReads(t *testing.T) {
 				errors <- err
 				return
 			}
-			assert.Equal(t, createdLead.Id, lead.Id)
-			assert.Equal(t, createdLead.Name, lead.Name)
+			results <- lead
 		}()
 	}
 
 	wg.Wait()
 	close(errors)
+	close(results)
 
 	// Check for errors
 	var errs []error
@@ -227,4 +147,13 @@ func TestGetLead_ConcurrentReads(t *testing.T) {
 		errs = append(errs, err)
 	}
 	require.Empty(t, errs, "Expected no errors during concurrent reads, got: %v", errs)
+
+	// Verify all reads returned the same data
+	for lead := range results {
+		assert.Equal(t, createdLead.Id, lead.Id)
+		assert.Equal(t, createdLead.Name, lead.Name)
+		assert.Equal(t, createdLead.Website, lead.Website)
+		assert.Equal(t, createdLead.Phone, lead.Phone)
+		assert.Equal(t, createdLead.Address, lead.Address)
+	}
 } 

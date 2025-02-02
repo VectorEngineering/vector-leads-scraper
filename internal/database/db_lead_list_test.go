@@ -12,6 +12,10 @@ import (
 )
 
 func TestListLeads(t *testing.T) {
+	// Clean up any existing leads first
+	result := conn.Client.Engine.Exec("DELETE FROM leads")
+	require.NoError(t, result.Error)
+
 	// Create a test scraping job first
 	testJob := testutils.GenerateRandomizedScrapingJob()
 
@@ -52,7 +56,7 @@ func TestListLeads(t *testing.T) {
 		validate  func(t *testing.T, leads []*lead_scraper_servicev1.Lead)
 	}{
 		{
-			name:      "[success scenario] - get all leads",
+			name:      "get all leads - success",
 			limit:     10,
 			offset:    0,
 			wantError: false,
@@ -60,12 +64,12 @@ func TestListLeads(t *testing.T) {
 				assert.Len(t, leads, numLeads)
 				for _, lead := range leads {
 					assert.NotNil(t, lead)
-					assert.NotZero(t, lead.Id)
+					assert.Contains(t, leadIDs, lead.Id)
 				}
 			},
 		},
 		{
-			name:      "[success scenario] - pagination first page",
+			name:      "pagination first page - success",
 			limit:     3,
 			offset:    0,
 			wantError: false,
@@ -73,12 +77,12 @@ func TestListLeads(t *testing.T) {
 				assert.Len(t, leads, 3)
 				for _, lead := range leads {
 					assert.NotNil(t, lead)
-					assert.NotZero(t, lead.Id)
+					assert.Contains(t, leadIDs, lead.Id)
 				}
 			},
 		},
 		{
-			name:      "[success scenario] - pagination second page",
+			name:      "pagination second page - success",
 			limit:     3,
 			offset:    3,
 			wantError: false,
@@ -86,12 +90,12 @@ func TestListLeads(t *testing.T) {
 				assert.Len(t, leads, 2) // Only 2 remaining leads
 				for _, lead := range leads {
 					assert.NotNil(t, lead)
-					assert.NotZero(t, lead.Id)
+					assert.Contains(t, leadIDs, lead.Id)
 				}
 			},
 		},
 		{
-			name:      "[success scenario] - empty result",
+			name:      "empty result - success",
 			limit:     10,
 			offset:    numLeads + 1,
 			wantError: false,
@@ -100,21 +104,21 @@ func TestListLeads(t *testing.T) {
 			},
 		},
 		{
-			name:      "[failure scenario] - invalid limit",
+			name:      "invalid limit - failure",
 			limit:     -1,
 			offset:    0,
 			wantError: true,
 			errType:   ErrInvalidInput,
 		},
 		{
-			name:      "[failure scenario] - invalid offset",
+			name:      "invalid offset - failure",
 			limit:     10,
 			offset:    -1,
 			wantError: true,
 			errType:   ErrInvalidInput,
 		},
 		{
-			name:      "[failure scenario] - context timeout",
+			name:      "context timeout - failure",
 			limit:     10,
 			offset:    0,
 			wantError: true,
@@ -124,7 +128,7 @@ func TestListLeads(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			if tt.name == "[failure scenario] - context timeout" {
+			if tt.name == "context timeout - failure" {
 				var cancel context.CancelFunc
 				ctx, cancel = context.WithTimeout(ctx, 1*time.Nanosecond)
 				defer cancel()
@@ -153,6 +157,12 @@ func TestListLeads(t *testing.T) {
 }
 
 func TestListLeads_EmptyDatabase(t *testing.T) {
-	_, err := conn.ListLeads(context.Background(), 10, 0)
+	// Clean up any existing leads first
+	result := conn.Client.Engine.Exec("DELETE FROM leads")
+	require.NoError(t, result.Error)
+
+	results, err := conn.ListLeads(context.Background(), 10, 0)
 	require.NoError(t, err)
+	assert.NotNil(t, results)
+	assert.Empty(t, results)
 } 

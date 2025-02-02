@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -15,7 +14,7 @@ import (
 func TestDeleteScrapingJob(t *testing.T) {
 	// Create a test job first
 	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      0, // Assuming 0 is PENDING in the protobuf enum
+		Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
 		Priority:    1,
 		PayloadType: "scraping_job",
 		Payload:     []byte(`{"query": "test query"}`),
@@ -36,72 +35,87 @@ func TestDeleteScrapingJob(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		id        string
+		jobID     uint64
 		wantError bool
 		errType   error
-		setup     func(t *testing.T) string
-		validate  func(t *testing.T, id string)
+		setup     func(t *testing.T) uint64
+		validate  func(t *testing.T, jobID uint64)
 	}{
 		{
 			name:      "[success scenario] - valid id",
-			id:        fmt.Sprintf("%d", created.Id),
+			jobID:     created.Id,
 			wantError: false,
-			validate: func(t *testing.T, id string) {
+			validate: func(t *testing.T, jobID uint64) {
 				// Verify the job was deleted
-				_, err := conn.GetScrapingJob(context.Background(), created.Id)
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				_, err := conn.GetScrapingJob(ctx, jobID)
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, ErrJobDoesNotExist)
 			},
 		},
 		{
-			name:      "[failure scenario] - invalid id",
-			id:        "",
+			name:      "[failure scenario] - zero id",
+			jobID:     0,
 			wantError: true,
 			errType:   ErrInvalidInput,
 		},
 		{
 			name:      "[failure scenario] - non-existent id",
-			id:        "999999",
+			jobID:     999999,
 			wantError: true,
 			errType:   ErrJobDoesNotExist,
+			validate: func(t *testing.T, jobID uint64) {
+				// Double check that the job really doesn't exist
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				_, err := conn.GetScrapingJob(ctx, jobID)
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrJobDoesNotExist)
+			},
 		},
 		{
 			name:      "[failure scenario] - already deleted job",
 			wantError: true,
 			errType:   ErrJobDoesNotExist,
-			setup: func(t *testing.T) string {
+			setup: func(t *testing.T) uint64 {
 				// Create and delete a job
 				job := &lead_scraper_servicev1.ScrapingJob{
-					Status:      0,
+					Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
 					Priority:    1,
 					PayloadType: "scraping_job",
 					Name:        "Test Job",
+					Zoom:        15,
+					Lat:         "40.7128",
+					Lon:         "-74.0060",
 				}
 				created, err := conn.CreateScrapingJob(context.Background(), job)
 				require.NoError(t, err)
 				require.NotNil(t, created)
 
-				id := fmt.Sprintf("%d", created.Id)
-				err = conn.DeleteScrapingJob(context.Background(), uint64(0))
+				jobID := created.Id
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				err = conn.DeleteScrapingJob(ctx, jobID)
+				cancel()
 				require.NoError(t, err)
 
-				return id
+				return jobID
 			},
 		},
 		{
 			name:      "[failure scenario] - context timeout",
-			id:        fmt.Sprintf("%d", created.Id),
+			jobID:     created.Id,
 			wantError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var id string
+			var jobID uint64
 			if tt.setup != nil {
-				id = tt.setup(t)
+				jobID = tt.setup(t)
 			} else {
-				id = tt.id
+				jobID = tt.jobID
 			}
 
 			ctx := context.Background()
@@ -112,7 +126,7 @@ func TestDeleteScrapingJob(t *testing.T) {
 				time.Sleep(2 * time.Millisecond)
 			}
 
-			err := conn.DeleteScrapingJob(ctx, uint64(0))
+			err := conn.DeleteScrapingJob(ctx, jobID)
 
 			if tt.wantError {
 				require.Error(t, err)
@@ -125,7 +139,7 @@ func TestDeleteScrapingJob(t *testing.T) {
 			require.NoError(t, err)
 
 			if tt.validate != nil {
-				tt.validate(t, id)
+				tt.validate(t, jobID)
 			}
 		})
 	}
@@ -135,13 +149,13 @@ func TestDeleteScrapingJob_ConcurrentDeletions(t *testing.T) {
 	numJobs := 5
 	var wg sync.WaitGroup
 	errors := make(chan error, numJobs)
-	jobIDs := make([]string, numJobs)
+	jobIDs := make([]uint64, numJobs)
 
 	// Create test jobs
 	for i := 0; i < numJobs; i++ {
 		job := &lead_scraper_servicev1.ScrapingJob{
-			Status:      0, // Assuming 0 is PENDING in the protobuf enum
-			Priority:    1,
+			Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+			Priority:    int32(i + 1), // Different priority for each job
 			PayloadType: "scraping_job",
 			Payload:     []byte(`{"query": "test query"}`),
 			Name:        "Test Job",
@@ -157,15 +171,18 @@ func TestDeleteScrapingJob_ConcurrentDeletions(t *testing.T) {
 		created, err := conn.CreateScrapingJob(context.Background(), job)
 		require.NoError(t, err)
 		require.NotNil(t, created)
-		jobIDs[i] = fmt.Sprintf("%d", created.Id)
+		jobIDs[i] = created.Id
 	}
 
 	// Delete jobs concurrently
 	for i := 0; i < numJobs; i++ {
 		wg.Add(1)
-		go func(id string) {
+		go func(jobID uint64) {
 			defer wg.Done()
-			if err := conn.DeleteScrapingJob(context.Background(), uint64(0)); err != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			
+			if err := conn.DeleteScrapingJob(ctx, jobID); err != nil {
 				errors <- err
 			}
 		}(jobIDs[i])
@@ -182,12 +199,28 @@ func TestDeleteScrapingJob_ConcurrentDeletions(t *testing.T) {
 	require.Empty(t, errs, "Expected no errors during concurrent deletions, got: %v", errs)
 
 	// Verify all jobs were deleted
-	for _, id := range jobIDs {
-		idUint64 := uint64(0)
-		_, err := fmt.Sscanf(id, "%d", &idUint64)
-		require.NoError(t, err)
-		_, err = conn.GetScrapingJob(context.Background(), idUint64)
+	for _, jobID := range jobIDs {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_, err := conn.GetScrapingJob(ctx, jobID)
+		cancel()
 		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrJobDoesNotExist)
+	}
+
+	// Try to delete already deleted jobs - should fail with ErrJobDoesNotExist
+	var deleteErrs []error
+	for _, jobID := range jobIDs {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := conn.DeleteScrapingJob(ctx, jobID)
+		cancel()
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrJobDoesNotExist)
+		if err != nil {
+			deleteErrs = append(deleteErrs, err)
+		}
+	}
+	require.NotEmpty(t, deleteErrs, "Expected errors when deleting already deleted jobs")
+	for _, err := range deleteErrs {
 		assert.ErrorIs(t, err, ErrJobDoesNotExist)
 	}
 }

@@ -11,14 +11,21 @@ import (
 func (db *Db) ListLeads(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.Lead, error) {
 	// validate the input
 	if limit <= 0 {
-		limit = 10 // default limit
+		return nil, ErrInvalidInput
+	}
+	if offset < 0 {
+		return nil, ErrInvalidInput
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
 	var leadsORM []lead_scraper_servicev1.LeadORM
-	result := db.Client.Engine.WithContext(ctx).Limit(limit).Offset(offset).Find(&leadsORM)
+	result := db.Client.Engine.WithContext(ctx).
+		Order("id asc").
+		Limit(limit).
+		Offset(offset).
+		Find(&leadsORM)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to list leads: %w", result.Error)
 	}

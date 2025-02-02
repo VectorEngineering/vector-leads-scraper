@@ -20,13 +20,16 @@ func (db *Db) GetLead(ctx context.Context, id uint64) (*lead_scraper_servicev1.L
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
-	var leadORM lead_scraper_servicev1.LeadORM
-	if _, err := lQop.
+	leadORM, err := lQop.
 		WithContext(ctx).
 		Where(lQop.Id.Eq(id)).
 		Preload(lQop.RegularHours).
 		Preload(lQop.SpecialHours).
-		First(); err != nil {
+		First()
+	if err != nil {
+		if err.Error() == "record not found" {
+			return nil, ErrJobDoesNotExist
+		}
 		return nil, fmt.Errorf("failed to get lead: %w", err)
 	}
 

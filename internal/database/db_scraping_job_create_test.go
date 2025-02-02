@@ -13,7 +13,7 @@ import (
 
 func TestCreateScrapingJob(t *testing.T) {
 	validJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      0, // Assuming 0 is PENDING in the protobuf enum
+		Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
 		Priority:    1,
 		PayloadType: "scraping_job",
 		Payload:     []byte(`{"query": "test query"}`),
@@ -55,6 +55,12 @@ func TestCreateScrapingJob(t *testing.T) {
 				assert.Equal(t, validJob.FastMode, job.FastMode)
 				assert.Equal(t, validJob.Radius, job.Radius)
 				assert.Equal(t, validJob.MaxTime, job.MaxTime)
+
+				// Validate timestamps
+				require.NotNil(t, job.CreatedAt)
+				require.NotNil(t, job.UpdatedAt)
+				assert.Equal(t, job.CreatedAt.AsTime().Unix(), job.UpdatedAt.AsTime().Unix())
+				assert.True(t, job.CreatedAt.AsTime().Before(time.Now()) || job.CreatedAt.AsTime().Equal(time.Now()))
 			},
 		},
 		{
@@ -66,8 +72,11 @@ func TestCreateScrapingJob(t *testing.T) {
 		{
 			name: "[failure scenario] - missing required fields",
 			job: &lead_scraper_servicev1.ScrapingJob{
-				Status: 0,
-				// Missing other required fields
+				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+				Priority:    1,
+				PayloadType: "scraping_job",
+				Zoom:        15,
+				Name:        "",
 			},
 			wantError: true,
 			errType:   ErrInvalidInput,
@@ -75,18 +84,63 @@ func TestCreateScrapingJob(t *testing.T) {
 		{
 			name: "[failure scenario] - invalid status",
 			job: &lead_scraper_servicev1.ScrapingJob{
-				Status:      999, // Invalid status
+				Status:      999,
 				Priority:    1,
 				PayloadType: "scraping_job",
 				Name:        "Test Job",
+				Zoom:        15,
+				Lat:         "40.7128",
+				Lon:         "-74.0060",
 			},
 			wantError: true,
 			errType:   ErrInvalidInput,
 		},
 		{
-			name: "[failure scenario] - context timeout",
-			job:  validJob,
+			name: "[failure scenario] - invalid priority",
+			job: &lead_scraper_servicev1.ScrapingJob{
+				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+				Priority:    -1,
+				PayloadType: "scraping_job",
+				Name:        "Test Job",
+				Zoom:        15,
+				Lat:         "40.7128",
+				Lon:         "-74.0060",
+			},
 			wantError: true,
+			errType:   ErrInvalidInput,
+		},
+		{
+			name: "[failure scenario] - empty payload type",
+			job: &lead_scraper_servicev1.ScrapingJob{
+				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+				Priority:    1,
+				PayloadType: "",
+				Name:        "Test Job",
+				Zoom:        15,
+				Lat:         "40.7128",
+				Lon:         "-74.0060",
+			},
+			wantError: true,
+			errType:   ErrInvalidInput,
+		},
+		{
+			name:      "[failure scenario] - context timeout",
+			job:       validJob,
+			wantError: true,
+		},
+		{
+			name: "[failure scenario] - invalid zoom value",
+			job: &lead_scraper_servicev1.ScrapingJob{
+				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+				Priority:    1,
+				PayloadType: "scraping_job",
+				Name:        "Test Job",
+				Zoom:        0, // Invalid zoom value
+				Lat:         "40.7128",
+				Lon:         "-74.0060",
+			},
+			wantError: true,
+			errType:   ErrInvalidInput,
 		},
 	}
 
@@ -120,7 +174,9 @@ func TestCreateScrapingJob(t *testing.T) {
 
 			// Clean up created job
 			if result != nil {
-				err := conn.DeleteScrapingJob(context.Background(), result.Id)
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				err := conn.DeleteScrapingJob(ctx, result.Id)
+				cancel()
 				require.NoError(t, err)
 			}
 		})
@@ -139,8 +195,8 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 		go func(index int) {
 			defer wg.Done()
 			job := &lead_scraper_servicev1.ScrapingJob{
-				Status:      0, // Assuming 0 is PENDING in the protobuf enum
-				Priority:    1,
+				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+				Priority:    int32(index + 1), // Different priority for each job
 				PayloadType: "scraping_job",
 				Payload:     []byte(`{"query": "test query"}`),
 				Name:        "Test Job",
@@ -167,7 +223,7 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 	close(errors)
 	close(jobs)
 
-	// Clean up created jobs
+	// Clean up created jobs and collect them for validation
 	createdJobs := make([]*lead_scraper_servicev1.ScrapingJob, 0)
 	for job := range jobs {
 		createdJobs = append(createdJobs, job)
@@ -176,7 +232,9 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 	defer func() {
 		for _, job := range createdJobs {
 			if job != nil {
-				err := conn.DeleteScrapingJob(context.Background(), job.Id)
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				err := conn.DeleteScrapingJob(ctx, job.Id)
+				cancel()
 				require.NoError(t, err)
 			}
 		}
@@ -191,11 +249,27 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 
 	// Verify all jobs were created successfully
 	require.Equal(t, numJobs, len(createdJobs))
+	
+	// Track IDs to ensure uniqueness
+	seenIDs := make(map[uint64]bool)
+	
 	for _, job := range createdJobs {
 		require.NotNil(t, job)
 		require.NotZero(t, job.Id)
-		assert.Equal(t, int32(0), job.Status) // Assuming 0 is PENDING in the protobuf enum
+		
+		// Verify ID uniqueness
+		_, exists := seenIDs[job.Id]
+		assert.False(t, exists, "Duplicate job ID found: %d", job.Id)
+		seenIDs[job.Id] = true
+		
+		assert.Equal(t, lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED, job.Status)
 		assert.Equal(t, "scraping_job", job.PayloadType)
 		assert.Equal(t, "Test Job", job.Name)
+		
+		// Validate timestamps
+		require.NotNil(t, job.CreatedAt)
+		require.NotNil(t, job.UpdatedAt)
+		assert.Equal(t, job.CreatedAt.AsTime().Unix(), job.UpdatedAt.AsTime().Unix())
+		assert.True(t, job.CreatedAt.AsTime().Before(time.Now()) || job.CreatedAt.AsTime().Equal(time.Now()))
 	}
 }

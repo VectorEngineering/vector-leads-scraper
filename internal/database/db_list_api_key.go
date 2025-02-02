@@ -9,15 +9,23 @@ import (
 
 // ListAPIKeys retrieves a list of API keys with pagination
 func (db *Db) ListAPIKeys(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.APIKey, error) {
+	// validate the input
 	if limit <= 0 {
-		limit = 10 // default limit
+		return nil, ErrInvalidInput
+	}
+	if offset < 0 {
+		return nil, ErrInvalidInput
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
 	var apiKeysORM []lead_scraper_servicev1.APIKeyORM
-	result := db.Client.Engine.WithContext(ctx).Limit(limit).Offset(offset).Find(&apiKeysORM)
+	result := db.Client.Engine.WithContext(ctx).
+		Order("id asc").
+		Limit(limit).
+		Offset(offset).
+		Find(&apiKeysORM)
 	if result.Error != nil {
 		return nil, fmt.Errorf("failed to list API keys: %w", result.Error)
 	}

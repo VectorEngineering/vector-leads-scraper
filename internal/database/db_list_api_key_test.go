@@ -16,6 +16,7 @@ func TestListAPIKeys(t *testing.T) {
 	// Create multiple test API keys
 	numKeys := 5
 	keyIDs := make([]uint64, numKeys)
+	createdKeys := make([]*lead_scraper_servicev1.APIKey, numKeys)
 
 	for i := 0; i < numKeys; i++ {
 		key := testutils.GenerateRandomAPIKey()
@@ -24,6 +25,7 @@ func TestListAPIKeys(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		keyIDs[i] = created.Id
+		createdKeys[i] = created
 	}
 
 	// Clean up after all tests
@@ -43,7 +45,7 @@ func TestListAPIKeys(t *testing.T) {
 		validate  func(t *testing.T, keys []*lead_scraper_servicev1.APIKey)
 	}{
 		{
-			name:      "[success scenario] - get all keys",
+			name:      "get all keys - success",
 			limit:     10,
 			offset:    0,
 			wantError: false,
@@ -51,13 +53,13 @@ func TestListAPIKeys(t *testing.T) {
 				assert.Len(t, keys, numKeys)
 				for i, key := range keys {
 					assert.NotNil(t, key)
-					assert.NotZero(t, key.Id)
-					assert.Equal(t, fmt.Sprintf("Test Key %d", i), key.Name)
+					assert.Equal(t, keyIDs[i], key.Id)
+					assert.Equal(t, createdKeys[i].Name, key.Name)
 				}
 			},
 		},
 		{
-			name:      "[success scenario] - pagination first page",
+			name:      "pagination first page - success",
 			limit:     3,
 			offset:    0,
 			wantError: false,
@@ -65,13 +67,13 @@ func TestListAPIKeys(t *testing.T) {
 				assert.Len(t, keys, 3)
 				for i, key := range keys {
 					assert.NotNil(t, key)
-					assert.NotZero(t, key.Id)
-					assert.Equal(t, fmt.Sprintf("Test Key %d", i), key.Name)
+					assert.Equal(t, keyIDs[i], key.Id)
+					assert.Equal(t, createdKeys[i].Name, key.Name)
 				}
 			},
 		},
 		{
-			name:      "[success scenario] - pagination second page",
+			name:      "pagination second page - success",
 			limit:     3,
 			offset:    3,
 			wantError: false,
@@ -79,13 +81,13 @@ func TestListAPIKeys(t *testing.T) {
 				assert.Len(t, keys, 2) // Only 2 remaining keys
 				for i, key := range keys {
 					assert.NotNil(t, key)
-					assert.NotZero(t, key.Id)
-					assert.Equal(t, fmt.Sprintf("Test Key %d", i+3), key.Name)
+					assert.Equal(t, keyIDs[i+3], key.Id)
+					assert.Equal(t, createdKeys[i+3].Name, key.Name)
 				}
 			},
 		},
 		{
-			name:      "[success scenario] - empty result",
+			name:      "empty result - success",
 			limit:     10,
 			offset:    numKeys + 1,
 			wantError: false,
@@ -94,21 +96,21 @@ func TestListAPIKeys(t *testing.T) {
 			},
 		},
 		{
-			name:      "[failure scenario] - invalid limit",
+			name:      "invalid limit - failure",
 			limit:     -1,
 			offset:    0,
 			wantError: true,
 			errType:   ErrInvalidInput,
 		},
 		{
-			name:      "[failure scenario] - invalid offset",
+			name:      "invalid offset - failure",
 			limit:     10,
 			offset:    -1,
 			wantError: true,
 			errType:   ErrInvalidInput,
 		},
 		{
-			name:      "[failure scenario] - context timeout",
+			name:      "context timeout - failure",
 			limit:     10,
 			offset:    0,
 			wantError: true,
@@ -118,7 +120,7 @@ func TestListAPIKeys(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			if tt.name == "[failure scenario] - context timeout" {
+			if tt.name == "context timeout - failure" {
 				var cancel context.CancelFunc
 				ctx, cancel = context.WithTimeout(ctx, 1*time.Nanosecond)
 				defer cancel()
@@ -149,5 +151,6 @@ func TestListAPIKeys(t *testing.T) {
 func TestListAPIKeys_EmptyDatabase(t *testing.T) {
 	results, err := conn.ListAPIKeys(context.Background(), 10, 0)
 	require.NoError(t, err)
+	assert.NotNil(t, results)
 	assert.Empty(t, results)
 }

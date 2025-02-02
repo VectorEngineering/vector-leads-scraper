@@ -23,13 +23,13 @@ func (db *Db) CreateScrapingJob(ctx context.Context, job *lead_scraper_servicev1
 
 	// validate the job
 	if err := job.Validate(); err != nil {
-		return nil, fmt.Errorf("failed to validate scraping job: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 
 	// convert to ORM model
 	jobORM, err := job.ToORM(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert to ORM model: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 
 	// create the job

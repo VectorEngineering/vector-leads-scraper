@@ -20,6 +20,15 @@ func (db *Db) DeleteLead(ctx context.Context, id uint64, deletionType DeletionTy
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
+	// First check if the lead exists
+	_, err := lQop.WithContext(ctx).Where(lQop.Id.Eq(id)).First()
+	if err != nil {
+		if err.Error() == "record not found" {
+			return ErrJobDoesNotExist
+		}
+		return fmt.Errorf("failed to get lead: %w", err)
+	}
+
 	queryRef := lQop.WithContext(ctx)
 	if deletionType == DeletionTypeSoft {
 		queryRef = queryRef.Where(lQop.Id.Eq(id)).Select(field.AssociationFields)
@@ -27,8 +36,13 @@ func (db *Db) DeleteLead(ctx context.Context, id uint64, deletionType DeletionTy
 		queryRef = queryRef.Where(lQop.Id.Eq(id)).Unscoped().Select(field.AssociationFields)
 	}
 
-	if _, err := queryRef.Delete(); err != nil {
+	result, err := queryRef.Delete()
+	if err != nil {
 		return fmt.Errorf("failed to delete lead: %w", err)
+	}
+
+	if result.RowsAffected == 0 {
+		return ErrJobDoesNotExist
 	}
 
 	return nil

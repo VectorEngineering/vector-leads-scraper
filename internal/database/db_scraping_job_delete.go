@@ -18,8 +18,24 @@ func (db *Db) DeleteScrapingJob(ctx context.Context, id uint64) error {
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
-	if _, err := sQop.WithContext(ctx).Where(sQop.Id.Eq(id)).Delete(); err != nil {
+	// Check if the job exists first
+	exists, err := sQop.WithContext(ctx).Where(sQop.Id.Eq(id)).Count()
+	if err != nil {
+		return fmt.Errorf("failed to check if job exists: %w", err)
+	}
+	if exists == 0 {
+		return ErrJobDoesNotExist
+	}
+
+	// Delete the job
+	result, err := sQop.WithContext(ctx).Where(sQop.Id.Eq(id)).Delete()
+	if err != nil {
 		return fmt.Errorf("failed to delete scraping job: %w", err)
+	}
+
+	// Check if any rows were affected
+	if result.RowsAffected == 0 {
+		return ErrJobDoesNotExist
 	}
 
 	return nil

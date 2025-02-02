@@ -7,24 +7,29 @@ import (
 	"time"
 
 	"github.com/Vector/vector-leads-scraper/internal/testutils"
+	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDeleteLead(t *testing.T) {
-	// Create a test scraping job first
+func setupTestLeadAndJob(t *testing.T) (*lead_scraper_servicev1.ScrapingJob, *lead_scraper_servicev1.Lead) {
+	// Create a test scraping job
 	testJob := testutils.GenerateRandomizedScrapingJob()
-
 	createdJob, err := conn.CreateScrapingJob(context.Background(), testJob)
 	require.NoError(t, err)
 	require.NotNil(t, createdJob)
 
 	// Create a test lead
 	testLead := testutils.GenerateRandomLead()
-
 	createdLead, err := conn.CreateLead(context.Background(), createdJob.Id, testLead)
 	require.NoError(t, err)
 	require.NotNil(t, createdLead)
+
+	return createdJob, createdLead
+}
+
+func TestDeleteLead(t *testing.T) {
+	createdJob, createdLead := setupTestLeadAndJob(t)
 
 	// Clean up job after all tests
 	defer func() {
@@ -44,7 +49,7 @@ func TestDeleteLead(t *testing.T) {
 		validate     func(t *testing.T, id uint64)
 	}{
 		{
-			name:         "[success scenario] - soft delete",
+			name:         "soft delete - success",
 			id:           createdLead.Id,
 			deletionType: DeletionTypeSoft,
 			wantError:    false,
@@ -52,10 +57,11 @@ func TestDeleteLead(t *testing.T) {
 				// Verify the lead was soft deleted
 				_, err := conn.GetLead(context.Background(), id)
 				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrJobDoesNotExist)
 			},
 		},
 		{
-			name: "[success scenario] - hard delete",
+			name: "hard delete - success",
 			setup: func(t *testing.T) uint64 {
 				// Create a new lead for hard delete
 				lead := testutils.GenerateRandomLead()
@@ -70,17 +76,18 @@ func TestDeleteLead(t *testing.T) {
 				// Verify the lead was hard deleted
 				_, err := conn.GetLead(context.Background(), id)
 				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrJobDoesNotExist)
 			},
 		},
 		{
-			name:         "[failure scenario] - invalid id",
+			name:         "invalid id - failure",
 			id:           0,
 			deletionType: DeletionTypeSoft,
 			wantError:    true,
 			errType:      ErrInvalidInput,
 		},
 		{
-			name:         "[failure scenario] - already deleted lead",
+			name:         "already deleted lead - failure",
 			deletionType: DeletionTypeSoft,
 			wantError:    true,
 			errType:      ErrJobDoesNotExist,
@@ -97,6 +104,12 @@ func TestDeleteLead(t *testing.T) {
 				return created.Id
 			},
 		},
+		{
+			name:         "context timeout - failure",
+			id:           createdLead.Id,
+			deletionType: DeletionTypeSoft,
+			wantError:    true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -109,7 +122,7 @@ func TestDeleteLead(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			if tt.name == "[failure scenario] - context timeout" {
+			if tt.name == "context timeout - failure" {
 				var cancel context.CancelFunc
 				ctx, cancel = context.WithTimeout(ctx, 1*time.Nanosecond)
 				defer cancel()
@@ -120,6 +133,9 @@ func TestDeleteLead(t *testing.T) {
 
 			if tt.wantError {
 				require.Error(t, err)
+				if tt.errType != nil {
+					assert.ErrorIs(t, err, tt.errType)
+				}
 				return
 			}
 
@@ -133,12 +149,7 @@ func TestDeleteLead(t *testing.T) {
 }
 
 func TestDeleteLead_ConcurrentDeletions(t *testing.T) {
-	// Create a test scraping job first
-	testJob := testutils.GenerateRandomizedScrapingJob()
-
-	createdJob, err := conn.CreateScrapingJob(context.Background(), testJob)
-	require.NoError(t, err)
-	require.NotNil(t, createdJob)
+	createdJob, _ := setupTestLeadAndJob(t)
 
 	// Create test leads
 	numLeads := 5
@@ -185,5 +196,6 @@ func TestDeleteLead_ConcurrentDeletions(t *testing.T) {
 	for _, id := range createdLeads {
 		_, err := conn.GetLead(context.Background(), id)
 		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrJobDoesNotExist)
 	}
 } 
