@@ -31,6 +31,7 @@ const (
 	RunModeAwsLambda
 	RunModeAwsLambdaInvoker
 	RunModeRedis
+	RunModeGRPC
 )
 
 var (
@@ -80,10 +81,19 @@ type Config struct {
 	Radius                   float64
 	Addr                     string
 	DisablePageReuse         bool
+	GRPCEnabled             bool
+
+	// gRPC-specific configurations
+	GRPCPort       int           `mapstructure:"grpc-port"`
+	GRPCDeadline   time.Duration `mapstructure:"grpc-deadline"`
+	NewRelicKey    string        `mapstructure:"newrelic-key"`
+	GRPCRetries    int           `mapstructure:"grpc-retries"`
+	GRPCRetryDelay time.Duration `mapstructure:"grpc-retry-delay"`
+	ServiceName    string        `mapstructure:"service-name"`
 
 	// Redis-specific configurations
 	RedisEnabled       bool
-	RedisURL           string // Redis connection string (takes precedence over other Redis settings)
+	RedisURL           string
 	RedisHost          string
 	RedisPort          int
 	RedisPassword      string
@@ -96,6 +106,9 @@ type Config struct {
 	RedisRetryInterval time.Duration
 	RedisMaxRetries    int
 	RedisRetentionDays int
+
+	// Logging configuration
+	LogLevel string `mapstructure:"log-level"` // Possible values: debug, info, warn, error
 }
 
 func ParseConfig() *Config {
@@ -141,6 +154,7 @@ func ParseConfig() *Config {
 	flag.Float64Var(&cfg.Radius, "radius", 10000, "search radius in meters. Default is 10000 meters")
 	flag.StringVar(&cfg.Addr, "addr", ":8080", "address to listen on for web server")
 	flag.BoolVar(&cfg.DisablePageReuse, "disable-page-reuse", false, "disable page reuse in playwright")
+	flag.BoolVar(&cfg.GRPCEnabled, "grpc", false, "enable gRPC server")
 
 	// Redis-specific flags
 	flag.BoolVar(&cfg.RedisEnabled, "redis-enabled", false, "enable Redis-backed task processing")
@@ -157,6 +171,17 @@ func ParseConfig() *Config {
 	flag.DurationVar(&cfg.RedisRetryInterval, "redis-retry-interval", 5*time.Second, "interval between task retries")
 	flag.IntVar(&cfg.RedisMaxRetries, "redis-max-retries", 3, "maximum number of task retries")
 	flag.IntVar(&cfg.RedisRetentionDays, "redis-retention-days", 7, "number of days to retain task history")
+
+	// gRPC-specific flags
+	flag.IntVar(&cfg.GRPCPort, "grpc-port", 50051, "gRPC server port")
+	flag.DurationVar(&cfg.GRPCDeadline, "grpc-deadline", 5*time.Second, "gRPC deadline")
+	flag.StringVar(&cfg.NewRelicKey, "newrelic-key", "", "New Relic key")
+	flag.IntVar(&cfg.GRPCRetries, "grpc-retries", 3, "gRPC retries")
+	flag.DurationVar(&cfg.GRPCRetryDelay, "grpc-retry-delay", 1*time.Second, "gRPC retry delay")
+	flag.StringVar(&cfg.ServiceName, "service-name", "lead-scraper-service", "service name for gRPC server")
+
+	// Logging configuration
+	flag.StringVar(&cfg.LogLevel, "log-level", "info", "log level (debug, info, warn, error)")
 
 	flag.Parse()
 
@@ -209,6 +234,8 @@ func ParseConfig() *Config {
 	}
 
 	switch {
+	case cfg.GRPCEnabled:
+		cfg.RunMode = RunModeGRPC
 	case cfg.AwsLambdaInvoker:
 		cfg.RunMode = RunModeAwsLambdaInvoker
 	case cfg.AwsLamdbaRunner:
