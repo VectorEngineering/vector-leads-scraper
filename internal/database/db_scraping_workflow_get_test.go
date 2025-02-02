@@ -32,6 +32,7 @@ func TestGetScrapingWorkflow(t *testing.T) {
 		RespectRobotsTxt:     true,
 		AcceptTermsOfService:  true,
 		UserAgent:            "TestBot/1.0",
+		NotificationWebhookUrl: "https://example.com/webhook",
 	}
 
 	created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)
@@ -145,6 +146,7 @@ func TestGetScrapingWorkflow_ConcurrentReads(t *testing.T) {
 		RespectRobotsTxt:     true,
 		AcceptTermsOfService:  true,
 		UserAgent:            "TestBot/1.0",
+		NotificationWebhookUrl: "https://example.com/webhook",
 	}
 
 	created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)

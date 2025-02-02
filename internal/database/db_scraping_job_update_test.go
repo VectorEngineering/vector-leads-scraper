@@ -15,7 +15,7 @@ import (
 func TestUpdateScrapingJob(t *testing.T) {
 	// Create a test job first
 	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      0, // Assuming 0 is PENDING in the protobuf enum
+		Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
 		Priority:    1,
 		PayloadType: "scraping_job",
 		Payload:     []byte(`{"query": "test query"}`),
@@ -33,6 +33,9 @@ func TestUpdateScrapingJob(t *testing.T) {
 	created, err := conn.CreateScrapingJob(context.Background(), testJob)
 	require.NoError(t, err)
 	require.NotNil(t, created)
+
+	// Store creation time for later comparison
+	creationTime := time.Now()
 
 	// Clean up after all tests
 	defer func() {
@@ -54,7 +57,7 @@ func TestUpdateScrapingJob(t *testing.T) {
 			name: "[success scenario] - valid update",
 			job: &lead_scraper_servicev1.ScrapingJob{
 				Id:          created.Id,
-				Status:      1, // Update to a different status
+				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS,
 				Priority:    2,
 				PayloadType: "scraping_job",
 				Payload:     []byte(`{"query": "updated query"}`),
@@ -72,7 +75,7 @@ func TestUpdateScrapingJob(t *testing.T) {
 			validate: func(t *testing.T, job *lead_scraper_servicev1.ScrapingJob) {
 				assert.NotNil(t, job)
 				assert.Equal(t, created.Id, job.Id)
-				assert.Equal(t, int32(1), job.Status)
+				assert.Equal(t, lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS, job.Status)
 				assert.Equal(t, int32(2), job.Priority)
 				assert.Equal(t, "scraping_job", job.PayloadType)
 				assert.Equal(t, []byte(`{"query": "updated query"}`), job.Payload)
@@ -85,6 +88,10 @@ func TestUpdateScrapingJob(t *testing.T) {
 				assert.True(t, job.FastMode)
 				assert.Equal(t, int32(5000), job.Radius)
 				assert.Equal(t, int32(1800), job.MaxTime)
+
+				// Verify timestamps
+				assert.Equal(t, job.CreatedAt.AsTime().Unix(), creationTime.Unix())
+				assert.True(t, job.UpdatedAt.AsTime().After(creationTime))
 			},
 		},
 		{
@@ -97,7 +104,7 @@ func TestUpdateScrapingJob(t *testing.T) {
 			name: "[failure scenario] - zero id",
 			job: &lead_scraper_servicev1.ScrapingJob{
 				Id:          0,
-				Status:      1,
+				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS,
 				Priority:    2,
 				PayloadType: "scraping_job",
 				Name:        "Updated Test Job",
@@ -109,7 +116,7 @@ func TestUpdateScrapingJob(t *testing.T) {
 			name: "[failure scenario] - non-existent id",
 			job: &lead_scraper_servicev1.ScrapingJob{
 				Id:          999999,
-				Status:      1,
+				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS,
 				Priority:    2,
 				PayloadType: "scraping_job",
 				Name:        "Updated Test Job",
@@ -118,10 +125,54 @@ func TestUpdateScrapingJob(t *testing.T) {
 			errType:   ErrJobDoesNotExist,
 		},
 		{
+			name: "[failure scenario] - invalid status transition",
+			setup: func(t *testing.T) *lead_scraper_servicev1.ScrapingJob {
+				// Create a new job in QUEUED state
+				job := &lead_scraper_servicev1.ScrapingJob{
+					Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+					Priority:    1,
+					PayloadType: "scraping_job",
+					Payload:     []byte(`{"query": "test query"}`),
+					Name:        "Test Job",
+					Keywords:    []string{"keyword1", "keyword2"},
+					Lang:        "en",
+					Zoom:        15,
+					Lat:         "40.7128",
+					Lon:         "-74.0060",
+					FastMode:    false,
+					Radius:      10000,
+					MaxTime:     3600,
+				}
+				created, err := conn.CreateScrapingJob(context.Background(), job)
+				require.NoError(t, err)
+				require.NotNil(t, created)
+
+				// Try to transition directly to COMPLETED
+				return &lead_scraper_servicev1.ScrapingJob{
+					Id:          created.Id,
+					Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_COMPLETED,
+					Priority:    2,
+					PayloadType: "scraping_job",
+					Payload:     []byte(`{"query": "test query"}`),
+					Name:        "Updated Test Job",
+					Keywords:    []string{"keyword1", "keyword2"},
+					Lang:        "en",
+					Zoom:        15,
+					Lat:         "40.7128",
+					Lon:         "-74.0060",
+					FastMode:    false,
+					Radius:      10000,
+					MaxTime:     3600,
+				}
+			},
+			wantError: true,
+			errType:   ErrInvalidInput,
+		},
+		{
 			name: "[failure scenario] - context timeout",
 			job: &lead_scraper_servicev1.ScrapingJob{
 				Id:          created.Id,
-				Status:      1,
+				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS,
 				Priority:    2,
 				PayloadType: "scraping_job",
 				Name:        "Updated Test Job",
@@ -171,7 +222,7 @@ func TestUpdateScrapingJob(t *testing.T) {
 func TestUpdateScrapingJob_ConcurrentUpdates(t *testing.T) {
 	// Create a test job first
 	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      0,
+		Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
 		Priority:    1,
 		PayloadType: "scraping_job",
 		Payload:     []byte(`{"query": "test query"}`),
@@ -201,15 +252,27 @@ func TestUpdateScrapingJob_ConcurrentUpdates(t *testing.T) {
 	errors := make(chan error, numUpdates)
 	results := make(chan *lead_scraper_servicev1.ScrapingJob, numUpdates)
 
+	// Perform concurrent updates with valid status transitions
+	validTransitions := []lead_scraper_servicev1.BackgroundJobStatus{
+		lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS,
+		lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_CANCELLED,
+		lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+		lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS,
+		lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_COMPLETED,
+	}
+
 	// Perform concurrent updates
 	for i := 0; i < numUpdates; i++ {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
 			
+			// Add a small delay to ensure a specific order of updates
+			time.Sleep(time.Duration(index) * time.Millisecond)
+			
 			updateJob := &lead_scraper_servicev1.ScrapingJob{
 				Id:          created.Id,
-				Status:      lead_scraper_servicev1.BackgroundJobStatus(index + 1), // Different status for each update
+				Status:      validTransitions[index],
 				Priority:    int32(index + 1),
 				PayloadType: "scraping_job",
 				Payload:     []byte(fmt.Sprintf(`{"query": "concurrent update %d"}`, index)),
@@ -252,4 +315,5 @@ func TestUpdateScrapingJob_ConcurrentUpdates(t *testing.T) {
 	assert.NotEqual(t, created.Status, finalJob.Status)
 	assert.NotEqual(t, created.Priority, finalJob.Priority)
 	assert.NotEqual(t, created.Name, finalJob.Name)
+	assert.True(t, finalJob.UpdatedAt.AsTime().After(finalJob.CreatedAt.AsTime()))
 }

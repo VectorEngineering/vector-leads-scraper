@@ -29,6 +29,7 @@ func TestUpdateScrapingWorkflow(t *testing.T) {
 		RespectRobotsTxt:     true,
 		AcceptTermsOfService:  true,
 		UserAgent:            "TestBot/1.0",
+		NotificationWebhookUrl: "https://example.com/webhook",
 	}
 	created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)
 	assert.NoError(t, err)
@@ -61,6 +62,7 @@ func TestUpdateScrapingWorkflow(t *testing.T) {
 				RespectRobotsTxt:     true,
 				AcceptTermsOfService:  true,
 				UserAgent:            "UpdatedTestBot/2.0",
+				NotificationWebhookUrl: "https://example.com/webhook/updated",
 			},
 			wantError: false,
 		},

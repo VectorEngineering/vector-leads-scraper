@@ -12,9 +12,13 @@ import (
 // It processes leads in batches of 100 to avoid overwhelming the database.
 // If an error occurs during batch processing, it will be logged and the operation
 // will continue with the next batch.
-func (db *Db) BatchUpdateLeads(ctx context.Context, leads []*lead_scraper_servicev1.Lead) ([]*lead_scraper_servicev1.Lead, error) {
+func (db *Db) BatchUpdateLeads(ctx context.Context, leads []*lead_scraper_servicev1.Lead) (bool, error) {
+	var (
+		qOp = db.QueryOperator.LeadORM
+	)
+
 	if len(leads) == 0 {
-		return nil, ErrInvalidInput
+		return false, ErrInvalidInput
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
@@ -23,15 +27,20 @@ func (db *Db) BatchUpdateLeads(ctx context.Context, leads []*lead_scraper_servic
 	// Start a transaction
 	tx := db.Client.Engine.WithContext(ctx).Begin()
 	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to start transaction: %w", tx.Error)
+		return false, fmt.Errorf("failed to start transaction: %w", tx.Error)
 	}
 
 	batches := BreakIntoBatches[*lead_scraper_servicev1.Lead](leads, batchSize)
-	resultingLeads := make([]*lead_scraper_servicev1.Lead, 0, len(leads))
 
 	// Process each batch
 	for _, batch := range batches {
-		updatedLeads, err := lead_scraper_servicev1.DefaultPatchSetLead(ctx, batch, nil, tx)
+			// convert batch to ORM objects
+		ormLeads, err := db.convertLeadsToORM(ctx, batch)
+		if err != nil {
+			return false, fmt.Errorf("failed to convert leads to ORM: %w", err)
+		}
+
+		result, err := qOp.Updates(ormLeads)
 		if err != nil {
 			db.Logger.Error("failed to update batch",
 				zap.Error(err),
@@ -39,8 +48,27 @@ func (db *Db) BatchUpdateLeads(ctx context.Context, leads []*lead_scraper_servic
 			)
 			continue
 		}
-		resultingLeads = append(resultingLeads, updatedLeads...)
+		
+		if result.Error != nil {
+			db.Logger.Error("failed to update batch",
+				zap.Error(result.Error),
+				zap.Int("batchSize", len(batch)),
+			)
+			continue
+		}
 	}
 
-	return resultingLeads, nil
+	return true, nil
 } 
+
+func (db *Db) convertLeadsToORM(ctx context.Context, leads []*lead_scraper_servicev1.Lead) ([]*lead_scraper_servicev1.LeadORM, error) {
+	ormLeads := make([]*lead_scraper_servicev1.LeadORM, 0, len(leads))
+	for _, lead := range leads {
+		ormLead, err := lead.ToORM(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert lead to ORM: %w", err)
+		}
+		ormLeads = append(ormLeads, &ormLead)
+	}
+	return ormLeads, nil
+}			

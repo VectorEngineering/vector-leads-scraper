@@ -102,7 +102,7 @@ type DatabaseOperations interface {
 	UpdateScrapingJob(ctx context.Context, job *lead_scraper_servicev1.ScrapingJob) (*lead_scraper_servicev1.ScrapingJob, error)
 	BatchUpdateScrapingJobs(ctx context.Context, jobs []*lead_scraper_servicev1.ScrapingJob) ([]*lead_scraper_servicev1.ScrapingJob, error)
 	DeleteScrapingJob(ctx context.Context, id uint64) error
-	ListScrapingJobs(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.ScrapingJob, error)
+	ListScrapingJobs(ctx context.Context, limit, offset uint64) ([]*lead_scraper_servicev1.ScrapingJob, error)
 
 	// ScrapingWorkflow operations
 	CreateScrapingWorkflow(ctx context.Context, workflow *lead_scraper_servicev1.ScrapingWorkflow) (*lead_scraper_servicev1.ScrapingWorkflow, error)
@@ -115,7 +115,7 @@ type DatabaseOperations interface {
 	CreateLead(ctx context.Context, jobID uint64, lead *lead_scraper_servicev1.Lead) (*lead_scraper_servicev1.Lead, error)
 	GetLead(ctx context.Context, id uint64) (*lead_scraper_servicev1.Lead, error)
 	UpdateLead(ctx context.Context, lead *lead_scraper_servicev1.Lead) (*lead_scraper_servicev1.Lead, error)
-	BatchUpdateLeads(ctx context.Context, leads []*lead_scraper_servicev1.Lead) ([]*lead_scraper_servicev1.Lead, error)
+	BatchUpdateLeads(ctx context.Context, leads []*lead_scraper_servicev1.Lead) (bool, error)
 	DeleteLead(ctx context.Context, id uint64, deletionType DeletionType) error
 	BatchDeleteLeads(ctx context.Context, leadIDs []uint64) error
 	ListLeads(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.Lead, error)

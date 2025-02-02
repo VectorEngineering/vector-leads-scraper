@@ -9,7 +9,16 @@ import (
 
 // ListScrapingWorkflows retrieves a list of scraping workflows with pagination
 func (db *Db) ListScrapingWorkflows(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.ScrapingWorkflow, error) {
-	if limit <= 0 {
+	// Validate input parameters
+	if limit < 0 {
+		return nil, fmt.Errorf("invalid limit: %w", ErrInvalidInput)
+	}
+	if offset < 0 {
+		return nil, fmt.Errorf("invalid offset: %w", ErrInvalidInput)
+	}
+
+	// Set default limit if not specified
+	if limit == 0 {
 		limit = 10 // default limit
 	}
 

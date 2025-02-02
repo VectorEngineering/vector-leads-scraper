@@ -9,10 +9,6 @@ import (
 
 // GetScrapingJob retrieves a scraping job by ID
 func (db *Db) GetScrapingJob(ctx context.Context, id uint64) (*lead_scraper_servicev1.ScrapingJob, error) {
-	var (
-		sQop = db.QueryOperator.ScrapingJobORM
-	)	
-
 	if id == 0 {
 		return nil, ErrInvalidInput
 	}
@@ -21,8 +17,12 @@ func (db *Db) GetScrapingJob(ctx context.Context, id uint64) (*lead_scraper_serv
 	defer cancel()
 
 	var jobORM lead_scraper_servicev1.ScrapingJobORM
-	if _, err := sQop.WithContext(ctx).Where(sQop.Id.Eq(id)).First(); err != nil {
-		return nil, fmt.Errorf("failed to get scraping job: %w", err)
+	result := db.Client.Engine.WithContext(ctx).Where("id = ?", id).First(&jobORM)
+	if result.Error != nil {
+		if result.Error.Error() == "record not found" {
+			return nil, fmt.Errorf("%w: %v", ErrJobDoesNotExist, result.Error)
+		}
+		return nil, fmt.Errorf("failed to get scraping job: %w", result.Error)
 	}
 
 	pbResult, err := jobORM.ToPB(ctx)

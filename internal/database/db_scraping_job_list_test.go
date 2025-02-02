@@ -12,14 +12,18 @@ import (
 )
 
 func TestListScrapingJobs(t *testing.T) {
+	// Clean up any existing jobs first
+	result := conn.Client.Engine.Exec("DELETE FROM gmaps_jobs")
+	require.NoError(t, result.Error)
+
 	// Create multiple test jobs
 	numJobs := 5
 	jobIDs := make([]uint64, numJobs)
 	
 	for i := 0; i < numJobs; i++ {
 		job := &lead_scraper_servicev1.ScrapingJob{
-			Status:      0,
-			Priority:    int32(i + 1),
+			Status:      lead_scraper_servicev1.BackgroundJobStatus(i % 3), // Mix of different statuses
+			Priority:    int32(numJobs - i), // Descending priorities: 5, 4, 3, 2, 1
 			PayloadType: "scraping_job",
 			Payload:     []byte(fmt.Sprintf(`{"query": "test query %d"}`, i)),
 			Name:        fmt.Sprintf("Test Job %d", i),
@@ -36,6 +40,9 @@ func TestListScrapingJobs(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		jobIDs[i] = created.Id
+		
+		// Add a small delay to ensure consistent ordering by creation time
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	// Clean up after all tests
@@ -61,10 +68,12 @@ func TestListScrapingJobs(t *testing.T) {
 			wantError: false,
 			validate: func(t *testing.T, jobs []*lead_scraper_servicev1.ScrapingJob) {
 				assert.Len(t, jobs, numJobs)
+				// Verify jobs are returned in order of creation (newest first)
 				for i, job := range jobs {
 					assert.NotNil(t, job)
 					assert.NotZero(t, job.Id)
-					assert.Equal(t, fmt.Sprintf("Test Job %d", i), job.Name)
+					assert.Equal(t, fmt.Sprintf("Test Job %d", numJobs-i-1), job.Name)
+					assert.Equal(t, int32(i+1), job.Priority)
 				}
 			},
 		},
@@ -78,7 +87,8 @@ func TestListScrapingJobs(t *testing.T) {
 				for i, job := range jobs {
 					assert.NotNil(t, job)
 					assert.NotZero(t, job.Id)
-					assert.Equal(t, fmt.Sprintf("Test Job %d", i), job.Name)
+					assert.Equal(t, fmt.Sprintf("Test Job %d", numJobs-i-1), job.Name)
+					assert.Equal(t, int32(i+1), job.Priority)
 				}
 			},
 		},
@@ -92,7 +102,8 @@ func TestListScrapingJobs(t *testing.T) {
 				for i, job := range jobs {
 					assert.NotNil(t, job)
 					assert.NotZero(t, job.Id)
-					assert.Equal(t, fmt.Sprintf("Test Job %d", i+3), job.Name)
+					assert.Equal(t, fmt.Sprintf("Test Job %d", 1-i), job.Name)
+					assert.Equal(t, int32(i+4), job.Priority)
 				}
 			},
 		},
@@ -137,7 +148,7 @@ func TestListScrapingJobs(t *testing.T) {
 				time.Sleep(2 * time.Millisecond)
 			}
 
-			results, err := conn.ListScrapingJobs(ctx, tt.limit, tt.offset)
+			results, err := conn.ListScrapingJobs(ctx, uint64(tt.limit), uint64(tt.offset))
 
 			if tt.wantError {
 				require.Error(t, err)
@@ -159,6 +170,10 @@ func TestListScrapingJobs(t *testing.T) {
 }
 
 func TestListScrapingJobs_EmptyDatabase(t *testing.T) {
+	// Clean up any existing jobs first
+	result := conn.Client.Engine.Exec("DELETE FROM gmaps_jobs")
+	require.NoError(t, result.Error)
+
 	results, err := conn.ListScrapingJobs(context.Background(), 10, 0)
 	require.NoError(t, err)
 	assert.Empty(t, results)
