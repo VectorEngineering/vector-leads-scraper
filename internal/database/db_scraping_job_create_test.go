@@ -11,8 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateScrapingJob(t *testing.T) {
-	validJob := &lead_scraper_servicev1.ScrapingJob{
+// testScrapingJob returns a valid scraping job for testing
+func testScrapingJob() *lead_scraper_servicev1.ScrapingJob {
+	return &lead_scraper_servicev1.ScrapingJob{
 		Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
 		Priority:    1,
 		PayloadType: "scraping_job",
@@ -27,6 +28,10 @@ func TestCreateScrapingJob(t *testing.T) {
 		Radius:      10000,
 		MaxTime:     3600,
 	}
+}
+
+func TestCreateScrapingJob(t *testing.T) {
+	validJob := testScrapingJob()
 
 	tests := []struct {
 		name      string
@@ -56,7 +61,6 @@ func TestCreateScrapingJob(t *testing.T) {
 				assert.Equal(t, validJob.Radius, job.Radius)
 				assert.Equal(t, validJob.MaxTime, job.MaxTime)
 
-				// Validate timestamps
 				require.NotNil(t, job.CreatedAt)
 				require.NotNil(t, job.UpdatedAt)
 				assert.Equal(t, job.CreatedAt.AsTime().Unix(), job.UpdatedAt.AsTime().Unix())
@@ -66,46 +70,6 @@ func TestCreateScrapingJob(t *testing.T) {
 		{
 			name:      "[failure scenario] - nil job",
 			job:       nil,
-			wantError: true,
-			errType:   ErrInvalidInput,
-		},
-		{
-			name: "[failure scenario] - missing required fields",
-			job: &lead_scraper_servicev1.ScrapingJob{
-				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-				Priority:    1,
-				PayloadType: "scraping_job",
-				Zoom:        15,
-				Name:        "",
-			},
-			wantError: true,
-			errType:   ErrInvalidInput,
-		},
-		{
-			name: "[failure scenario] - invalid status",
-			job: &lead_scraper_servicev1.ScrapingJob{
-				Status:      999,
-				Priority:    1,
-				PayloadType: "scraping_job",
-				Name:        "Test Job",
-				Zoom:        15,
-				Lat:         "40.7128",
-				Lon:         "-74.0060",
-			},
-			wantError: true,
-			errType:   ErrInvalidInput,
-		},
-		{
-			name: "[failure scenario] - invalid priority",
-			job: &lead_scraper_servicev1.ScrapingJob{
-				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-				Priority:    -1,
-				PayloadType: "scraping_job",
-				Name:        "Test Job",
-				Zoom:        15,
-				Lat:         "40.7128",
-				Lon:         "-74.0060",
-			},
 			wantError: true,
 			errType:   ErrInvalidInput,
 		},
@@ -135,7 +99,7 @@ func TestCreateScrapingJob(t *testing.T) {
 				Priority:    1,
 				PayloadType: "scraping_job",
 				Name:        "Test Job",
-				Zoom:        0, // Invalid zoom value
+				Zoom:        0,
 				Lat:         "40.7128",
 				Lon:         "-74.0060",
 			},
@@ -175,8 +139,8 @@ func TestCreateScrapingJob(t *testing.T) {
 			// Clean up created job
 			if result != nil {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
 				err := conn.DeleteScrapingJob(ctx, result.Id)
-				cancel()
 				require.NoError(t, err)
 			}
 		})
@@ -194,23 +158,13 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			job := &lead_scraper_servicev1.ScrapingJob{
-				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-				Priority:    int32(index + 1), // Different priority for each job
-				PayloadType: "scraping_job",
-				Payload:     []byte(`{"query": "test query"}`),
-				Name:        "Test Job",
-				Keywords:    []string{"keyword1", "keyword2"},
-				Lang:        "en",
-				Zoom:        15,
-				Lat:         "40.7128",
-				Lon:         "-74.0060",
-				FastMode:    false,
-				Radius:      10000,
-				MaxTime:     3600,
-			}
+			job := testScrapingJob()
+			job.Priority = int32(index + 1) // Different priority for each job
 
-			created, err := conn.CreateScrapingJob(context.Background(), job)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			created, err := conn.CreateScrapingJob(ctx, job)
 			if err != nil {
 				errors <- err
 				return

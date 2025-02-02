@@ -12,52 +12,75 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBatchUpdateLeads(t *testing.T) {
-	// Create a test scraping job first
-	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      0, // Assuming 0 is PENDING in the protobuf enum
-		Priority:    1,
-		PayloadType: "scraping_job",
-		Payload:     []byte(`{"query": "test query"}`),
-		Name:        "Test Job",
-		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        "en",
-		Zoom:        15,
-		Lat:         "40.7128",
-		Lon:         "-74.0060",
-		FastMode:    false,
-		Radius:      10000,
-		MaxTime:     3600,
-	}
+// setupTestLeads creates a test job and leads for testing
+func setupTestLeads(t *testing.T, numLeads int) (*lead_scraper_servicev1.ScrapingJob, []*lead_scraper_servicev1.Lead) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	createdJob, err := conn.CreateScrapingJob(context.Background(), testJob)
+	// Create a test scraping job
+	testJob := testScrapingJob()
+	createdJob, err := conn.CreateScrapingJob(ctx, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, createdJob)
 
-	// Create multiple test leads
-	numLeads := 10
+	// Create test leads
 	createdLeads := make([]*lead_scraper_servicev1.Lead, numLeads)
 	for i := 0; i < numLeads; i++ {
 		lead := testutils.GenerateRandomLead()
-		created, err := conn.CreateLead(context.Background(), createdJob.Id, lead)
+		created, err := conn.CreateLead(ctx, createdJob.Id, lead)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		createdLeads[i] = created
 	}
 
-	// Clean up after all tests
-	defer func() {
-		for _, lead := range createdLeads {
-			if lead != nil {
-				err := conn.DeleteLead(context.Background(), lead.Id, DeletionTypeSoft)
-				require.NoError(t, err)
-			}
-		}
-		if createdJob != nil {
-			err := conn.DeleteScrapingJob(context.Background(), createdJob.Id)
+	return createdJob, createdLeads
+}
+
+// cleanupTestLeads cleans up test job and leads
+func cleanupTestLeads(t *testing.T, job *lead_scraper_servicev1.ScrapingJob, leads []*lead_scraper_servicev1.Lead) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	for _, lead := range leads {
+		if lead != nil {
+			err := conn.DeleteLead(ctx, lead.Id, DeletionTypeSoft)
 			require.NoError(t, err)
 		}
-	}()
+	}
+	if job != nil {
+		err := conn.DeleteScrapingJob(ctx, job.Id)
+		require.NoError(t, err)
+	}
+}
+
+// getUpdatedLeads returns a slice of updated leads for testing
+func getUpdatedLeads(leads []*lead_scraper_servicev1.Lead) []*lead_scraper_servicev1.Lead {
+	updatedLeads := make([]*lead_scraper_servicev1.Lead, len(leads))
+	for i, lead := range leads {
+		updatedLead := *lead
+		updatedLead.Name = fmt.Sprintf("Updated Lead %d", i)
+		updatedLead.Website = fmt.Sprintf("https://updated-lead-%d.com", i)
+		updatedLead.Phone = fmt.Sprintf("+%d", 9876543210+i)
+		updatedLead.Address = fmt.Sprintf("456 Updated St %d", i)
+		updatedLead.City = "Updated City"
+		updatedLead.State = "Updated State"
+		updatedLead.Country = "Updated Country"
+		updatedLead.Industry = "Updated Industry"
+		updatedLead.PlaceId = fmt.Sprintf("ChIJ_updated%d", i)
+		updatedLead.GoogleMapsUrl = "https://maps.google.com/?q=41.8781,-87.6298"
+		updatedLead.Latitude = 41.8781
+		updatedLead.Longitude = -87.6298
+		updatedLead.GoogleRating = 4.8
+		updatedLead.ReviewCount = 200
+		updatedLeads[i] = &updatedLead
+	}
+	return updatedLeads
+}
+
+func TestBatchUpdateLeads(t *testing.T) {
+	// Setup test data
+	testJob, createdLeads := setupTestLeads(t, 10)
+	defer cleanupTestLeads(t, testJob, createdLeads)
 
 	tests := []struct {
 		name      string
@@ -70,32 +93,21 @@ func TestBatchUpdateLeads(t *testing.T) {
 		{
 			name: "[success scenario] - update all leads",
 			setup: func(t *testing.T) []*lead_scraper_servicev1.Lead {
-				updatedLeads := make([]*lead_scraper_servicev1.Lead, len(createdLeads))
-				for i, lead := range createdLeads {
-					updatedLead := *lead
-					updatedLead.Name = fmt.Sprintf("Updated Lead %d", i)
-					updatedLead.Website = fmt.Sprintf("https://updated-lead-%d.com", i)
-					updatedLead.Phone = fmt.Sprintf("+%d", 9876543210+i)
-					updatedLead.Address = fmt.Sprintf("456 Updated St %d", i)
-					updatedLead.City = "Updated City"
-					updatedLead.State = "Updated State"
-					updatedLead.Country = "Updated Country"
-					updatedLead.Industry = "Updated Industry"
-					updatedLead.PlaceId = fmt.Sprintf("ChIJ_updated%d", i)
-					updatedLead.GoogleMapsUrl = "https://maps.google.com/?q=41.8781,-87.6298"
-					updatedLead.Latitude = 41.8781
-					updatedLead.Longitude = -87.6298
-					updatedLead.GoogleRating = 4.8
-					updatedLead.ReviewCount = 200
-					updatedLeads[i] = &updatedLead
-				}
-				return updatedLeads
+				return getUpdatedLeads(createdLeads)
 			},
 			wantError: false,
 			validate: func(t *testing.T, leads []*lead_scraper_servicev1.Lead) {
 				require.NotEmpty(t, leads)
-				for _, lead := range leads {
+				for i, lead := range leads {
 					assert.NotNil(t, lead)
+					assert.Equal(t, fmt.Sprintf("Updated Lead %d", i), lead.Name)
+					assert.Equal(t, fmt.Sprintf("https://updated-lead-%d.com", i), lead.Website)
+					assert.Equal(t, fmt.Sprintf("+%d", 9876543210+i), lead.Phone)
+					assert.Equal(t, fmt.Sprintf("456 Updated St %d", i), lead.Address)
+					assert.Equal(t, "Updated City", lead.City)
+					assert.Equal(t, "Updated State", lead.State)
+					assert.Equal(t, "Updated Country", lead.Country)
+					assert.Equal(t, "Updated Industry", lead.Industry)
 				}
 			},
 		},
@@ -137,130 +149,70 @@ func TestBatchUpdateLeads(t *testing.T) {
 				time.Sleep(2 * time.Millisecond)
 			}
 
-			results, err := conn.BatchUpdateLeads(ctx, leads)
+			success, err := conn.BatchUpdateLeads(ctx, leads)
 
 			if tt.wantError {
 				require.Error(t, err)
 				if tt.errType != nil {
 					assert.ErrorIs(t, err, tt.errType)
 				}
-				assert.Nil(t, results)
+				assert.False(t, success)
 				return
 			}
 
 			require.NoError(t, err)
-			require.NotNil(t, results)
+			assert.True(t, success)
 
+			// If validation is needed, fetch the updated leads and validate them
 			if tt.validate != nil {
-				tt.validate(t, leads)
+				// Fetch the updated leads to validate them
+				updatedLeads := make([]*lead_scraper_servicev1.Lead, len(leads))
+				for i, lead := range leads {
+					updated, err := conn.GetLead(ctx, lead.Id)
+					require.NoError(t, err)
+					updatedLeads[i] = updated
+				}
+				tt.validate(t, updatedLeads)
 			}
 		})
 	}
 }
 
 func TestBatchUpdateLeads_LargeBatch(t *testing.T) {
-	// Create a test scraping job first
-	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      0, // Assuming 0 is PENDING in the protobuf enum
-		Priority:    1,
-		PayloadType: "scraping_job",
-		Payload:     []byte(`{"query": "test query"}`),
-		Name:        "Test Job",
-		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        "en",
-		Zoom:        15,
-		Lat:         "40.7128",
-		Lon:         "-74.0060",
-		FastMode:    false,
-		Radius:      10000,
-		MaxTime:     3600,
-	}
-
-	createdJob, err := conn.CreateScrapingJob(context.Background(), testJob)
-	require.NoError(t, err)
-	require.NotNil(t, createdJob)
-
-	// Create a large number of test leads
-	numLeads := 1000 // This will test multiple batches
-	createdLeads := make([]*lead_scraper_servicev1.Lead, numLeads)
-	for i := 0; i < numLeads; i++ {
-		lead := &lead_scraper_servicev1.Lead{
-			Name:          fmt.Sprintf("Test Lead %d", i),
-			Website:       fmt.Sprintf("https://test-lead-%d.com", i),
-			Phone:         fmt.Sprintf("+%d", 1234567890+i),
-			Address:       fmt.Sprintf("123 Test St %d", i),
-			City:          "Test City",
-			State:         "Test State",
-			Country:       "Test Country",
-			Industry:      "Technology",
-			PlaceId:       fmt.Sprintf("ChIJ_test%d", i),
-			GoogleMapsUrl: "https://maps.google.com/?q=40.7128,-74.0060",
-			Latitude:      40.7128,
-			Longitude:     -74.0060,
-			GoogleRating:  4.5,
-			ReviewCount:   100,
-		}
-		created, err := conn.CreateLead(context.Background(), createdJob.Id, lead)
-		require.NoError(t, err)
-		require.NotNil(t, created)
-		createdLeads[i] = created
-	}
-
-	// Clean up after test
-	defer func() {
-		for _, lead := range createdLeads {
-			if lead != nil {
-				err := conn.DeleteLead(context.Background(), lead.Id, DeletionTypeSoft)
-				require.NoError(t, err)
-			}
-		}
-		err := conn.DeleteScrapingJob(context.Background(), createdJob.Id)
-		require.NoError(t, err)
-	}()
+	// Setup test data
+	testJob, createdLeads := setupTestLeads(t, 1000)
+	defer cleanupTestLeads(t, testJob, createdLeads)
 
 	// Prepare updates
-	updatedLeads := make([]*lead_scraper_servicev1.Lead, len(createdLeads))
-	for i, lead := range createdLeads {
-		updatedLead := *lead
-		updatedLead.Name = fmt.Sprintf("Updated Lead %d", i)
-		updatedLead.Website = fmt.Sprintf("https://updated-lead-%d.com", i)
-		updatedLead.Phone = fmt.Sprintf("+%d", 9876543210+i)
-		updatedLead.Address = fmt.Sprintf("456 Updated St %d", i)
-		updatedLead.City = "Updated City"
-		updatedLead.State = "Updated State"
-		updatedLead.Country = "Updated Country"
-		updatedLead.Industry = "Updated Industry"
-		updatedLead.PlaceId = fmt.Sprintf("ChIJ_updated%d", i)
-		updatedLead.GoogleMapsUrl = "https://maps.google.com/?q=41.8781,-87.6298"
-		updatedLead.Latitude = 41.8781
-		updatedLead.Longitude = -87.6298
-		updatedLead.GoogleRating = 4.8
-		updatedLead.ReviewCount = 200
-		updatedLeads[i] = &updatedLead
-	}
+	updatedLeads := getUpdatedLeads(createdLeads)
 
 	// Perform batch update
-	results, err := conn.BatchUpdateLeads(context.Background(), updatedLeads)
-	require.NoError(t, err)
-	require.NotNil(t, results)
-	assert.Len(t, results, numLeads)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-	// Verify all leads were updated correctly
+	success, err := conn.BatchUpdateLeads(ctx, updatedLeads)
+	require.NoError(t, err)
+	assert.True(t, success)
+
+	// Verify all leads were updated correctly by fetching them
 	for i, lead := range updatedLeads {
-		assert.NotNil(t, lead)
-		assert.Equal(t, fmt.Sprintf("Updated Lead %d", i), lead.Name)
-		assert.Equal(t, fmt.Sprintf("https://updated-lead-%d.com", i), lead.Website)
-		assert.Equal(t, fmt.Sprintf("+%d", 9876543210+i), lead.Phone)
-		assert.Equal(t, fmt.Sprintf("456 Updated St %d", i), lead.Address)
-		assert.Equal(t, "Updated City", lead.City)
-		assert.Equal(t, "Updated State", lead.State)
-		assert.Equal(t, "Updated Country", lead.Country)
-		assert.Equal(t, "Updated Industry", lead.Industry)
-		assert.Equal(t, fmt.Sprintf("ChIJ_updated%d", i), lead.PlaceId)
-		assert.Equal(t, "https://maps.google.com/?q=41.8781,-87.6298", lead.GoogleMapsUrl)
-		assert.Equal(t, float64(41.8781), lead.Latitude)
-		assert.Equal(t, float64(-87.6298), lead.Longitude)
-		assert.Equal(t, float32(4.8), lead.GoogleRating)
-		assert.Equal(t, int32(200), lead.ReviewCount)
+		updated, err := conn.GetLead(ctx, lead.Id)
+		require.NoError(t, err)
+		require.NotNil(t, updated)
+
+		assert.Equal(t, fmt.Sprintf("Updated Lead %d", i), updated.Name)
+		assert.Equal(t, fmt.Sprintf("https://updated-lead-%d.com", i), updated.Website)
+		assert.Equal(t, fmt.Sprintf("+%d", 9876543210+i), updated.Phone)
+		assert.Equal(t, fmt.Sprintf("456 Updated St %d", i), updated.Address)
+		assert.Equal(t, "Updated City", updated.City)
+		assert.Equal(t, "Updated State", updated.State)
+		assert.Equal(t, "Updated Country", updated.Country)
+		assert.Equal(t, "Updated Industry", updated.Industry)
+		assert.Equal(t, fmt.Sprintf("ChIJ_updated%d", i), updated.PlaceId)
+		assert.Equal(t, "https://maps.google.com/?q=41.8781,-87.6298", updated.GoogleMapsUrl)
+		assert.Equal(t, float64(41.8781), updated.Latitude)
+		assert.Equal(t, float64(-87.6298), updated.Longitude)
+		assert.Equal(t, float32(4.8), updated.GoogleRating)
+		assert.Equal(t, int32(200), updated.ReviewCount)
 	}
 } 

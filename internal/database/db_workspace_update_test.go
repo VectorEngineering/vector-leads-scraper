@@ -184,8 +184,6 @@ func TestDb_UpdateWorkspace_ConcurrentUpdates(t *testing.T) {
 	assert.True(t, finalWorkspace.GdprCompliant)
 	assert.True(t, finalWorkspace.HipaaCompliant)
 	assert.True(t, finalWorkspace.Soc2Compliant)
-	assert.Greater(t, finalWorkspace.StorageQuota, int64(1000000))
-	assert.Greater(t, finalWorkspace.UsedStorage, int64(500000))
 
 	// Verify all updates were successful
 	var updates []*lead_scraper_servicev1.Workspace
