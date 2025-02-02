@@ -116,7 +116,7 @@ func New(redisOpt asynq.RedisClientOpt, config *Config) *Scheduler {
 		scheduler: asynq.NewScheduler(
 			redisOpt,
 			&asynq.SchedulerOpts{
-				Location:           config.Location,
+				Location:            config.Location,
 				EnqueueErrorHandler: config.ErrorHandler,
 			},
 		),
@@ -269,4 +269,4 @@ func WithRetry(max int) asynq.Option {
 // WithDeadline returns an option to set task deadline.
 func WithDeadline(t time.Time) asynq.Option {
 	return asynq.Deadline(t)
-} 
+}

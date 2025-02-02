@@ -48,10 +48,10 @@ var (
 //	func TestMain(m *testing.M) {
 //	    // Custom setup
 //	    mySetup()
-//	    
+//
 //	    // Run standard test main
 //	    code, err := run(m)
-//	    
+//
 //	    // Custom teardown
 //	    myTeardown()
 //	    os.Exit(code)
@@ -79,10 +79,10 @@ func TestMain(m *testing.M) {
 //	    MockServer = NewMockGrpcServer()
 //	    clientConn, leadScraperClient = setupPreconditions()
 //	    defer clientConn.Close()
-//	    
+//
 //	    // Custom setup
 //	    initTestData()
-//	    
+//
 //	    return m.Run(), nil
 //	}
 func run(m *testing.M) (code int, err error) {

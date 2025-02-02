@@ -39,9 +39,9 @@ func createTestLogger(t *testing.T, cfg *runner.Config) (*zap.Logger, *bytes.Buf
 	// Configure sampling with a very short tick for testing
 	core := zapcore.NewSampler(
 		zapcore.NewCore(encoder, zapcore.AddSync(buf), level),
-		time.Millisecond,  // Tick every millisecond for testing
-		3,                 // Take first 3 messages
-		1,                 // Then sample 1 message per interval
+		time.Millisecond, // Tick every millisecond for testing
+		3,                // Take first 3 messages
+		1,                // Then sample 1 message per interval
 	)
 
 	hostname, err := os.Hostname()
@@ -236,10 +236,10 @@ func TestLoggerSampling(t *testing.T) {
 			zapcore.InfoLevel,
 		),
 		time.Millisecond, // Tick every millisecond
-		3,               // Log first 3 entries
-		10,              // Then sample 1 out of every 10 messages
+		3,                // Log first 3 entries
+		10,               // Then sample 1 out of every 10 messages
 	)
-	
+
 	// Create logger
 	logger := zap.New(core)
 
@@ -313,4 +313,4 @@ func TestValidateLogLevel(t *testing.T) {
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
-} 
+}

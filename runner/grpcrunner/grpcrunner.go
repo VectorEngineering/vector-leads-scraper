@@ -32,31 +32,31 @@ import (
 
 // LoggerOptions contains configuration options for the logger
 type LoggerOptions struct {
-	ServiceName    string
-	LogLevel      string
-	Development   bool
+	ServiceName        string
+	LogLevel           string
+	Development        bool
 	SamplingInitial    int
 	SamplingThereafter int
-	MaxSize       int
-	MaxAge        int
-	MaxBackups    int
-	LocalTime     bool
-	Compress      bool
+	MaxSize            int
+	MaxAge             int
+	MaxBackups         int
+	LocalTime          bool
+	Compress           bool
 }
 
 // defaultLoggerOptions returns the default logger options
 func defaultLoggerOptions(cfg *runner.Config) *LoggerOptions {
 	return &LoggerOptions{
-		ServiceName:    cfg.ServiceName,
-		LogLevel:      cfg.LogLevel,
-		Development:   false,
+		ServiceName:        cfg.ServiceName,
+		LogLevel:           cfg.LogLevel,
+		Development:        false,
 		SamplingInitial:    100,
 		SamplingThereafter: 100,
-		MaxSize:       100, // megabytes
-		MaxAge:        7,   // days
-		MaxBackups:    5,
-		LocalTime:     true,
-		Compress:      true,
+		MaxSize:            100, // megabytes
+		MaxAge:             7,   // days
+		MaxBackups:         5,
+		LocalTime:          true,
+		Compress:           true,
 	}
 }
 
@@ -83,7 +83,7 @@ func createLogger(cfg *runner.Config) (*zap.Logger, error) {
 	}
 
 	opts := defaultLoggerOptions(cfg)
-	
+
 	// Validate service name
 	if opts.ServiceName == "" {
 		opts.ServiceName = "unknown-service"
@@ -116,8 +116,8 @@ func createLogger(cfg *runner.Config) (*zap.Logger, error) {
 	}
 
 	config := zap.Config{
-		Level:             zap.NewAtomicLevelAt(level),
-		Development:       opts.Development,
+		Level:            zap.NewAtomicLevelAt(level),
+		Development:      opts.Development,
 		Encoding:         "json",
 		EncoderConfig:    encoderConfig,
 		OutputPaths:      []string{"stdout"},
@@ -170,19 +170,19 @@ func createLogger(cfg *runner.Config) (*zap.Logger, error) {
 // It manages a gRPC server instance and coordinates the lifecycle of various
 // gRPC services registered with it.
 type GRPCRunner struct {
-	cfg           *runner.Config
-	logger        *zap.Logger
-	metrics       *metrics.Metrics
-	health        *health.Checker
-	mu            sync.RWMutex
-	boot          *rkboot.Boot
-	nrApp         *newrelic.Application
-	grpcEntry     *rkgrpc.GrpcEntry
-	grpcServer    *pkggrpc.Server
-	taskHandler   *taskhandler.Handler
-	redisClient   *redis.Client
-	shutdown      chan struct{}
-	done          chan struct{}
+	cfg         *runner.Config
+	logger      *zap.Logger
+	metrics     *metrics.Metrics
+	health      *health.Checker
+	mu          sync.RWMutex
+	boot        *rkboot.Boot
+	nrApp       *newrelic.Application
+	grpcEntry   *rkgrpc.GrpcEntry
+	grpcServer  *pkggrpc.Server
+	taskHandler *taskhandler.Handler
+	redisClient *redis.Client
+	shutdown    chan struct{}
+	done        chan struct{}
 }
 
 // New creates a new instance of GRPCRunner with the provided configuration.
@@ -358,7 +358,7 @@ func (g *GRPCRunner) Run(ctx context.Context) error {
 	// Bootstrap application with timeout
 	bootstrapCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	
+
 	// Bootstrap the application
 	g.boot.Bootstrap(bootstrapCtx)
 
@@ -397,7 +397,7 @@ func (g *GRPCRunner) performShutdown(ctx context.Context) error {
 	if g.nrApp != nil {
 		shutdownNRCtx, cancelNR := context.WithTimeout(shutdownCtx, 5*time.Second)
 		defer cancelNR()
-		
+
 		done := make(chan struct{})
 		go func() {
 			g.nrApp.Shutdown(5 * time.Second)
@@ -441,4 +441,4 @@ func (g *GRPCRunner) Close(ctx context.Context) error {
 
 	close(g.shutdown)
 	return g.performShutdown(ctx)
-} 
+}

@@ -26,45 +26,45 @@ type Metrics struct {
 	mu     sync.RWMutex
 
 	// Server metrics
-	uptime prometheus.Gauge
+	uptime     prometheus.Gauge
 	goroutines prometheus.Gauge
-	
+
 	// Request metrics
 	requestsTotal    *prometheus.CounterVec
 	requestDuration  *prometheus.HistogramVec
 	requestsInFlight prometheus.Gauge
-	
+
 	// Error metrics
 	errorTotal *prometheus.CounterVec
-	
+
 	// Resource metrics
-	memoryUsage    prometheus.Gauge
-	cpuUsage       prometheus.Gauge
+	memoryUsage     prometheus.Gauge
+	cpuUsage        prometheus.Gauge
 	openConnections prometheus.Gauge
 
 	// Health metrics
 	componentHealth *prometheus.GaugeVec
-	gcDuration     prometheus.Histogram
-	gcCount        prometheus.Counter
+	gcDuration      prometheus.Histogram
+	gcCount         prometheus.Counter
 
 	// System metrics
-	threadCount    prometheus.Gauge
-	heapObjects    prometheus.Gauge
-	heapAlloc      prometheus.Gauge
-	stackInUse     prometheus.Gauge
+	threadCount prometheus.Gauge
+	heapObjects prometheus.Gauge
+	heapAlloc   prometheus.Gauge
+	stackInUse  prometheus.Gauge
 
 	// Redis metrics
 	redisLatency          prometheus.Gauge
 	redisConnectionStatus prometheus.Gauge
-	redisOperations      *prometheus.CounterVec
-	redisErrors          *prometheus.CounterVec
+	redisOperations       *prometheus.CounterVec
+	redisErrors           *prometheus.CounterVec
 }
 
 // New creates a new Metrics instance
 func New(logger *zap.Logger) *Metrics {
 	m := &Metrics{
 		logger: logger,
-		
+
 		// Server metrics
 		uptime: promauto.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
@@ -78,7 +78,7 @@ func New(logger *zap.Logger) *Metrics {
 			Name:      "goroutines",
 			Help:      "Current number of goroutines",
 		}),
-		
+
 		// Request metrics
 		requestsTotal: promauto.NewCounterVec(
 			prometheus.CounterOpts{
@@ -105,7 +105,7 @@ func New(logger *zap.Logger) *Metrics {
 			Name:      "requests_in_flight",
 			Help:      "Current number of requests being processed",
 		}),
-		
+
 		// Error metrics
 		errorTotal: promauto.NewCounterVec(
 			prometheus.CounterOpts{
@@ -116,7 +116,7 @@ func New(logger *zap.Logger) *Metrics {
 			},
 			[]string{"type"},
 		),
-		
+
 		// Resource metrics
 		memoryUsage: promauto.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
@@ -232,7 +232,7 @@ func (m *Metrics) StartServer(addr string) error {
 // StartCollection starts collecting metrics
 func (m *Metrics) StartCollection(ctx context.Context) {
 	startTime := time.Now()
-	
+
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
@@ -260,13 +260,13 @@ func (m *Metrics) collect(startTime time.Time) {
 	// Update memory stats
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
-	
+
 	m.memoryUsage.Set(float64(memStats.Alloc))
 	m.heapObjects.Set(float64(memStats.HeapObjects))
 	m.heapAlloc.Set(float64(memStats.HeapAlloc))
 	m.stackInUse.Set(float64(memStats.StackInuse))
 	m.threadCount.Set(float64(runtime.NumCPU()))
-	
+
 	// Update GC stats
 	m.gcCount.Add(float64(memStats.NumGC))
 	if memStats.NumGC > 0 {
@@ -347,4 +347,4 @@ func (m *Metrics) RecordRedisOperation(operation string) {
 // RecordRedisError records a Redis error
 func (m *Metrics) RecordRedisError(errorType string) {
 	m.redisErrors.WithLabelValues(errorType).Inc()
-} 
+}

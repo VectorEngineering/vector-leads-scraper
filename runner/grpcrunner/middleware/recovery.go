@@ -13,4 +13,4 @@ func CreateRecoveryOptions() []grpc_recovery.Option {
 			return status.Errorf(codes.Internal, "panic triggered: %v", p)
 		}),
 	}
-} 
+}

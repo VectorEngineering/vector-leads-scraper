@@ -81,7 +81,7 @@ type Config struct {
 	Radius                   float64
 	Addr                     string
 	DisablePageReuse         bool
-	GRPCEnabled             bool
+	GRPCEnabled              bool
 
 	// gRPC-specific configurations
 	GRPCPort       int           `mapstructure:"grpc-port"`

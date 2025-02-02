@@ -197,4 +197,4 @@ func (h *Handler) GetRedisClient() *redis.Client {
 		return nil
 	}
 	return h.components.Client
-} 
+}

@@ -72,7 +72,7 @@ func (c *Client) EnqueueTask(ctx context.Context, task *asynq.Task, subscription
 
 	// Add queue option based on subscription type
 	queueOpts := append(opts, asynq.Queue(subscriptionType.GetQueueName()))
-	
+
 	return c.client.EnqueueContext(ctx, task, queueOpts...)
 }
 
@@ -129,4 +129,4 @@ func WithRetry(max int) asynq.Option {
 //	)
 func WithDeadline(t time.Time) asynq.Option {
 	return asynq.Deadline(t)
-} 
+}

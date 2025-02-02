@@ -67,7 +67,7 @@ func TestCreateRateLimitInterceptor(t *testing.T) {
 			elapsed := time.Since(start)
 
 			// Verify that the rate limiting is working
-			expectedMinDuration := time.Duration(float64(tt.requests-1)/float64(tt.rps) * float64(time.Second))
+			expectedMinDuration := time.Duration(float64(tt.requests-1) / float64(tt.rps) * float64(time.Second))
 			if elapsed < expectedMinDuration {
 				t.Errorf("requests completed too quickly: got %v, expected at least %v", elapsed, expectedMinDuration)
 			}
@@ -125,7 +125,7 @@ func TestCreateRateLimitStreamInterceptor(t *testing.T) {
 			elapsed := time.Since(start)
 
 			// Verify that the rate limiting is working
-			expectedMinDuration := time.Duration(float64(tt.requests-1)/float64(tt.rps) * float64(time.Second))
+			expectedMinDuration := time.Duration(float64(tt.requests-1) / float64(tt.rps) * float64(time.Second))
 			if elapsed < expectedMinDuration {
 				t.Errorf("requests completed too quickly: got %v, expected at least %v", elapsed, expectedMinDuration)
 			}
@@ -167,4 +167,4 @@ func TestNewRateLimiter(t *testing.T) {
 			}
 		})
 	}
-} 
+}

@@ -155,4 +155,4 @@ func TestAggregator(t *testing.T) {
 			assert.False(t, exists, "Group should be processed")
 		})
 	})
-} 
+}

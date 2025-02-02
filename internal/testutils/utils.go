@@ -197,44 +197,44 @@ func GenerateRandomizeUrl() string {
 //
 // Returns:
 //   - A pointer to a new UserAccount instance with randomized data
-func GenerateRandomizedAccount() *proto.Account {	
+func GenerateRandomizedAccount() *proto.Account {
 	return &proto.Account{
-		Email:               GenerateRandomEmail(10),
-		AuthPlatformUserId:  fmt.Sprintf("auth0|%s", GenerateRandomString(24, true, false)),
-		OrgId:               fmt.Sprintf("org_%s", GenerateRandomString(10, true, false)),
-		TenantId:            fmt.Sprintf("tenant_%s", GenerateRandomString(10, true, false)),
-		AccountStatus:       proto.Account_AccountStatus(GenerateRandomInt(0, 2)),
-		Roles:               []string{"role_1", "role_2"},
-		Permissions:         []string{"permission_1", "permission_2"},
-		MfaEnabled:          false,
-		LastLoginAt:         nil,
-		TotalJobsRun:        0,
-		MonthlyJobLimit:     int32(GenerateRandomInt(1, 100)),
-		ConcurrentJobLimit:  int32(GenerateRandomInt(1, 100)),
-		Workspaces:          nil,
-		Settings:            nil,
-		Timezone:            "America/New_York",
+		Email:              GenerateRandomEmail(10),
+		AuthPlatformUserId: fmt.Sprintf("auth0|%s", GenerateRandomString(24, true, false)),
+		OrgId:              fmt.Sprintf("org_%s", GenerateRandomString(10, true, false)),
+		TenantId:           fmt.Sprintf("tenant_%s", GenerateRandomString(10, true, false)),
+		AccountStatus:      proto.Account_AccountStatus(GenerateRandomInt(0, 2)),
+		Roles:              []string{"role_1", "role_2"},
+		Permissions:        []string{"permission_1", "permission_2"},
+		MfaEnabled:         false,
+		LastLoginAt:        nil,
+		TotalJobsRun:       0,
+		MonthlyJobLimit:    int32(GenerateRandomInt(1, 100)),
+		ConcurrentJobLimit: int32(GenerateRandomInt(1, 100)),
+		Workspaces:         nil,
+		Settings:           nil,
+		Timezone:           "America/New_York",
 	}
 }
 
 func GenerateRandomWorkspace() *proto.Workspace {
 	return &proto.Workspace{
-		Name: GenerateRandomString(10, false, false),
-		Industry: industries[GenerateRandomInt(0, len(industries)-1)],
-		Domain: GenerateRandomizeUrl(),
-		GdprCompliant: false,
-		HipaaCompliant: false,
-		Soc2Compliant: false,
-		StorageQuota: int64(GenerateRandomInt(1, 1000000)),
-		UsedStorage: int64(GenerateRandomInt(1, 1000000)),
-		CreatedAt: nil,
-		UpdatedAt: nil,
-		DeletedAt: nil,
-		Workflows: nil,
-		JobsRunThisMonth: 0,
-		WorkspaceJobLimit: 0,
-		DailyJobQuota:     0,
-		ActiveScrapers:     0,
+		Name:                GenerateRandomString(10, false, false),
+		Industry:            industries[GenerateRandomInt(0, len(industries)-1)],
+		Domain:              GenerateRandomizeUrl(),
+		GdprCompliant:       false,
+		HipaaCompliant:      false,
+		Soc2Compliant:       false,
+		StorageQuota:        int64(GenerateRandomInt(1, 1000000)),
+		UsedStorage:         int64(GenerateRandomInt(1, 1000000)),
+		CreatedAt:           nil,
+		UpdatedAt:           nil,
+		DeletedAt:           nil,
+		Workflows:           nil,
+		JobsRunThisMonth:    0,
+		WorkspaceJobLimit:   0,
+		DailyJobQuota:       0,
+		ActiveScrapers:      0,
 		TotalLeadsCollected: 0,
 		LastJobRun:          nil,
 	}
@@ -245,20 +245,20 @@ func GenerateRandomizedScrapingJob() *proto.ScrapingJob {
 	startDate := now.AddDate(-5, 0, 0) // 5 years ago
 
 	return &proto.ScrapingJob{
-		CreatedAt: GenerateRandomTimestamp(startDate, now),
-		Status: proto.BackgroundJobStatus(GenerateRandomInt(0, 2)),
-		Priority: int32(GenerateRandomInt(0, 100)),
+		CreatedAt:   GenerateRandomTimestamp(startDate, now),
+		Status:      proto.BackgroundJobStatus(GenerateRandomInt(0, 2)),
+		Priority:    int32(GenerateRandomInt(0, 100)),
 		PayloadType: "payload_type",
-		Payload: []byte(GenerateRandomString(100, true, false)),
-		Name: GenerateRandomString(10, false, false),
-		Keywords: []string{"keyword_1", "keyword_2"},
-		Lang: "en",
-		Zoom: int32(GenerateRandomInt(1, 20)),
-		Lat: "40.7128",
-		Lon: "-74.0060",
-		FastMode: false,
-		Radius: int32(GenerateRandomInt(1, 1000000)),
-		MaxTime: int32(GenerateRandomInt(1, 3600)),
+		Payload:     []byte(GenerateRandomString(100, true, false)),
+		Name:        GenerateRandomString(10, false, false),
+		Keywords:    []string{"keyword_1", "keyword_2"},
+		Lang:        "en",
+		Zoom:        int32(GenerateRandomInt(1, 20)),
+		Lat:         "40.7128",
+		Lon:         "-74.0060",
+		FastMode:    false,
+		Radius:      int32(GenerateRandomInt(1, 1000000)),
+		MaxTime:     int32(GenerateRandomInt(1, 3600)),
 	}
 }
 
@@ -377,31 +377,31 @@ func GenerateRandomAPIKey() *proto.APIKey {
 // GenerateRandomScrapingWorkflow creates a new ScrapingWorkflow instance with random test data
 func GenerateRandomScrapingWorkflow() *proto.ScrapingWorkflow {
 	return &proto.ScrapingWorkflow{
-		CronExpression:         "0 0 * * *", // Daily at midnight
-		Status:                 proto.WorkflowStatus(GenerateRandomInt(0, 2)),
-		RetryCount:             int32(GenerateRandomInt(0, 5)),
-		MaxRetries:             5,
-		AlertEmails:            GenerateRandomEmail(8),
-		OrgId:                  fmt.Sprintf("org_%s", GenerateRandomString(10, true, false)),
-		TenantId:               fmt.Sprintf("tenant_%s", GenerateRandomString(10, true, false)),
-		CreatedAt:              nil,
-		UpdatedAt:              nil,
-		DeletedAt:              nil,
-		GeoFencingRadius:       float32(GenerateRandomFloat(1000, 10000)),
-		GeoFencingLat:          GenerateRandomFloat(-90, 90),
-		GeoFencingLon:          GenerateRandomFloat(-180, 180),
-		GeoFencingZoomMin:      int32(GenerateRandomInt(1, 10)),
-		GeoFencingZoomMax:      int32(GenerateRandomInt(11, 20)),
-		IncludeReviews:         GenerateRandomInt(0, 1) == 1,
-		IncludePhotos:          GenerateRandomInt(0, 1) == 1,
-		IncludeBusinessHours:   GenerateRandomInt(0, 1) == 1,
-		MaxReviewsPerBusiness:  int32(GenerateRandomInt(10, 100)),
-		OutputFormat:           proto.ScrapingWorkflow_OutputFormat(GenerateRandomInt(0, 2)),
-		OutputDestination:      fmt.Sprintf("s3://bucket-%s", GenerateRandomString(8, true, false)),
-		AnonymizePii:           GenerateRandomInt(0, 1) == 1,
+		CronExpression:        "0 0 * * *", // Daily at midnight
+		Status:                proto.WorkflowStatus(GenerateRandomInt(0, 2)),
+		RetryCount:            int32(GenerateRandomInt(0, 5)),
+		MaxRetries:            5,
+		AlertEmails:           GenerateRandomEmail(8),
+		OrgId:                 fmt.Sprintf("org_%s", GenerateRandomString(10, true, false)),
+		TenantId:              fmt.Sprintf("tenant_%s", GenerateRandomString(10, true, false)),
+		CreatedAt:             nil,
+		UpdatedAt:             nil,
+		DeletedAt:             nil,
+		GeoFencingRadius:      float32(GenerateRandomFloat(1000, 10000)),
+		GeoFencingLat:         GenerateRandomFloat(-90, 90),
+		GeoFencingLon:         GenerateRandomFloat(-180, 180),
+		GeoFencingZoomMin:     int32(GenerateRandomInt(1, 10)),
+		GeoFencingZoomMax:     int32(GenerateRandomInt(11, 20)),
+		IncludeReviews:        GenerateRandomInt(0, 1) == 1,
+		IncludePhotos:         GenerateRandomInt(0, 1) == 1,
+		IncludeBusinessHours:  GenerateRandomInt(0, 1) == 1,
+		MaxReviewsPerBusiness: int32(GenerateRandomInt(10, 100)),
+		OutputFormat:          proto.ScrapingWorkflow_OutputFormat(GenerateRandomInt(0, 2)),
+		OutputDestination:     fmt.Sprintf("s3://bucket-%s", GenerateRandomString(8, true, false)),
+		AnonymizePii:          GenerateRandomInt(0, 1) == 1,
 		RespectRobotsTxt:      true,
-		AcceptTermsOfService:   true,
-		UserAgent:              fmt.Sprintf("TestBot/%s", GenerateRandomString(8, true, false)),
+		AcceptTermsOfService:  true,
+		UserAgent:             fmt.Sprintf("TestBot/%s", GenerateRandomString(8, true, false)),
 	}
 }
 
@@ -516,14 +516,14 @@ func GenerateRandomWithOptions[T any](count int, generator func() T) []T {
 // GenerateConfig holds configuration for generating test data
 type GenerateConfig struct {
 	// Number of related records to generate
-	NumWorkflows        int
-	NumScrapingJobs     int
-	NumLeads            int
-	NumReviews          int
-	NumBusinessHours    int
-	NumAPIKeys          int
-	NumAccountSettings  int
-	NumResults          int
+	NumWorkflows       int
+	NumScrapingJobs    int
+	NumLeads           int
+	NumReviews         int
+	NumBusinessHours   int
+	NumAPIKeys         int
+	NumAccountSettings int
+	NumResults         int
 	// Whether to generate related records
 	WithWorkflows       bool
 	WithScrapingJobs    bool
@@ -559,16 +559,16 @@ func DefaultGenerateConfig() *GenerateConfig {
 
 // TestContext represents a complete test context with all related records
 type TestContext struct {
-	Account          *proto.Account
-	Workspace        *proto.Workspace
-	Workflows        []*proto.ScrapingWorkflow
-	ScrapingJobs     []*proto.ScrapingJob
-	Leads            []*proto.Lead
-	Reviews          []*proto.Review
-	BusinessHours    []*proto.BusinessHours
-	APIKeys          []*proto.APIKey
-	AccountSettings  *proto.AccountSettings
-	Results          []*proto.Result
+	Account         *proto.Account
+	Workspace       *proto.Workspace
+	Workflows       []*proto.ScrapingWorkflow
+	ScrapingJobs    []*proto.ScrapingJob
+	Leads           []*proto.Lead
+	Reviews         []*proto.Review
+	BusinessHours   []*proto.BusinessHours
+	APIKeys         []*proto.APIKey
+	AccountSettings *proto.AccountSettings
+	Results         []*proto.Result
 }
 
 // GenerateTestContext generates a complete test context with related records based on config

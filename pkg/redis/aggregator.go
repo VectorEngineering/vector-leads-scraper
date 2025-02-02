@@ -93,7 +93,7 @@ func defaultAggregator(group string, tasks []*Task) *Task {
 
 	// Use the first task as a template
 	base := tasks[0]
-	
+
 	// Combine payloads into an array
 	payloads := make([]map[string]interface{}, len(tasks))
 	for i, task := range tasks {
@@ -118,7 +118,7 @@ func defaultAggregator(group string, tasks []*Task) *Task {
 // groupState tracks the state of a task group
 type groupState struct {
 	tasks         []*Task
-	firstTaskTime time.Time  // Track when group was created
+	firstTaskTime time.Time // Track when group was created
 	lastTaskTime  time.Time
 	timer         *time.Timer
 	maxDelayTimer *time.Timer
@@ -182,7 +182,7 @@ type Aggregator struct {
 func NewAggregator(client *Client, cfg *AggregationConfig) *Aggregator {
 	// Set default configuration if none provided
 	if cfg == nil {
-		cfg = DefaultAggregationConfig()  // Use proper default config
+		cfg = DefaultAggregationConfig() // Use proper default config
 	}
 	return &Aggregator{
 		client: client,
@@ -207,7 +207,7 @@ func (a *Aggregator) Start(ctx context.Context) {
 
 // processGroups periodically checks for groups that need processing
 func (a *Aggregator) processGroups(ctx context.Context) {
-	ticker := time.NewTicker(100 * time.Millisecond)  // Faster check interval
+	ticker := time.NewTicker(100 * time.Millisecond) // Faster check interval
 	defer ticker.Stop()
 
 	for {
@@ -274,7 +274,7 @@ func (a *Aggregator) AddTask(ctx context.Context, task *Task) error {
 	if !exists {
 		state = &groupState{
 			tasks:         make([]*Task, 0),
-			firstTaskTime: time.Now(),  // Set initial creation time
+			firstTaskTime: time.Now(), // Set initial creation time
 		}
 		a.groups[task.GroupKey] = state
 	}
@@ -312,4 +312,4 @@ func (a *Aggregator) processGroup(groupKey string, tasks []*Task) {
 		// Log error but continue - we might want to add proper error handling here
 		log.Printf("Failed to enqueue aggregated task: %v", err)
 	}
-} 
+}

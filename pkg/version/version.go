@@ -29,12 +29,12 @@ var (
 // Info returns a map containing all version information
 func Info() map[string]string {
 	return map[string]string{
-		"service":    ServiceName,
-		"version":    Version,
-		"gitCommit":  GitCommit,
-		"buildTime":  BuildTime,
+		"service":   ServiceName,
+		"version":   Version,
+		"gitCommit": GitCommit,
+		"buildTime": BuildTime,
 		"goVersion": GoVersion,
-		"platform":   Platform,
+		"platform":  Platform,
 	}
 }
 
@@ -49,4 +49,4 @@ func String() string {
 		GoVersion,
 		Platform,
 	)
-} 
+}

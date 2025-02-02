@@ -60,7 +60,7 @@ func TestValidateAPIKey(t *testing.T) {
 			}
 
 			_, err := ValidateAPIKey(ctx, nil, &grpc.UnaryServerInfo{}, mockHandler)
-			
+
 			if tt.expectedError == codes.OK && err != nil {
 				t.Errorf("expected no error, got %v", err)
 				return
@@ -128,7 +128,7 @@ func TestValidateAPIKeyStream(t *testing.T) {
 			}
 
 			err := ValidateAPIKeyStream(nil, mockStream, &grpc.StreamServerInfo{}, mockHandler)
-			
+
 			if tt.expectedError == codes.OK && err != nil {
 				t.Errorf("expected no error, got %v", err)
 				return
@@ -152,4 +152,4 @@ func TestValidateAPIKeyStream(t *testing.T) {
 			}
 		})
 	}
-} 
+}

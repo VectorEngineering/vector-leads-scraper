@@ -153,4 +153,4 @@ func (s *Server) TriggerWorkflow(ctx context.Context, req *proto.TriggerWorkflow
 func (s *Server) PauseWorkflow(ctx context.Context, req *proto.PauseWorkflowRequest) (*proto.PauseWorkflowResponse, error) {
 	// TODO: Implement workflow pausing logic
 	return &proto.PauseWorkflowResponse{}, nil
-} 
+}

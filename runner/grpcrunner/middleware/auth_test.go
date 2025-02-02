@@ -56,9 +56,9 @@ func TestExtractAuthInfo(t *testing.T) {
 				})
 				return metadata.NewIncomingContext(context.Background(), md)
 			},
-			expectedError:  false,
-			expectedTID:    "tenant123",
-			expectedOrgID:  "org123",
+			expectedError: false,
+			expectedTID:   "tenant123",
+			expectedOrgID: "org123",
 		},
 	}
 
@@ -175,8 +175,8 @@ func TestGetOrgID(t *testing.T) {
 			setupContext: func() context.Context {
 				return context.WithValue(context.Background(), orgIDKey, "org123")
 			},
-			expectedError:  false,
-			expectedOrgID:  "org123",
+			expectedError: false,
+			expectedOrgID: "org123",
 		},
 	}
 
@@ -202,4 +202,4 @@ func TestGetOrgID(t *testing.T) {
 			}
 		})
 	}
-} 
+}

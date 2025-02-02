@@ -91,7 +91,7 @@ func setupRedisContainer(ctx context.Context) (testcontainers.Container, string,
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
-		Started:         true,
+		Started:          true,
 	})
 	if err != nil {
 		return nil, "", err
@@ -121,4 +121,4 @@ func getTestScheduler() *Scheduler {
 			fmt.Printf("Task enqueue error: %v\n", err)
 		},
 	})
-} 
+}

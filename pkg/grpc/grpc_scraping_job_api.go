@@ -150,4 +150,4 @@ func (s *Server) DownloadScrapingResults(ctx context.Context, req *proto.Downloa
 	s.logger.Info("downloading scraping results", zap.String("job_id", req.JobId))
 	// TODO: Implement results download logic
 	return &proto.DownloadScrapingResultsResponse{}, nil
-} 
+}

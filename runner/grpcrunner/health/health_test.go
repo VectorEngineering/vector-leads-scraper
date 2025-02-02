@@ -36,9 +36,9 @@ func TestChecker(t *testing.T) {
 		t.Run("creates checker with default options", func(t *testing.T) {
 			checker := New(logger, metricsClient, nil)
 			assert.NotNil(t, checker)
-			assert.Equal(t, uint64(1<<30), checker.memoryThreshold)    // 1GB
-			assert.Equal(t, 10000, checker.goroutineThreshold)         // 10k goroutines
-			assert.Equal(t, float64(80.0), checker.cpuThreshold)       // 80% CPU
+			assert.Equal(t, uint64(1<<30), checker.memoryThreshold) // 1GB
+			assert.Equal(t, 10000, checker.goroutineThreshold)      // 10k goroutines
+			assert.Equal(t, float64(80.0), checker.cpuThreshold)    // 80% CPU
 		})
 
 		t.Run("creates checker with custom options", func(t *testing.T) {
@@ -159,9 +159,9 @@ func TestChecker(t *testing.T) {
 
 		t.Run("handles component thresholds", func(t *testing.T) {
 			checker := New(logger, metricsClient, &Options{
-				MemoryThreshold:    1,        // Very low to trigger NOT_SERVING
-				GoroutineThreshold: 1,        // Very low to trigger NOT_SERVING
-				CPUThreshold:       0.1,      // Very low to trigger NOT_SERVING
+				MemoryThreshold:    1,   // Very low to trigger NOT_SERVING
+				GoroutineThreshold: 1,   // Very low to trigger NOT_SERVING
+				CPUThreshold:       0.1, // Very low to trigger NOT_SERVING
 				RedisClient:        redisClient,
 			})
 
@@ -187,4 +187,4 @@ func TestChecker(t *testing.T) {
 			assert.Equal(t, "Redis client not initialized", redis.Details["error"])
 		})
 	})
-} 
+}

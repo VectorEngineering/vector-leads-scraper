@@ -85,4 +85,4 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(t, 6, config.Weights["enterprise"], "Enterprise weight should be 6")
 	assert.Equal(t, 3, config.Weights["pro"], "Pro weight should be 3")
 	assert.Equal(t, 1, config.Weights["free"], "Free weight should be 1")
-} 
+}

@@ -240,4 +240,4 @@ func (c *Client) GetWithTTL(ctx context.Context, key string, value interface{}) 
 	}
 
 	return ttl, nil
-} 
+}

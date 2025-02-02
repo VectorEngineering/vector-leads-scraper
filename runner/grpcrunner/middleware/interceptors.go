@@ -140,7 +140,6 @@ func CreateInterceptors(logger *zap.Logger, zapOpts []grpc_zap.Option) ([]grpc.U
 	return unaryInterceptors, streamInterceptors
 }
 
-
 // API key validation interceptor
 func validateAPIKey(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	md, ok := metadata.FromIncomingContext(ctx)

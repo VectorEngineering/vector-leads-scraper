@@ -31,4 +31,4 @@ func NewRateLimiter(rps int) ratelimit.Limiter {
 		rps = 1 // Set a safe default minimum
 	}
 	return ratelimit.New(rps)
-} 
+}

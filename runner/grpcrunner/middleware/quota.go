@@ -35,4 +35,4 @@ func QuotaManagementStreamInterceptor(srv interface{}, ss grpc.ServerStream, inf
 	// TODO: Implement quota management logic
 
 	return handler(srv, ss)
-} 
+}

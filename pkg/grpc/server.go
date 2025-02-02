@@ -38,8 +38,8 @@ import (
 //	grpcServer := server.ListenAndServe()
 type Server struct {
 	proto.UnimplementedLeadScraperServiceServer
-	logger            *zap.Logger
-	config            *Config
+	logger *zap.Logger
+	config *Config
 }
 
 // Config defines the server's runtime configuration parameters.
@@ -54,34 +54,34 @@ type Server struct {
 //	  secure-port: 50052
 type Config struct {
 	// Network configuration
-	Port        int    `mapstructure:"grpc-port"`       // Listening port (default: 50051)
-	Host        string `mapstructure:"host"`            // Interface to bind to (default: "0.0.0.0")
-	SecurePort  string `mapstructure:"secure-port"`     // TLS port (optional)
-	CertPath    string `mapstructure:"cert-path"`       // Path to TLS certificates (required for secure-port)
-	
+	Port       int    `mapstructure:"grpc-port"`   // Listening port (default: 50051)
+	Host       string `mapstructure:"host"`        // Interface to bind to (default: "0.0.0.0")
+	SecurePort string `mapstructure:"secure-port"` // TLS port (optional)
+	CertPath   string `mapstructure:"cert-path"`   // Path to TLS certificates (required for secure-port)
+
 	// Service configuration
-	ServiceName string `mapstructure:"grpc-service-name"` // Service name for health checks (required)
-	RpcTimeout  time.Duration `mapstructure:"rpc-timeout"` // Global RPC timeout (default: 10m)
-	
+	ServiceName string        `mapstructure:"grpc-service-name"` // Service name for health checks (required)
+	RpcTimeout  time.Duration `mapstructure:"rpc-timeout"`       // Global RPC timeout (default: 10m)
+
 	// Operational parameters
 	H2C         bool   `mapstructure:"h2c"`          // Enable HTTP/2 without TLS (default: false)
-	PortMetrics int    `mapstructure:"port-metrics"`// Prometheus metrics port (default: 9090)
-	Hostname    string `mapstructure:"hostname"`    // Override hostname identification
-	
+	PortMetrics int    `mapstructure:"port-metrics"` // Prometheus metrics port (default: 9090)
+	Hostname    string `mapstructure:"hostname"`     // Override hostname identification
+
 	// Reliability testing features
-	RandomDelay bool   `mapstructure:"random-delay"`    // Enable artificial delays
-	RandomError bool   `mapstructure:"random-error"`   // Inject random errors
-	Unhealthy   bool   `mapstructure:"unhealthy"`      // Force unhealthy status
-	Unready     bool   `mapstructure:"unready"`        // Force not-ready status
-	
+	RandomDelay bool `mapstructure:"random-delay"` // Enable artificial delays
+	RandomError bool `mapstructure:"random-error"` // Inject random errors
+	Unhealthy   bool `mapstructure:"unhealthy"`    // Force unhealthy status
+	Unready     bool `mapstructure:"unready"`      // Force not-ready status
+
 	// Security configuration
-	JWTSecret   string `mapstructure:"jwt-secret"`    // JWT validation secret
-	CacheServer string `mapstructure:"cache-server"`  // Redis address (e.g., "redis:6379")
-	
+	JWTSecret   string `mapstructure:"jwt-secret"`   // JWT validation secret
+	CacheServer string `mapstructure:"cache-server"` // Redis address (e.g., "redis:6379")
+
 	// AWS integration
 	BaseBucketName string `mapstructure:"aws-bucket-name"` // S3 bucket for storage
-	Region         string `mapstructure:"aws-region"`     // AWS region (default: "us-west-2")
-	
+	Region         string `mapstructure:"aws-region"`      // AWS region (default: "us-west-2")
+
 	// UI configuration
 	UILogo    string `mapstructure:"ui-logo"`    // Path to UI logo asset
 	UIMessage string `mapstructure:"ui-message"` // Welcome message
@@ -134,7 +134,7 @@ func NewServer(config *Config, logger *zap.Logger, opts ...ServerOption) (*Serve
 //
 //	grpcServer := server.ListenAndServe()
 //	defer grpcServer.GracefulStop()
-//	
+//
 //	// Handle signals
 //	sigCh := make(chan os.Signal, 1)
 //	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)

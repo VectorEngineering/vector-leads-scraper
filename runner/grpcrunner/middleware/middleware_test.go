@@ -64,7 +64,7 @@ func TestRecoveryInterceptor(t *testing.T) {
 	recoveryInterceptor := streamInterceptors[1] // Recovery is second in the chain
 
 	mockStream := &mockRecoveryStream{ctx: context.Background()}
-	
+
 	err := recoveryInterceptor(nil, mockStream, &grpc.StreamServerInfo{
 		FullMethod: "test.Method",
 	}, func(srv interface{}, stream grpc.ServerStream) error {
@@ -80,4 +80,4 @@ func TestRecoveryInterceptor(t *testing.T) {
 func setupMockLogger() (*zap.Logger, *observer.ObservedLogs) {
 	core, recorded := observer.New(zap.DebugLevel)
 	return zap.New(core), recorded
-} 
+}

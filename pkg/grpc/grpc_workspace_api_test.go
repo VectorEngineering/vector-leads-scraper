@@ -20,8 +20,8 @@ func TestServer_CreateWorkspace(t *testing.T) {
 		errCode codes.Code
 	}{
 		{
-			name: "success",
-			req: &proto.CreateWorkspaceRequest{},
+			name:    "success",
+			req:     &proto.CreateWorkspaceRequest{},
 			wantErr: false,
 		},
 	}
@@ -50,8 +50,8 @@ func TestServer_GetWorkspace(t *testing.T) {
 		errCode codes.Code
 	}{
 		{
-			name: "success",
-			req: &proto.GetWorkspaceRequest{},
+			name:    "success",
+			req:     &proto.GetWorkspaceRequest{},
 			wantErr: false,
 		},
 	}
@@ -82,8 +82,8 @@ func TestServer_UpdateWorkspace(t *testing.T) {
 		errCode codes.Code
 	}{
 		{
-			name: "success",
-			req: &proto.UpdateWorkspaceRequest{},
+			name:    "success",
+			req:     &proto.UpdateWorkspaceRequest{},
 			wantErr: false,
 		},
 	}
@@ -113,8 +113,8 @@ func TestServer_DeleteWorkspace(t *testing.T) {
 		errCode codes.Code
 	}{
 		{
-			name: "success",
-			req: &proto.DeleteWorkspaceRequest{},
+			name:    "success",
+			req:     &proto.DeleteWorkspaceRequest{},
 			wantErr: false,
 		},
 	}

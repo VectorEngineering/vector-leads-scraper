@@ -69,8 +69,8 @@ func DefaultConfig() Config {
 	return Config{
 		Weights: map[string]int{
 			"enterprise": 6,
-			"pro":       3,
-			"free":      1,
+			"pro":        3,
+			"free":       1,
 		},
 		StrictPriority: true,
 	}
@@ -105,4 +105,4 @@ func (s SubscriptionType) IsValid() bool {
 	default:
 		return false
 	}
-} 
+}

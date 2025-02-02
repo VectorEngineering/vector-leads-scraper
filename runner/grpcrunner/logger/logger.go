@@ -16,30 +16,30 @@ import (
 // Options contains configuration options for the logger
 type Options struct {
 	ServiceName        string
-	LogLevel          string
-	Development       bool
-	SamplingInitial   int
+	LogLevel           string
+	Development        bool
+	SamplingInitial    int
 	SamplingThereafter int
-	MaxSize           int
-	MaxAge            int
-	MaxBackups        int
-	LocalTime         bool
-	Compress          bool
+	MaxSize            int
+	MaxAge             int
+	MaxBackups         int
+	LocalTime          bool
+	Compress           bool
 }
 
 // defaultOptions returns the default logger options
 func defaultOptions(cfg *runner.Config) *Options {
 	return &Options{
 		ServiceName:        cfg.ServiceName,
-		LogLevel:          cfg.LogLevel,
-		Development:       false,
-		SamplingInitial:   100,
+		LogLevel:           cfg.LogLevel,
+		Development:        false,
+		SamplingInitial:    100,
 		SamplingThereafter: 100,
-		MaxSize:           100, // megabytes
-		MaxAge:            7,   // days
-		MaxBackups:        5,
-		LocalTime:         true,
-		Compress:          true,
+		MaxSize:            100, // megabytes
+		MaxAge:             7,   // days
+		MaxBackups:         5,
+		LocalTime:          true,
+		Compress:           true,
 	}
 }
 
@@ -66,7 +66,7 @@ func NewLogger(cfg *runner.Config) (*zap.Logger, error) {
 	}
 
 	opts := defaultOptions(cfg)
-	
+
 	// Validate service name
 	if opts.ServiceName == "" {
 		opts.ServiceName = "unknown-service"
@@ -99,8 +99,8 @@ func NewLogger(cfg *runner.Config) (*zap.Logger, error) {
 	}
 
 	config := zap.Config{
-		Level:             zap.NewAtomicLevelAt(level),
-		Development:       opts.Development,
+		Level:            zap.NewAtomicLevelAt(level),
+		Development:      opts.Development,
 		Encoding:         "json",
 		EncoderConfig:    encoderConfig,
 		OutputPaths:      []string{"stdout"},
@@ -161,4 +161,4 @@ type zapWriter struct {
 func (w *zapWriter) Write(p []byte) (n int, err error) {
 	w.sugar.Info(string(p))
 	return len(p), nil
-} 
+}

@@ -40,39 +40,39 @@ func TestClient_EnqueueTask(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name            string
-		task           *asynq.Task
+		name             string
+		task             *asynq.Task
 		subscriptionType SubscriptionType
-		wantErr        bool
-		errContains    string
+		wantErr          bool
+		errContains      string
 	}{
 		{
-			name: "enterprise task",
-			task: asynq.NewTask("test_task", []byte("test_payload")),
+			name:             "enterprise task",
+			task:             asynq.NewTask("test_task", []byte("test_payload")),
 			subscriptionType: SubscriptionEnterprise,
-			wantErr: true,
-			errContains: "connection refused",
+			wantErr:          true,
+			errContains:      "connection refused",
 		},
 		{
-			name: "pro task",
-			task: asynq.NewTask("test_task", []byte("test_payload")),
+			name:             "pro task",
+			task:             asynq.NewTask("test_task", []byte("test_payload")),
 			subscriptionType: SubscriptionPro,
-			wantErr: true,
-			errContains: "connection refused",
+			wantErr:          true,
+			errContains:      "connection refused",
 		},
 		{
-			name: "free task",
-			task: asynq.NewTask("test_task", []byte("test_payload")),
+			name:             "free task",
+			task:             asynq.NewTask("test_task", []byte("test_payload")),
 			subscriptionType: SubscriptionFree,
-			wantErr: true,
-			errContains: "connection refused",
+			wantErr:          true,
+			errContains:      "connection refused",
 		},
 		{
-			name: "invalid subscription type",
-			task: asynq.NewTask("test_task", []byte("test_payload")),
+			name:             "invalid subscription type",
+			task:             asynq.NewTask("test_task", []byte("test_payload")),
 			subscriptionType: SubscriptionType("invalid"),
-			wantErr: true,
-			errContains: "invalid subscription type",
+			wantErr:          true,
+			errContains:      "invalid subscription type",
 		},
 	}
 
@@ -102,28 +102,28 @@ func TestClient_EnqueueTask(t *testing.T) {
 
 func TestGetQueueOptions(t *testing.T) {
 	tests := []struct {
-		name            string
+		name             string
 		subscriptionType SubscriptionType
-		additionalOpts  []asynq.Option
-		expectedLen     int
+		additionalOpts   []asynq.Option
+		expectedLen      int
 	}{
 		{
-			name:            "only subscription type",
+			name:             "only subscription type",
 			subscriptionType: SubscriptionEnterprise,
-			additionalOpts:  nil,
-			expectedLen:     1,
+			additionalOpts:   nil,
+			expectedLen:      1,
 		},
 		{
-			name:            "with timeout",
+			name:             "with timeout",
 			subscriptionType: SubscriptionPro,
-			additionalOpts:  []asynq.Option{WithTimeout(time.Second)},
-			expectedLen:     2,
+			additionalOpts:   []asynq.Option{WithTimeout(time.Second)},
+			expectedLen:      2,
 		},
 		{
-			name:            "with multiple options",
+			name:             "with multiple options",
 			subscriptionType: SubscriptionFree,
-			additionalOpts:  []asynq.Option{WithTimeout(time.Second), WithRetry(3)},
-			expectedLen:     3,
+			additionalOpts:   []asynq.Option{WithTimeout(time.Second), WithRetry(3)},
+			expectedLen:      3,
 		},
 	}
 
@@ -151,4 +151,4 @@ func TestOptionHelpers(t *testing.T) {
 		opt := WithDeadline(deadline)
 		require.NotNil(t, opt)
 	})
-} 
+}

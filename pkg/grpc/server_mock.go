@@ -47,34 +47,34 @@ var MockServer *Server
 //	}
 func NewMockGrpcServer() *Server {
 	config := &Config{
-		Port:            9999,
-		ServiceName:     "",
-		UILogo:          "",
-		UIMessage:       "Greetings",
-		UIColor:         "blue",
-		UIPath:          ".ui",
-		CertPath:        "",
-		Host:            "",
-		RpcTimeout:      10 * time.Minute,
-		SecurePort:      "",
-		PortMetrics:     0,
-		Hostname:        "localhost",
-		H2C:             false,
-		RandomDelay:     false,
-		RandomError:     false,
-		Unhealthy:       false,
-		Unready:         false,
-		JWTSecret:       "",
-		CacheServer:     "",
-		BaseBucketName:  "",
-		Region:          "us-west-2",
+		Port:           9999,
+		ServiceName:    "",
+		UILogo:         "",
+		UIMessage:      "Greetings",
+		UIColor:        "blue",
+		UIPath:         ".ui",
+		CertPath:       "",
+		Host:           "",
+		RpcTimeout:     10 * time.Minute,
+		SecurePort:     "",
+		PortMetrics:    0,
+		Hostname:       "localhost",
+		H2C:            false,
+		RandomDelay:    false,
+		RandomError:    false,
+		Unhealthy:      false,
+		Unready:        false,
+		JWTSecret:      "",
+		CacheServer:    "",
+		BaseBucketName: "",
+		Region:         "us-west-2",
 	}
 
 	logger, _ := zap.NewDevelopment()
 
 	return &Server{
-		logger:            logger,
-		config:            config,
+		logger: logger,
+		config: config,
 	}
 }
 
@@ -117,14 +117,14 @@ func dialer() func() MockDialOption {
 //
 //	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 //	defer cancel()
-//	
+//
 //	conn := MockGRPCService(ctx)
 //	defer conn.Close()
-//	
+//
 //	client := proto.NewLeadScraperServiceClient(conn)
 func MockGRPCService(ctx context.Context) *grpc.ClientConn {
-	conn, err := grpc.DialContext(ctx, "", 
-		grpc.WithTransportCredentials(insecure.NewCredentials()), 
+	conn, err := grpc.DialContext(ctx, "",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(dialer()()))
 	if err != nil {
 		log.Fatal(err)
@@ -138,7 +138,7 @@ func MockGRPCService(ctx context.Context) *grpc.ClientConn {
 //
 //	conn, client := setupPreconditions()
 //	defer conn.Close()
-//	
+//
 //	// Use client for test requests
 //	resp, err := client.GetLeads(context.Background(), &proto.GetLeadsRequest{})
 func setupPreconditions() (*grpc.ClientConn, proto.LeadScraperServiceClient) {

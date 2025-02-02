@@ -142,4 +142,4 @@ func (s *Server) GetWorkspaceAnalytics(ctx context.Context, req *proto.GetWorksp
 	s.logger.Info("getting workspace analytics", zap.String("workspace_id", req.WorkspaceId))
 	// TODO: Implement analytics retrieval logic
 	return &proto.GetWorkspaceAnalyticsResponse{}, nil
-} 
+}

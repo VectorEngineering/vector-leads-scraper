@@ -18,10 +18,10 @@ import (
 type Status string
 
 const (
-	StatusUnknown   Status = "UNKNOWN"
-	StatusServing   Status = "SERVING"
+	StatusUnknown    Status = "UNKNOWN"
+	StatusServing    Status = "SERVING"
 	StatusNotServing Status = "NOT_SERVING"
-	StatusError     Status = "ERROR"
+	StatusError      Status = "ERROR"
 )
 
 // Component represents a system component that can be health checked
@@ -47,14 +47,14 @@ type Checker struct {
 	// Thresholds for health checks
 	memoryThreshold    uint64
 	goroutineThreshold int
-	cpuThreshold      float64
+	cpuThreshold       float64
 }
 
 // Options configures the health checker
 type Options struct {
-	MemoryThreshold    uint64  // Maximum memory usage in bytes
-	GoroutineThreshold int     // Maximum number of goroutines
-	CPUThreshold       float64 // Maximum CPU usage percentage
+	MemoryThreshold    uint64        // Maximum memory usage in bytes
+	GoroutineThreshold int           // Maximum number of goroutines
+	CPUThreshold       float64       // Maximum CPU usage percentage
 	RedisClient        *redis.Client // Redis client for health checks
 }
 
@@ -70,13 +70,13 @@ func New(logger *zap.Logger, metrics *metrics.Metrics, opts *Options) *Checker {
 
 	checker := &Checker{
 		logger:             logger,
-		metrics:           metrics,
-		components:        make(map[string]*Component),
-		startTime:         time.Now(),
-		memoryThreshold:   opts.MemoryThreshold,
+		metrics:            metrics,
+		components:         make(map[string]*Component),
+		startTime:          time.Now(),
+		memoryThreshold:    opts.MemoryThreshold,
 		goroutineThreshold: opts.GoroutineThreshold,
-		cpuThreshold:      opts.CPUThreshold,
-		redisClient:       opts.RedisClient,
+		cpuThreshold:       opts.CPUThreshold,
+		redisClient:        opts.RedisClient,
 	}
 
 	// Register components during initialization
@@ -116,8 +116,8 @@ func (c *Checker) registerComponents() {
 
 	for _, comp := range components {
 		c.components[comp] = &Component{
-			Name:   comp,
-			Status: StatusUnknown,
+			Name:    comp,
+			Status:  StatusUnknown,
 			Details: make(map[string]interface{}),
 		}
 	}
@@ -127,7 +127,7 @@ func (c *Checker) registerComponents() {
 func (c *Checker) updateComponent(name string, updateFn func(*Component)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if component, exists := c.components[name]; exists {
 		component.LastChecked = time.Now()
 		updateFn(component)
@@ -160,8 +160,8 @@ func (c *Checker) checkMemoryHealth() {
 		mem.Details = map[string]interface{}{
 			"allocated":       memStats.Alloc,
 			"total_allocated": memStats.TotalAlloc,
-			"system":         memStats.Sys,
-			"gc_cycles":      memStats.NumGC,
+			"system":          memStats.Sys,
+			"gc_cycles":       memStats.NumGC,
 		}
 
 		if memStats.Alloc > c.memoryThreshold {
@@ -308,7 +308,7 @@ func (c *Checker) updateMetrics() {
 	if c.metrics == nil {
 		return
 	}
-	
+
 	for name, component := range c.components {
 		status := 1.0 // 1 for healthy, 0 for unhealthy
 		if component.Status != StatusServing {
@@ -341,12 +341,12 @@ func (c *Checker) GetStatus() *grpc_health_v1.HealthCheckResponse {
 func (c *Checker) GetComponentStatus(name string) *Component {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	comp, exists := c.components[name]
 	if !exists || comp == nil {
 		return nil
 	}
-	
+
 	// Return a copy to prevent race conditions
 	return &Component{
 		Name:        comp.Name,
@@ -354,4 +354,4 @@ func (c *Checker) GetComponentStatus(name string) *Component {
 		Details:     maps.Clone(comp.Details),
 		LastChecked: comp.LastChecked,
 	}
-} 
+}

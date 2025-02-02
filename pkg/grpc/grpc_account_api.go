@@ -199,4 +199,4 @@ func (s *Server) GetAccountUsage(ctx context.Context, req *proto.GetAccountUsage
 func (s *Server) UpdateAccountSettings(ctx context.Context, req *proto.UpdateAccountSettingsRequest) (*proto.UpdateAccountSettingsResponse, error) {
 	// TODO: Implement settings update logic
 	return &proto.UpdateAccountSettingsResponse{}, nil
-} 
+}

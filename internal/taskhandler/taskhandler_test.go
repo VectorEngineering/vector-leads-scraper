@@ -259,7 +259,7 @@ func TestTaskHandler(t *testing.T) {
 				// Create bad config with invalid port
 				badCfg := &runner.Config{
 					RedisHost:     "localhost",
-					RedisPort:     0,  // Invalid port
+					RedisPort:     0, // Invalid port
 					RedisPassword: "",
 					RedisDB:       0,
 				}
@@ -278,7 +278,7 @@ func TestTaskHandler(t *testing.T) {
 				err := handler.MonitorHealth(ctx)
 				assert.Error(t, err)
 				// Allow either context error or health check error due to timing
-				assert.True(t, errors.Is(err, context.Canceled) || 
+				assert.True(t, errors.Is(err, context.Canceled) ||
 					strings.Contains(err.Error(), "redis health check failed"))
 			})
 		})
@@ -313,4 +313,4 @@ func TestTaskHandler(t *testing.T) {
 			wg.Wait()
 		})
 	})
-} 
+}

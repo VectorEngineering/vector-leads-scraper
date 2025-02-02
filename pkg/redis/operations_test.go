@@ -229,4 +229,4 @@ func TestRedisOperations(t *testing.T) {
 			assert.Error(t, err)
 		})
 	})
-} 
+}

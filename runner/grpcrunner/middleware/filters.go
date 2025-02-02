@@ -14,8 +14,8 @@ type ServiceMethod struct {
 
 // MiddlewareFilter defines which services and methods a middleware should be applied to
 type MiddlewareFilter struct {
-	IncludedServices []string       // Deprecated: Use IncludedMethods instead
-	ExcludedServices []string       // Deprecated: Use ExcludedMethods instead
+	IncludedServices []string // Deprecated: Use IncludedMethods instead
+	ExcludedServices []string // Deprecated: Use ExcludedMethods instead
 	IncludedMethods  []ServiceMethod
 	ExcludedMethods  []ServiceMethod
 }
@@ -61,4 +61,4 @@ func CreateFilteredStreamInterceptor(filter *MiddlewareFilter, interceptor grpc.
 		}
 		return interceptor(srv, ss, info, handler)
 	}
-} 
+}
