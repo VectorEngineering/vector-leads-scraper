@@ -195,11 +195,12 @@ func TestBatchUpdateLeads_LargeBatch(t *testing.T) {
 	assert.True(t, success)
 
 	// Verify all leads were updated correctly by fetching them
-	for i, lead := range updatedLeads {
-		updated, err := conn.GetLead(ctx, lead.Id)
+	for i, originalLead := range createdLeads {
+		updated, err := conn.GetLead(ctx, originalLead.Id)
 		require.NoError(t, err)
 		require.NotNil(t, updated)
 
+		// Use the original lead's index to construct expected values
 		assert.Equal(t, fmt.Sprintf("Updated Lead %d", i), updated.Name)
 		assert.Equal(t, fmt.Sprintf("https://updated-lead-%d.com", i), updated.Website)
 		assert.Equal(t, fmt.Sprintf("+%d", 9876543210+i), updated.Phone)

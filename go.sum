@@ -68,6 +68,8 @@ github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-
 github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250201224936-0421781dba95/go.mod h1:IxfUHQhLfFULZm7FwQ3Tx0qanQJQGwFpoAu6doCVOQo=
 github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250202103608-ca7fd6b9b3be h1:z0t9rE2aVoT6nnw8lw05VCGYthOkh92mkU5/dpespiA=
 github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250202103608-ca7fd6b9b3be/go.mod h1:IxfUHQhLfFULZm7FwQ3Tx0qanQJQGwFpoAu6doCVOQo=
+github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250202110204-19e07159ab55 h1:J6oYQIg9L6vs85khNJWv0A4Rd/xfI2acAzPdOtvdB60=
+github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250202110204-19e07159ab55/go.mod h1:IxfUHQhLfFULZm7FwQ3Tx0qanQJQGwFpoAu6doCVOQo=
 github.com/adhocore/gronx v1.19.5 h1:cwIG4nT1v9DvadxtHBe6MzE+FZ1JDvAUC45U2fl4eSQ=
 github.com/adhocore/gronx v1.19.5/go.mod h1:7oUY1WAU8rEJWmAxXR2DN0JaO4gi9khSgKjiRypqteg=
 github.com/alecthomas/assert/v2 v2.2.2 h1:Z/iVC0xZfWTaFNE6bA3z07T86hd45Xe2eLt6WVy2bbk=
