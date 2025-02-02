@@ -104,10 +104,6 @@ func (db *Db) CreateAccount(ctx context.Context, input *CreateAccountInput) (*le
 	if err == nil && existing != nil {
 		return nil, ErrAccountAlreadyExists
 	}
-
-	// Set organization and tenant IDs
-	input.Account.OrgId = input.OrgID
-	input.Account.TenantId = input.TenantID
 	
 	// Set default account status if not specified
 	if input.Account.AccountStatus == lead_scraper_servicev1.Account_ACCOUNT_STATUS_UNSPECIFIED {

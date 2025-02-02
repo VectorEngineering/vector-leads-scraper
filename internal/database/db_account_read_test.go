@@ -56,8 +56,6 @@ func TestDb_GetAccount(t *testing.T) {
 			validate: func(t *testing.T, account *lead_scraper_servicev1.Account) {
 				assert.NotNil(t, account)
 				assert.Equal(t, validAccount.Email, account.Email)
-				assert.Equal(t, "test-org", account.OrgId)
-				assert.Equal(t, "test-tenant", account.TenantId)
 			},
 		},
 		{

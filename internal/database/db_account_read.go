@@ -120,6 +120,9 @@ func (d *ListAccountsInput) validate() error {
 //   - []*lead_scraper_servicev1.Account: A slice of Account objects
 //   - error: An error if the operation fails, or nil if successful
 func (db *Db) ListAccounts(ctx context.Context, input *ListAccountsInput) ([]*lead_scraper_servicev1.Account, error) {
+	var (
+		qOp = db.QueryOperator.AccountORM
+	)
 	// ensure the db operation executes within the specified timeout
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
@@ -137,7 +140,7 @@ func (db *Db) ListAccounts(ctx context.Context, input *ListAccountsInput) ([]*le
 	var accounts []*lead_scraper_servicev1.AccountORM
 	if err := db.Client.Engine.
 		WithContext(ctx).
-		Order("id").
+		Order(qOp.Id.Desc()).
 		Limit(input.Limit).
 		Offset(input.Offset).
 		Find(&accounts).Error; err != nil {

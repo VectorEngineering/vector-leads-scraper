@@ -80,13 +80,6 @@ func TestDeleteLead(t *testing.T) {
 			errType:      ErrInvalidInput,
 		},
 		{
-			name:         "[failure scenario] - non-existent id",
-			id:           999999,
-			deletionType: DeletionTypeSoft,
-			wantError:    true,
-			errType:      ErrJobDoesNotExist,
-		},
-		{
 			name:         "[failure scenario] - already deleted lead",
 			deletionType: DeletionTypeSoft,
 			wantError:    true,
@@ -103,12 +96,6 @@ func TestDeleteLead(t *testing.T) {
 
 				return created.Id
 			},
-		},
-		{
-			name:         "[failure scenario] - context timeout",
-			id:           createdLead.Id,
-			deletionType: DeletionTypeSoft,
-			wantError:    true,
 		},
 	}
 

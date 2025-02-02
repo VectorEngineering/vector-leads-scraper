@@ -27,8 +27,6 @@ func TestDb_UpdateAccount(t *testing.T) {
 			validate: func(t *testing.T, account *lead_scraper_servicev1.Account) {
 				assert.NotNil(t, account)
 				assert.Equal(t, "updated@example.com", account.Email)
-				assert.Equal(t, "test-org", account.OrgId)
-				assert.Equal(t, "test-tenant", account.TenantId)
 			},
 		},
 		{
@@ -41,8 +39,6 @@ func TestDb_UpdateAccount(t *testing.T) {
 			name: "[failure scenario] - non-existent account",
 			account: &lead_scraper_servicev1.Account{
 				Id:       999999,
-				OrgId:    "test-org",
-				TenantId: "test-tenant",
 				Email:    "nonexistent@example.com",
 			},
 			wantErr: true,

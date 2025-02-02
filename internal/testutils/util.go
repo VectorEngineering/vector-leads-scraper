@@ -201,8 +201,6 @@ func GenerateRandomizedAccount() *proto.Account {
 	return &proto.Account{
 		Email:               GenerateRandomEmail(10),
 		AuthPlatformUserId:  fmt.Sprintf("auth0|%s", GenerateRandomString(24, true, false)),
-		OrgId:               fmt.Sprintf("org_%s", GenerateRandomString(10, true, false)),
-		TenantId:            fmt.Sprintf("tenant_%s", GenerateRandomString(10, true, false)),
 		AccountStatus:       proto.Account_AccountStatus(GenerateRandomInt(0, 2)),
 		Roles:               []string{"role_1", "role_2"},
 		Permissions:         []string{"permission_1", "permission_2"},

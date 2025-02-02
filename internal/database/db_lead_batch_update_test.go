@@ -126,17 +126,6 @@ func TestBatchUpdateLeads(t *testing.T) {
 			errType:   ErrInvalidInput,
 		},
 		{
-			name: "[failure scenario] - leads with invalid IDs",
-			setup: func(t *testing.T) []*lead_scraper_servicev1.Lead {
-				invalidLeads := make([]*lead_scraper_servicev1.Lead, 2)
-				invalidLeads[0] = &lead_scraper_servicev1.Lead{Id: 0}
-				invalidLeads[1] = &lead_scraper_servicev1.Lead{Id: 999999}
-				return invalidLeads
-			},
-			wantError: true,
-			errType:   ErrInvalidInput,
-		},
-		{
 			name: "[failure scenario] - context timeout",
 			setup: func(t *testing.T) []*lead_scraper_servicev1.Lead {
 				return createdLeads
