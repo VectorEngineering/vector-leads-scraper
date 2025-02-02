@@ -67,7 +67,7 @@ func New(logger *zap.Logger, metrics *metrics.Metrics, opts *Options) *Checker {
 		}
 	}
 
-	return &Checker{
+	checker := &Checker{
 		logger:             logger,
 		metrics:           metrics,
 		components:        make(map[string]*Component),
@@ -77,6 +77,11 @@ func New(logger *zap.Logger, metrics *metrics.Metrics, opts *Options) *Checker {
 		cpuThreshold:      opts.CPUThreshold,
 		redisClient:       opts.RedisClient,
 	}
+
+	// Register components during initialization
+	checker.registerComponents()
+
+	return checker
 }
 
 // Start begins the health checking process
@@ -84,8 +89,8 @@ func (c *Checker) Start(ctx context.Context) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
-	// Register initial components
-	c.registerComponents()
+	// Run an initial health check immediately
+	c.checkHealth()
 
 	for {
 		select {
@@ -134,6 +139,9 @@ func (c *Checker) checkHealth() {
 	// Check CPU usage
 	c.checkCPUHealth()
 
+	// Check gRPC status
+	c.checkGRPCHealth()
+
 	// Check Redis connection
 	c.checkRedisHealth()
 
@@ -176,8 +184,10 @@ func (c *Checker) checkMemoryHealth() {
 		mem.Status = StatusServing
 	}
 
-	// Update metrics
-	c.metrics.SetMemoryUsage(float64(memStats.Alloc))
+	// Update metrics if metrics client is available
+	if c.metrics != nil {
+		c.metrics.SetMemoryUsage(float64(memStats.Alloc))
+	}
 }
 
 // checkGoroutineHealth checks goroutine count
@@ -194,8 +204,10 @@ func (c *Checker) checkGoroutineHealth() {
 		gr.Status = StatusServing
 	}
 
-	// Update metrics
-	c.metrics.SetGoroutineCount(float64(count))
+	// Update metrics if metrics client is available
+	if c.metrics != nil {
+		c.metrics.SetGoroutineCount(float64(count))
+	}
 }
 
 // checkCPUHealth checks CPU usage
@@ -215,8 +227,25 @@ func (c *Checker) checkCPUHealth() {
 		cpu.Status = StatusServing
 	}
 
-	// Update metrics
-	c.metrics.SetCPUUsage(cpuUsage)
+	// Update metrics if metrics client is available
+	if c.metrics != nil {
+		c.metrics.SetCPUUsage(cpuUsage)
+	}
+}
+
+// checkGRPCHealth checks gRPC server health
+func (c *Checker) checkGRPCHealth() {
+	grpc := c.components["grpc"]
+	grpc.LastChecked = time.Now()
+	
+	// For now, we'll consider gRPC always serving if we can run the health check
+	grpc.Status = StatusServing
+	grpc.Details["status"] = "serving"
+
+	// Log gRPC health
+	c.logger.Debug("grpc health check",
+		zap.String("status", string(grpc.Status)),
+	)
 }
 
 // checkRedisHealth checks Redis connection health
@@ -248,7 +277,9 @@ func (c *Checker) checkRedisHealth() {
 		c.logger.Error("redis health check failed",
 			zap.Duration("latency", latency),
 		)
-		c.metrics.RecordError("redis_health_check_failed")
+		if c.metrics != nil {
+			c.metrics.RecordError("redis_health_check_failed")
+		}
 	} else {
 		redis.Status = StatusServing
 		redis.Details["error"] = nil
@@ -257,17 +288,23 @@ func (c *Checker) checkRedisHealth() {
 		)
 	}
 
-	// Update Redis metrics
-	c.metrics.SetRedisLatency(latency.Seconds())
-	if redis.Status == StatusServing {
-		c.metrics.SetRedisConnectionStatus(1)
-	} else {
-		c.metrics.SetRedisConnectionStatus(0)
+	// Update Redis metrics if metrics client is available
+	if c.metrics != nil {
+		c.metrics.SetRedisLatency(latency.Seconds())
+		if redis.Status == StatusServing {
+			c.metrics.SetRedisConnectionStatus(1)
+		} else {
+			c.metrics.SetRedisConnectionStatus(0)
+		}
 	}
 }
 
 // updateMetrics updates all health-related metrics
 func (c *Checker) updateMetrics() {
+	if c.metrics == nil {
+		return
+	}
+	
 	for name, component := range c.components {
 		status := 1.0 // 1 for healthy, 0 for unhealthy
 		if component.Status != StatusServing {

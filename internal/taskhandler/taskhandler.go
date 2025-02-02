@@ -104,26 +104,7 @@ func (h *Handler) Run(ctx context.Context, workers int) error {
 	return h.Close(ctx)
 }
 
-// Close gracefully shuts down the task handler.
-func (h *Handler) Close(ctx context.Context) error {
-	h.logger.Println("Shutting down task handler...")
-
-	// Signal all goroutines to stop
-	close(h.done)
-
-	// Wait for all goroutines to finish
-	h.wg.Wait()
-
-	// Close Redis components
-	if err := h.components.Close(ctx); err != nil {
-		h.logger.Printf("Error closing Redis components: %v", err)
-	}
-
-	h.logger.Println("Task handler shutdown complete")
-	return nil
-}
-
-// monitorHealth periodically checks the health of Redis connections.
+// Private method for continuous monitoring
 func (h *Handler) monitorHealth(ctx context.Context) {
 	defer h.wg.Done()
 
@@ -145,6 +126,34 @@ func (h *Handler) monitorHealth(ctx context.Context) {
 			}
 		}
 	}
+}
+
+// Public method for single health check
+func (h *Handler) MonitorHealth(ctx context.Context) error {
+	// Perform single health check without WaitGroup
+	if !h.components.Client.IsHealthy(ctx) {
+		return fmt.Errorf("redis health check failed")
+	}
+	return nil
+}
+
+// Close gracefully shuts down the task handler.
+func (h *Handler) Close(ctx context.Context) error {
+	h.logger.Println("Shutting down task handler...")
+
+	// Signal all goroutines to stop
+	close(h.done)
+
+	// Wait for all goroutines to finish
+	h.wg.Wait()
+
+	// Close Redis components
+	if err := h.components.Close(ctx); err != nil {
+		h.logger.Printf("Error closing Redis components: %v", err)
+	}
+
+	h.logger.Println("Task handler shutdown complete")
+	return nil
 }
 
 // EnqueueTask enqueues a new task for processing.

@@ -2,8 +2,11 @@ package taskhandler
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -230,6 +233,84 @@ func TestTaskHandler(t *testing.T) {
 				[]byte(`{"key":"value"}`),
 			)
 			assert.NoError(t, err)
+		})
+
+		t.Run("monitors system health", func(t *testing.T) {
+			opts := &Options{
+				MaxRetries:    3,
+				RetryInterval: 100 * time.Millisecond,
+				TaskTypes:     []string{"health_check_task"},
+			}
+
+			handler, err := New(testCfg, opts)
+			require.NoError(t, err)
+			defer handler.Close(context.Background())
+
+			// Test healthy state with timeout
+			t.Run("returns healthy status", func(t *testing.T) {
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+				err := handler.MonitorHealth(ctx)
+				assert.NoError(t, err)
+			})
+
+			// Test Redis connection failure
+			t.Run("detects Redis connection issues", func(t *testing.T) {
+				// Create bad config with invalid port
+				badCfg := &runner.Config{
+					RedisHost:     "localhost",
+					RedisPort:     0,  // Invalid port
+					RedisPassword: "",
+					RedisDB:       0,
+				}
+
+				// Should fail to create handler with bad config
+				_, err := New(badCfg, opts)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "failed to connect to Redis")
+			})
+
+			// Test context cancellation
+			t.Run("handles context cancellation", func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+
+				err := handler.MonitorHealth(ctx)
+				assert.Error(t, err)
+				// Allow either context error or health check error due to timing
+				assert.True(t, errors.Is(err, context.Canceled) || 
+					strings.Contains(err.Error(), "redis health check failed"))
+			})
+		})
+
+		// Add this test case for concurrent health checks
+		t.Run("handles concurrent health checks", func(t *testing.T) {
+			opts := &Options{
+				MaxRetries:    3,
+				RetryInterval: 100 * time.Millisecond,
+				TaskTypes:     []string{"concurrent_health_task"},
+			}
+
+			handler, err := New(testCfg, opts)
+			require.NoError(t, err)
+			defer handler.Close(context.Background())
+
+			const numChecks = 5
+			var wg sync.WaitGroup
+			wg.Add(numChecks)
+
+			timeoutCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			for i := 0; i < numChecks; i++ {
+				go func() {
+					defer wg.Done()
+					err := handler.MonitorHealth(timeoutCtx)
+					assert.NoError(t, err)
+				}()
+			}
+
+			wg.Wait()
 		})
 	})
 } 
