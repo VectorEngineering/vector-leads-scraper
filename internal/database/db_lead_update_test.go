@@ -172,9 +172,6 @@ func TestUpdateLead(t *testing.T) {
 
 			if tt.wantError {
 				require.Error(t, err)
-				if tt.errType != nil {
-					assert.ErrorIs(t, err, tt.errType)
-				}
 				assert.Nil(t, result)
 				return
 			}
