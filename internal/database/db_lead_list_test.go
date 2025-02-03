@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -16,6 +17,10 @@ func TestListLeads(t *testing.T) {
 	result := conn.Client.Engine.Exec("DELETE FROM leads")
 	require.NoError(t, result.Error)
 
+	// Also clean up any existing scraping jobs
+	result = conn.Client.Engine.Exec("DELETE FROM gmaps_jobs")
+	require.NoError(t, result.Error)
+
 	// Create a test scraping job first
 	testJob := testutils.GenerateRandomizedScrapingJob()
 
@@ -23,28 +28,46 @@ func TestListLeads(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, createdJob)
 
-	// Create multiple test leads
+	// Create multiple test leads with explicit ordering
 	numLeads := 5
-	leadIDs := make([]uint64, numLeads)
-
+	leadIDs := make([]uint64, 0, numLeads)
+	
+	// Create leads with a small delay to ensure ordering
 	for i := 0; i < numLeads; i++ {
 		lead := testutils.GenerateRandomLead()
+		// Ensure each lead has a unique name for ordering
+		lead.Name = fmt.Sprintf("Test Lead %d", i)
+		
 		created, err := conn.CreateLead(context.Background(), createdJob.Id, lead)
 		require.NoError(t, err)
 		require.NotNil(t, created)
-		leadIDs[i] = created.Id
+		leadIDs = append(leadIDs, created.Id)
+		
+		// Small delay to ensure consistent ordering
+		time.Sleep(time.Millisecond)
 	}
+
+	// Verify we have exactly the number of leads we expect
+	var count int64
+	result = conn.Client.Engine.Table("leads").Count(&count)
+	require.NoError(t, result.Error)
+	require.Equal(t, int64(numLeads), count, "Should have exactly %d leads in the database", numLeads)
 
 	// Clean up after all tests
 	defer func() {
+		// Clean up leads
 		for _, id := range leadIDs {
 			err := conn.DeleteLead(context.Background(), id, DeletionTypeSoft)
 			require.NoError(t, err)
 		}
+		// Clean up job
 		if createdJob != nil {
 			err := conn.DeleteScrapingJob(context.Background(), createdJob.Id)
 			require.NoError(t, err)
 		}
+		// Final cleanup
+		conn.Client.Engine.Exec("DELETE FROM leads")
+		conn.Client.Engine.Exec("DELETE FROM gmaps_jobs")
 	}()
 
 	tests := []struct {
@@ -61,10 +84,15 @@ func TestListLeads(t *testing.T) {
 			offset:    0,
 			wantError: false,
 			validate: func(t *testing.T, leads []*lead_scraper_servicev1.Lead) {
-				assert.Len(t, leads, numLeads)
+				assert.Equal(t, numLeads, len(leads), "Should return exactly %d leads", numLeads)
+				// Verify each lead ID is in our created set
 				for _, lead := range leads {
 					assert.NotNil(t, lead)
-					assert.Contains(t, leadIDs, lead.Id)
+					assert.Contains(t, leadIDs, lead.Id, "Lead ID should be in the created set")
+				}
+				// Verify ordering
+				for i := 1; i < len(leads); i++ {
+					assert.True(t, leads[i].Id > leads[i-1].Id, "Leads should be ordered by ID")
 				}
 			},
 		},
@@ -74,10 +102,10 @@ func TestListLeads(t *testing.T) {
 			offset:    0,
 			wantError: false,
 			validate: func(t *testing.T, leads []*lead_scraper_servicev1.Lead) {
-				assert.Len(t, leads, 3)
+				assert.Equal(t, 3, len(leads), "Should return exactly 3 leads")
 				for _, lead := range leads {
 					assert.NotNil(t, lead)
-					assert.Contains(t, leadIDs, lead.Id)
+					assert.Contains(t, leadIDs, lead.Id, "Lead ID should be in the created set")
 				}
 			},
 		},
@@ -87,10 +115,10 @@ func TestListLeads(t *testing.T) {
 			offset:    3,
 			wantError: false,
 			validate: func(t *testing.T, leads []*lead_scraper_servicev1.Lead) {
-				assert.Len(t, leads, 2) // Only 2 remaining leads
+				assert.Equal(t, 2, len(leads), "Should return exactly 2 leads")
 				for _, lead := range leads {
 					assert.NotNil(t, lead)
-					assert.Contains(t, leadIDs, lead.Id)
+					assert.Contains(t, leadIDs, lead.Id, "Lead ID should be in the created set")
 				}
 			},
 		},
