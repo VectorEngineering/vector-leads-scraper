@@ -54,6 +54,8 @@ github.com/PuerkitoBio/goquery v1.10.0 h1:6fiXdLuUvYs2OJSvNRqlNPoBm6YABE226xrbav
 github.com/PuerkitoBio/goquery v1.10.0/go.mod h1:TjZZl68Q3eGHNBA8CWaxAN7rOU1EbDz3CWuolcO5Yu4=
 github.com/SolomonAIEngineering/backend-core-library v1.30.0 h1:c4W2Mvd7uh6wOVTLqV4TUzfj7IeHkycI//KXrWmrHTQ=
 github.com/SolomonAIEngineering/backend-core-library v1.30.0/go.mod h1:DQv8Xb1rljobwulkSPf+1fnknm/V2SkzVcIgP3lPT/w=
+github.com/VectorEngineering/vector-protobuf-definitions v1.9.1 h1:kCTSTt4v2o8YtLetAikw64oKQfFGXngiDoSLj2FVsF4=
+github.com/VectorEngineering/vector-protobuf-definitions v1.9.1/go.mod h1:oan/JMiDAM9j5u6AgEL8AGhQL8hkSHBNtgxVmXWKA6o=
 github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250203154734-88320e1e5d11 h1:RlU7rBu5jgxRJBXJkxI7D4NBwPVtLVbENrs3+3044Qs=
 github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250203154734-88320e1e5d11/go.mod h1:IxfUHQhLfFULZm7FwQ3Tx0qanQJQGwFpoAu6doCVOQo=
 github.com/adhocore/gronx v1.19.5 h1:cwIG4nT1v9DvadxtHBe6MzE+FZ1JDvAUC45U2fl4eSQ=

@@ -40,7 +40,13 @@ func (db *Db) BatchUpdateLeads(ctx context.Context, leads []*lead_scraper_servic
 			return false, fmt.Errorf("failed to convert leads to ORM: %w", err)
 		}
 
-		result, err := qOp.Updates(ormLeads)
+		// get all the ids from the batch
+		ids := make([]uint64, 0, len(batch))
+		for _, lead := range batch {
+			ids = append(ids, lead.Id)
+		}
+
+		result, err := qOp.WithContext(ctx).Where(qOp.Id.In(ids...)).Updates(ormLeads)
 		if err != nil {
 			db.Logger.Error("failed to update batch",
 				zap.Error(err),

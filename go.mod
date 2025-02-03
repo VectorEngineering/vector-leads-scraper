@@ -62,6 +62,7 @@ require (
 	github.com/Noooste/utls v1.2.12 // indirect
 	github.com/Noooste/websocket v1.0.3 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.0 // indirect
+	github.com/VectorEngineering/vector-protobuf-definitions v1.9.1 // indirect
 	github.com/adhocore/gronx v1.19.5 // indirect
 	github.com/alecthomas/go-check-sumtype v0.1.4 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.4 // indirect

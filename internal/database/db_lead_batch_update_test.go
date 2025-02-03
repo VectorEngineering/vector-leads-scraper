@@ -108,6 +108,12 @@ func TestBatchUpdateLeads(t *testing.T) {
 					assert.Equal(t, "Updated State", lead.State)
 					assert.Equal(t, "Updated Country", lead.Country)
 					assert.Equal(t, "Updated Industry", lead.Industry)
+					assert.Equal(t, fmt.Sprintf("ChIJ_updated%d", i), lead.PlaceId)
+					assert.Equal(t, "https://maps.google.com/?q=41.8781,-87.6298", lead.GoogleMapsUrl)
+					assert.Equal(t, float64(41.8781), lead.Latitude)
+					assert.Equal(t, float64(-87.6298), lead.Longitude)
+					assert.Equal(t, float32(4.8), lead.GoogleRating)
+					assert.Equal(t, int32(200), lead.ReviewCount)
 				}
 			},
 		},
@@ -183,24 +189,55 @@ func TestBatchUpdateLeads_LargeBatch(t *testing.T) {
 	testJob, createdLeads := setupTestLeads(t, 1000)
 	defer cleanupTestLeads(t, testJob, createdLeads)
 
+	// Print a few leads before update for debugging
+	t.Log("Before update:")
+	for i := 0; i < 3; i++ {
+		original, err := conn.GetLead(context.Background(), createdLeads[i].Id)
+		require.NoError(t, err)
+		t.Logf("Lead %d - ID: %d, Name: %s, Website: %s", 
+			i, original.Id, original.Name, original.Website)
+	}
+
 	// Prepare updates
 	updatedLeads := getUpdatedLeads(createdLeads)
-
+	
 	// Perform batch update
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	success, err := conn.BatchUpdateLeads(ctx, updatedLeads)
 	require.NoError(t, err)
 	assert.True(t, success)
 
-	// Verify all leads were updated correctly by fetching them
+	// Add a small delay to ensure data is committed
+	time.Sleep(2 * time.Second)
+
+	// Print the same leads after update for debugging
+	t.Log("After update:")
+	for i := 0; i < 3; i++ {
+		updated, err := conn.GetLead(context.Background(), createdLeads[i].Id)
+		require.NoError(t, err)
+		t.Logf("Lead %d - ID: %d, Name: %s, Website: %s",
+			i, updated.Id, updated.Name, updated.Website)
+		t.Logf("Expected Name: %s, Website: %s", 
+			fmt.Sprintf("Updated Lead %d", i), 
+			fmt.Sprintf("https://updated-lead-%d.com", i))
+	}
+
+	// Verify all leads were updated correctly
 	for i, originalLead := range createdLeads {
 		updated, err := conn.GetLead(ctx, originalLead.Id)
 		require.NoError(t, err)
 		require.NotNil(t, updated)
 
-		// Use the original lead's index to construct expected values
+		if updated.Name != fmt.Sprintf("Updated Lead %d", i) {
+			t.Errorf("Lead %d (ID: %d): Name not updated. Got %s, want %s",
+				i, originalLead.Id, updated.Name, fmt.Sprintf("Updated Lead %d", i))
+			t.Logf("Attempted update - ID: %d, Name: %s",
+				updatedLeads[i].Id, updatedLeads[i].Name)
+			continue
+		}
+		
 		assert.Equal(t, fmt.Sprintf("Updated Lead %d", i), updated.Name)
 		assert.Equal(t, fmt.Sprintf("https://updated-lead-%d.com", i), updated.Website)
 		assert.Equal(t, fmt.Sprintf("+%d", 9876543210+i), updated.Phone)
@@ -214,5 +251,6 @@ func TestBatchUpdateLeads_LargeBatch(t *testing.T) {
 		assert.Equal(t, float64(41.8781), updated.Latitude)
 		assert.Equal(t, float64(-87.6298), updated.Longitude)
 		assert.Equal(t, float32(4.8), updated.GoogleRating)
+		assert.Equal(t, int32(200), updated.ReviewCount)
 	}
 } 
