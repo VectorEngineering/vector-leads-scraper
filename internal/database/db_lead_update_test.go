@@ -11,6 +11,7 @@ import (
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestUpdateLead(t *testing.T) {
@@ -51,7 +52,7 @@ func TestUpdateLead(t *testing.T) {
 		{
 			name: "[success scenario] - valid update",
 			setup: func(t *testing.T) *lead_scraper_servicev1.Lead {
-				updatedLead := *createdLead
+				updatedLead := proto.Clone(createdLead).(*lead_scraper_servicev1.Lead)
 				updatedLead.Name = "Updated Lead"
 				updatedLead.Website = "https://updated-lead.com"
 				updatedLead.Phone = "+9876543210"
@@ -66,7 +67,7 @@ func TestUpdateLead(t *testing.T) {
 				updatedLead.Longitude = -87.6298
 				updatedLead.GoogleRating = 4.8
 				updatedLead.ReviewCount = 200
-				return &updatedLead
+				return updatedLead
 			},
 			wantError: false,
 			validate: func(t *testing.T, lead *lead_scraper_servicev1.Lead) {
@@ -97,9 +98,9 @@ func TestUpdateLead(t *testing.T) {
 		{
 			name: "[failure scenario] - zero id",
 			setup: func(t *testing.T) *lead_scraper_servicev1.Lead {
-				invalidLead := *createdLead
+				invalidLead := proto.Clone(createdLead).(*lead_scraper_servicev1.Lead)
 				invalidLead.Id = 0
-				return &invalidLead
+				return invalidLead
 			},
 			wantError: true,
 			errType:   ErrInvalidInput,
@@ -107,9 +108,9 @@ func TestUpdateLead(t *testing.T) {
 		{
 			name: "[failure scenario] - non-existent id",
 			setup: func(t *testing.T) *lead_scraper_servicev1.Lead {
-				invalidLead := *createdLead
+				invalidLead := proto.Clone(createdLead).(*lead_scraper_servicev1.Lead)
 				invalidLead.Id = 999999
-				return &invalidLead
+				return invalidLead
 			},
 			wantError: true,
 			errType:   ErrJobDoesNotExist,
