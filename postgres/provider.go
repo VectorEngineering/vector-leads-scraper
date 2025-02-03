@@ -338,7 +338,7 @@ func (p *provider) fetchJobsGorm(ctx context.Context, db *gorm.DB, oldStatus, ne
 		PayloadType string
 		Payload     string
 	}
-	for _, _ = range result {
+	for range result {
 		payloads = append(payloads, struct {
 			PayloadType string
 			Payload     string
