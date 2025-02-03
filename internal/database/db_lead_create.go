@@ -57,19 +57,18 @@ func (db *Db) CreateLead(ctx context.Context, scrapingJobID uint64, lead *lead_s
 func (db *Db) BatchCreateLeads(ctx context.Context, scrapingJobID uint64, leads []*lead_scraper_servicev1.Lead) ([]*lead_scraper_servicev1.Lead, error) {
 	var (
 		sQop = db.QueryOperator.ScrapingJobORM
+		sLeadQop = db.QueryOperator.LeadORM
 	)
 
 	if len(leads) == 0 {
 		return nil, ErrInvalidInput
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())	
-
+	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
 	// ensure the scraping job exists
-	scrapingJob, err := sQop.WithContext(ctx).Where(sQop.Id.Eq(scrapingJobID)).First()
-	if err != nil {
+	if _, err := sQop.WithContext(ctx).Where(sQop.Id.Eq(scrapingJobID)).First(); err != nil {
 		return nil, fmt.Errorf("failed to get scraping job: %w", err)
 	}
 
@@ -78,19 +77,11 @@ func (db *Db) BatchCreateLeads(ctx context.Context, scrapingJobID uint64, leads 
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to ORM model: %w", err)
 	}
-	
-	// break lead into batches of 150
-	batches := BreakIntoBatches[*lead_scraper_servicev1.LeadORM](leadORMs, 150)		
 
-	for _, batch := range batches {
-		if err := sQop.Leads.WithContext(ctx).Model(scrapingJob).Append(batch...); err != nil {
-			return nil, fmt.Errorf("failed to append leads to scraping job: %w", err)
-		}
 
-		// save the scraping job
-		if _, err := sQop.WithContext(ctx).Updates(scrapingJob); err != nil {
-			return nil, fmt.Errorf("failed to save scraping job: %w", err)
-		}
+	// insert the leads in batches
+	if err := sLeadQop.WithContext(ctx).Where(sLeadQop.ScrapingJobId.Eq(scrapingJobID)).CreateInBatches(leadORMs, batchSize); err != nil {
+		return nil, fmt.Errorf("failed to insert leads: %w", err)
 	}
 
 	// convert back to protobuf

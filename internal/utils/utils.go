@@ -97,12 +97,6 @@ func ValidateURL(rawURL string) (string, error) {
 		return "", fmt.Errorf("invalid host: %s", host)
 	}
 
-	// Determine if the original rawURL contains a percent sign in the path (to decide on double escape)
-	doubleEscape := false
-	if strings.Index(rawURL, "%") != -1 {
-		doubleEscape = true
-	}
-
 	// Re-encode path using custom sanitization logic while preserving trailing slash
 	cleanedPath := path.Clean(parsedURL.Path)
 	if parsedURL.Path == "" || cleanedPath == "." {
@@ -110,16 +104,6 @@ func ValidateURL(rawURL string) (string, error) {
 		parsedURL.RawPath = ""
 	} else {
 		sanitized := sanitizePath(parsedURL.Path)
-		if doubleEscape {
-			// Double-escape each non-empty segment
-			segments := strings.Split(sanitized, "/")
-			for i, seg := range segments {
-				if seg != "" {
-					segments[i] = url.PathEscape(seg)
-				}
-			}
-			sanitized = strings.Join(segments, "/")
-		}
 		decoded, err := url.PathUnescape(sanitized)
 		if err != nil {
 			return "", fmt.Errorf("failed to unescape sanitized path: %w", err)
@@ -130,10 +114,20 @@ func ValidateURL(rawURL string) (string, error) {
 
 	parsedURL.RawQuery = parsedURL.Query().Encode()
 	if parsedURL.Fragment != "" {
-		parsedURL.RawFragment = url.QueryEscape(parsedURL.Fragment)
+		parsedURL.RawFragment = sanitizeFragment(parsedURL.Fragment)
 	}
 
-	result := parsedURL.String()
+	// Manually build the URL string to ensure RawPath is used
+	result := parsedURL.Scheme + "://" + parsedURL.Host
+	if parsedURL.RawPath != "" {
+		result += parsedURL.RawPath
+	}
+	if parsedURL.RawQuery != "" {
+		result += "?" + parsedURL.RawQuery
+	}
+	if parsedURL.RawFragment != "" {
+		result += "#" + parsedURL.RawFragment
+	}
 
 	return result, nil
 }

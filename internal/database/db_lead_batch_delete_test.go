@@ -88,7 +88,7 @@ func TestBatchDeleteLeads(t *testing.T) {
 				time.Sleep(2 * time.Millisecond)
 			}
 
-			err := conn.BatchDeleteLeads(ctx, ids)
+			err := conn.BatchDeleteLeads(ctx, ids, DeletionTypeSoft)
 
 			if tt.wantError {
 				require.Error(t, err)
@@ -133,7 +133,7 @@ func TestBatchDeleteLeads_LargeBatch(t *testing.T) {
 	}()
 
 	// Perform batch delete
-	err = conn.BatchDeleteLeads(context.Background(), leadIDs)
+	err = conn.BatchDeleteLeads(context.Background(), leadIDs, DeletionTypeSoft)
 	require.NoError(t, err)
 
 	// Verify all leads were deleted

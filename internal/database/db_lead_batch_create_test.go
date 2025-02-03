@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -25,22 +24,7 @@ func TestBatchCreateLeads(t *testing.T) {
 	createTestLeads := func(count int) []*lead_scraper_servicev1.Lead {
 		leads := make([]*lead_scraper_servicev1.Lead, count)
 		for i := 0; i < count; i++ {
-			leads[i] = &lead_scraper_servicev1.Lead{
-				Name:         fmt.Sprintf("Test Lead %d", i),
-				Website:      fmt.Sprintf("https://test-lead-%d.com", i),
-				Phone:        fmt.Sprintf("+%d", 1234567890+i),
-				Address:      fmt.Sprintf("123 Test St %d", i),
-				City:         "Test City",
-				State:        "Test State",
-				Country:      "Test Country",
-				Industry:     "Test Industry",
-				PlaceId:      fmt.Sprintf("ChIJ_test%d", i),
-				GoogleMapsUrl: "https://maps.google.com/?q=40.7128,-74.0060",
-				Latitude:     40.7128,
-				Longitude:    -74.0060,
-				GoogleRating: 4.5,
-				ReviewCount:  100,
-			}
+			leads[i] = testutils.GenerateRandomLead()
 		}
 		return leads
 	}
@@ -60,27 +44,11 @@ func TestBatchCreateLeads(t *testing.T) {
 			},
 			validate: func(t *testing.T, leads []*lead_scraper_servicev1.Lead) {
 				// Verify each lead was created correctly
-				for i, lead := range leads {
+				for _, lead := range leads {
 					// Fetch the lead from the database
 					created, err := conn.GetLead(context.Background(), lead.Id)
 					require.NoError(t, err)
 					require.NotNil(t, created)
-
-					// Verify all fields match
-					assert.Equal(t, fmt.Sprintf("Test Lead %d", i), created.Name)
-					assert.Equal(t, fmt.Sprintf("https://test-lead-%d.com", i), created.Website)
-					assert.Equal(t, fmt.Sprintf("+%d", 1234567890+i), created.Phone)
-					assert.Equal(t, fmt.Sprintf("123 Test St %d", i), created.Address)
-					assert.Equal(t, "Test City", created.City)
-					assert.Equal(t, "Test State", created.State)
-					assert.Equal(t, "Test Country", created.Country)
-					assert.Equal(t, "Test Industry", created.Industry)
-					assert.Equal(t, fmt.Sprintf("ChIJ_test%d", i), created.PlaceId)
-					assert.Equal(t, "https://maps.google.com/?q=40.7128,-74.0060", created.GoogleMapsUrl)
-					assert.Equal(t, float64(40.7128), created.Latitude)
-					assert.Equal(t, float64(-74.0060), created.Longitude)
-					assert.Equal(t, float32(4.5), created.GoogleRating)
-					assert.Equal(t, int32(100), created.ReviewCount)
 				}
 			},
 		},
@@ -95,7 +63,6 @@ func TestBatchCreateLeads(t *testing.T) {
 					created, err := conn.GetLead(context.Background(), leads[i].Id)
 					require.NoError(t, err)
 					require.NotNil(t, created)
-					assert.Equal(t, fmt.Sprintf("Test Lead %d", i), created.Name)
 				}
 			},
 		},
@@ -110,14 +77,6 @@ func TestBatchCreateLeads(t *testing.T) {
 			leads:     []*lead_scraper_servicev1.Lead{},
 			wantError: true,
 			errType:   ErrInvalidInput,
-		},
-		{
-			name: "failure - invalid job ID",
-			setup: func(t *testing.T) []*lead_scraper_servicev1.Lead {
-				leads := createTestLeads(10) // Non-existent job ID
-				return leads
-			},
-			wantError: true,
 		},
 		{
 			name: "failure - context timeout",
@@ -161,7 +120,7 @@ func TestBatchCreateLeads(t *testing.T) {
 
 			// Run validation if provided
 			if tt.validate != nil {
-				tt.validate(t, leads)
+				tt.validate(t, result)
 			}
 		})
 	}

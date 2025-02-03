@@ -92,4 +92,68 @@ func (db *Db) CreateScrapingWorkflow(ctx context.Context, workflow *lead_scraper
 	}
 
 	return &pbResult, nil
+}
+
+// BatchCreateScrapingWorkflows creates multiple scraping workflows in the database
+func (db *Db) BatchCreateScrapingWorkflows(ctx context.Context, workspaceID uint64, workflows []*lead_scraper_servicev1.ScrapingWorkflow) ([]*lead_scraper_servicev1.ScrapingWorkflow, error) {
+	var (
+		sQop = db.QueryOperator.ScrapingWorkflowORM
+	)
+
+	if len(workflows) == 0 {
+		return nil, ErrInvalidInput
+	}
+
+	if workspaceID == 0 {
+		return nil, ErrInvalidInput
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
+	defer cancel()
+
+	// Validate all workflows first
+	for _, workflow := range workflows {
+		if workflow == nil {
+			return nil, ErrInvalidInput
+		}
+
+		// Validate cron expression
+		if err := validateCronExpression(workflow.CronExpression); err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidInput, err)
+		}
+
+		// Validate the workflow
+		if err := workflow.Validate(); err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidInput, err)
+		}
+	}
+
+	// Convert all workflows to ORM models
+	workflowORMs := make([]*lead_scraper_servicev1.ScrapingWorkflowORM, 0, len(workflows))
+	for _, workflow := range workflows {
+		workflowORM, err := workflow.ToORM(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert to ORM model: %w", err)
+		}
+		workflowORMs = append(workflowORMs, &workflowORM)
+	}
+
+
+	// Create workflows in batches
+	err := sQop.WithContext(ctx).Where(sQop.WorkspaceId.Eq(workspaceID)).CreateInBatches(workflowORMs, batchSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create scraping workflows: %w", err)
+	}
+
+	// Convert back to protobuf
+	pbResults := make([]*lead_scraper_servicev1.ScrapingWorkflow, 0, len(workflowORMs))
+	for _, workflowORM := range workflowORMs {
+		pbResult, err := workflowORM.ToPB(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert to protobuf: %w", err)
+		}
+		pbResults = append(pbResults, &pbResult)
+	}
+
+	return pbResults, nil
 } 

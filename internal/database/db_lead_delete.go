@@ -46,4 +46,4 @@ func (db *Db) DeleteLead(ctx context.Context, id uint64, deletionType DeletionTy
 	}
 
 	return nil
-} 
+}

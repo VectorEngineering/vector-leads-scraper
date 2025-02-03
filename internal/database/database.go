@@ -67,6 +67,9 @@ var (
 
 	// ErrAPIKeyDoesNotExist is returned when attempting to operate on a non-existent API key
 	ErrAPIKeyDoesNotExist = fmt.Errorf("API key does not exist")
+
+	// ErrLeadDoesNotExist is returned when attempting to operate on a non-existent lead
+	ErrLeadDoesNotExist = fmt.Errorf("lead does not exist")
 )
 
 // DatabaseOperations defines the methods to interact with the underlying database
@@ -115,9 +118,8 @@ type DatabaseOperations interface {
 	CreateLead(ctx context.Context, jobID uint64, lead *lead_scraper_servicev1.Lead) (*lead_scraper_servicev1.Lead, error)
 	GetLead(ctx context.Context, id uint64) (*lead_scraper_servicev1.Lead, error)
 	UpdateLead(ctx context.Context, lead *lead_scraper_servicev1.Lead) (*lead_scraper_servicev1.Lead, error)
-	BatchUpdateLeads(ctx context.Context, leads []*lead_scraper_servicev1.Lead) (bool, error)
 	DeleteLead(ctx context.Context, id uint64, deletionType DeletionType) error
-	BatchDeleteLeads(ctx context.Context, leadIDs []uint64) error
+	BatchDeleteLeads(ctx context.Context, leadIDs []uint64, deletionType DeletionType) error
 	ListLeads(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.Lead, error)
 
 	// APIKey operations

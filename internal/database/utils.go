@@ -1,12 +1,16 @@
 package database
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/dal"
+	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	user "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 )
 
 const (
-	batchSize = 500
+	batchSize = 100
 )
 
 // PreloadUserAccount preloads related data for a user account query based on the provided query reference.
@@ -48,3 +52,16 @@ func BreakIntoBatches[T any](items []T, batchSize int) [][]T {
 
     return batches
 } 
+
+
+func (db *Db) convertLeadsToORM(ctx context.Context, leads []*lead_scraper_servicev1.Lead) ([]*lead_scraper_servicev1.LeadORM, error) {
+	ormLeads := make([]*lead_scraper_servicev1.LeadORM, 0, len(leads))
+	for _, lead := range leads {
+		ormLead, err := lead.ToORM(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert lead to ORM: %w", err)
+		}
+		ormLeads = append(ormLeads, &ormLead)
+	}
+	return ormLeads, nil
+}			

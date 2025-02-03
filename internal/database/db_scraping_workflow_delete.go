@@ -40,4 +40,40 @@ func (db *Db) DeleteScrapingWorkflow(ctx context.Context, id uint64) error {
 	}
 
 	return nil
+}
+
+// BatchDeleteScrapingWorkflows deletes multiple scraping workflows by their IDs
+func (db *Db) BatchDeleteScrapingWorkflows(ctx context.Context, ids []uint64) error {
+	var (
+		sQop = db.QueryOperator.ScrapingWorkflowORM
+	)
+
+	if len(ids) == 0 {
+		return ErrInvalidInput
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
+	defer cancel()
+
+	// check if the workflows exist
+	exists, err := sQop.WithContext(ctx).Where(sQop.Id.In(ids...)).Count()
+	if err != nil {
+		return fmt.Errorf("failed to check if workflows exist: %w", err)
+	}
+
+	if exists == 0 {
+		return ErrWorkflowDoesNotExist
+	}
+
+	// delete the workflows
+	result, err := sQop.WithContext(ctx).Where(sQop.Id.In(ids...)).Delete()
+	if err != nil {
+		return fmt.Errorf("failed to delete scraping workflows: %w", err)
+	}
+
+	if result.RowsAffected != int64(len(ids)) {
+		return ErrWorkflowDoesNotExist
+	}
+
+	return nil
 } 

@@ -40,3 +40,38 @@ func (db *Db) DeleteScrapingJob(ctx context.Context, id uint64) error {
 
 	return nil
 } 
+
+func (db *Db) BatchDeleteScrapingJobs(ctx context.Context, ids []uint64) error {
+	var (
+		sQop = db.QueryOperator.ScrapingJobORM
+	)
+
+	if len(ids) == 0 {
+		return ErrInvalidInput
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
+	defer cancel()
+
+	// check if the jobs exist
+	exists, err := sQop.WithContext(ctx).Where(sQop.Id.In(ids...)).Count()
+	if err != nil {
+		return fmt.Errorf("failed to check if jobs exist: %w", err)
+	}
+
+	if exists == 0 {
+		return ErrJobDoesNotExist
+	}
+
+	// delete the jobs
+	result, err := sQop.WithContext(ctx).Where(sQop.Id.In(ids...)).Delete()
+	if err != nil {
+		return fmt.Errorf("failed to delete scraping jobs: %w", err)
+	}
+
+	if result.RowsAffected != int64(len(ids)) {
+		return ErrJobDoesNotExist
+	}
+
+	return nil
+}

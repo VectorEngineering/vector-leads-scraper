@@ -188,3 +188,154 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 		require.NotNil(t, job.UpdatedAt)
 	}
 }
+
+func TestBatchCreateScrapingJobs(t *testing.T) {
+	// Create a test workspace first
+	testWorkspace := testutils.GenerateRandomWorkspace()
+	createdWorkspace, err := conn.CreateWorkspace(context.Background(), testWorkspace)
+	require.NoError(t, err)
+	require.NotNil(t, createdWorkspace)
+
+	// Clean up workspace after all tests
+	defer func() {
+		if createdWorkspace != nil {
+			err := conn.DeleteWorkspace(context.Background(), createdWorkspace.Id)
+			require.NoError(t, err)
+		}
+	}()
+
+	tests := []struct {
+		name        string
+		workspaceID uint64
+		jobs        []*lead_scraper_servicev1.ScrapingJob
+		wantError   bool
+		errType     error
+		validate    func(t *testing.T, jobs []*lead_scraper_servicev1.ScrapingJob)
+	}{
+		{
+			name:        "[success scenario] - multiple valid jobs",
+			workspaceID: createdWorkspace.Id,
+			jobs: func() []*lead_scraper_servicev1.ScrapingJob {
+				numJobs := 5
+				jobs := make([]*lead_scraper_servicev1.ScrapingJob, numJobs)
+				for i := 0; i < numJobs; i++ {
+					jobs[i] = testutils.GenerateRandomizedScrapingJob()
+				}
+				return jobs
+			}(),
+			wantError: false,
+			validate: func(t *testing.T, jobs []*lead_scraper_servicev1.ScrapingJob) {
+				assert.Equal(t, 5, len(jobs))
+				for _, job := range jobs {
+					assert.NotNil(t, job)
+					assert.NotZero(t, job.Id)
+				}
+			},
+		},
+		{
+			name:        "[failure scenario] - nil jobs slice",
+			workspaceID: createdWorkspace.Id,
+			jobs:        nil,
+			wantError:   true,
+			errType:     ErrInvalidInput,
+		},
+		{
+			name:        "[failure scenario] - empty jobs slice",
+			workspaceID: createdWorkspace.Id,
+			jobs:        []*lead_scraper_servicev1.ScrapingJob{},
+			wantError:   true,
+			errType:     ErrInvalidInput,
+		},
+		{
+			name:        "[failure scenario] - invalid workspace ID",
+			workspaceID: 0,
+			jobs: []*lead_scraper_servicev1.ScrapingJob{
+				testutils.GenerateRandomizedScrapingJob(),
+			},
+			wantError: true,
+			errType:   ErrInvalidInput,
+		},
+		{
+			name:        "[failure scenario] - context timeout",
+			workspaceID: createdWorkspace.Id,
+			jobs: []*lead_scraper_servicev1.ScrapingJob{
+				testutils.GenerateRandomizedScrapingJob(),
+			},
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			if tt.name == "[failure scenario] - context timeout" {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, 1*time.Nanosecond)
+				defer cancel()
+				time.Sleep(2 * time.Millisecond)
+			}
+
+			results, err := conn.BatchCreateScrapingJobs(ctx, tt.workspaceID, tt.jobs)
+
+			if tt.wantError {
+				require.Error(t, err)
+				if tt.errType != nil {
+					assert.ErrorIs(t, err, tt.errType)
+				}
+				assert.Nil(t, results)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, results)
+
+			if tt.validate != nil {
+				tt.validate(t, results)
+			}
+
+			// Clean up created jobs
+			for _, job := range results {
+				err := conn.DeleteScrapingJob(context.Background(), job.Id)
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestBatchCreateScrapingJobs_LargeBatch(t *testing.T) {
+	// Create a test workspace
+	testWorkspace := testutils.GenerateRandomWorkspace()
+	createdWorkspace, err := conn.CreateWorkspace(context.Background(), testWorkspace)
+	require.NoError(t, err)
+	require.NotNil(t, createdWorkspace)
+
+	// Clean up workspace after test
+	defer func() {
+		err := conn.DeleteWorkspace(context.Background(), createdWorkspace.Id)
+		require.NoError(t, err)
+	}()
+
+	// Create a large batch of jobs
+	numJobs := 1000
+	jobs := make([]*lead_scraper_servicev1.ScrapingJob, numJobs)
+	for i := 0; i < numJobs; i++ {
+		jobs[i] = testutils.GenerateRandomizedScrapingJob()
+	}
+
+	// Create jobs in batch
+	results, err := conn.BatchCreateScrapingJobs(context.Background(), createdWorkspace.Id, jobs)
+	require.NoError(t, err)
+	require.NotNil(t, results)
+	require.Equal(t, numJobs, len(results))
+
+	// Verify all jobs were created with correct workspace ID
+	for _, job := range results {
+		assert.NotZero(t, job.Id)
+	}
+
+	// Clean up created jobs
+	for _, job := range results {
+		err := conn.DeleteScrapingJob(context.Background(), job.Id)
+		require.NoError(t, err)
+	}
+}
