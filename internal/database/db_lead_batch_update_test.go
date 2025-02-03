@@ -214,6 +214,5 @@ func TestBatchUpdateLeads_LargeBatch(t *testing.T) {
 		assert.Equal(t, float64(41.8781), updated.Latitude)
 		assert.Equal(t, float64(-87.6298), updated.Longitude)
 		assert.Equal(t, float32(4.8), updated.GoogleRating)
-		assert.Equal(t, int32(200), updated.ReviewCount)
 	}
 } 

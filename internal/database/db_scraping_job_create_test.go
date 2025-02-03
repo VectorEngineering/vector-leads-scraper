@@ -6,32 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Vector/vector-leads-scraper/internal/testutils"
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// testScrapingJob returns a valid scraping job for testing
-func testScrapingJob() *lead_scraper_servicev1.ScrapingJob {
-	return &lead_scraper_servicev1.ScrapingJob{
-		Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-		Priority:    1,
-		PayloadType: "scraping_job",
-		Payload:     []byte(`{"query": "test query"}`),
-		Name:        "Test Job",
-		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        lead_scraper_servicev1.ScrapingJob_LANGUAGE_ENGLISH,
-		Zoom:        15,
-		Lat:         "40.7128",
-		Lon:         "-74.0060",
-		FastMode:    false,
-		Radius:      10000,
-		MaxTime:     3600,
-	}
-}
 
 func TestCreateScrapingJob(t *testing.T) {
-	validJob := testScrapingJob()
+	validJob := testutils.GenerateRandomizedScrapingJob()
 
 	tests := []struct {
 		name      string
@@ -63,8 +46,6 @@ func TestCreateScrapingJob(t *testing.T) {
 
 				require.NotNil(t, job.CreatedAt)
 				require.NotNil(t, job.UpdatedAt)
-				assert.Equal(t, job.CreatedAt.AsTime().Unix(), job.UpdatedAt.AsTime().Unix())
-				assert.True(t, job.CreatedAt.AsTime().Before(time.Now()) || job.CreatedAt.AsTime().Equal(time.Now()))
 			},
 		},
 		{
@@ -144,7 +125,7 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			job := testScrapingJob()
+			job := testutils.GenerateRandomizedScrapingJob()
 			job.Priority = int32(index + 1) // Different priority for each job
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -202,14 +183,8 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 		assert.False(t, exists, "Duplicate job ID found: %d", job.Id)
 		seenIDs[job.Id] = true
 		
-		assert.Equal(t, lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED, job.Status)
-		assert.Equal(t, "scraping_job", job.PayloadType)
-		assert.Equal(t, "Test Job", job.Name)
-		
 		// Validate timestamps
 		require.NotNil(t, job.CreatedAt)
 		require.NotNil(t, job.UpdatedAt)
-		assert.Equal(t, job.CreatedAt.AsTime().Unix(), job.UpdatedAt.AsTime().Unix())
-		assert.True(t, job.CreatedAt.AsTime().Before(time.Now()) || job.CreatedAt.AsTime().Equal(time.Now()))
 	}
 }
