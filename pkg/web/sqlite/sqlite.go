@@ -8,7 +8,7 @@ import (
 
 	_ "modernc.org/sqlite" // sqlite driver
 
-	"github.com/Vector/vector-leads-scraper/web"
+	"github.com/Vector/vector-leads-scraper/pkg/web"
 )
 
 type repo struct {

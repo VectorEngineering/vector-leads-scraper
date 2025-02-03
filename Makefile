@@ -1,5 +1,9 @@
 APP_NAME := google_maps_scraper
-VERSION := 1.7.7
+VERSION := $(shell git describe --tags --always --dirty)
+GIT_COMMIT := $(shell git rev-parse HEAD)
+BUILD_TIME := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+GO_VERSION := $(shell go version | cut -d ' ' -f 3)
+PLATFORM := $(shell go env GOOS)/$(shell go env GOARCH)
 
 # Helm/K8s related variables
 CHART_NAME := leads-scraper-service
@@ -19,6 +23,12 @@ HELM_DOCS := helm-docs
 # Deployment variables
 DOCKER_IMAGE := gosom/google-maps-scraper
 DOCKER_TAG := $(VERSION)
+
+# Go build flags
+LDFLAGS := -ldflags "\
+	-X github.com/Vector/vector-leads-scraper/pkg/version.Version=$(VERSION) \
+	-X github.com/Vector/vector-leads-scraper/pkg/version.GitCommit=$(GIT_COMMIT) \
+	-X github.com/Vector/vector-leads-scraper/pkg/version.BuildTime=$(BUILD_TIME)"
 
 # Combined deployment target that handles everything
 .PHONY: deploy
@@ -173,11 +183,15 @@ cross-compile: ## cross compiles the application
 	GOOS=windows GOARCH=amd64 go build -o bin/$(APP_NAME)-${VERSION}-windows-amd64.exe
 
 docker-build: ## builds the docker image
-	docker build -t gosom/google-maps-scraper:${VERSION} .
-	docker tag gosom/google-maps-scraper:${VERSION} gosom/google-maps-scraper:latest
+	docker build \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg GIT_COMMIT=$(GIT_COMMIT) \
+		--build-arg BUILD_TIME=$(BUILD_TIME) \
+		-t gosom/google-maps-scraper:$(VERSION) .
+	docker tag gosom/google-maps-scraper:$(VERSION) gosom/google-maps-scraper:latest
 
 docker-push: ## pushes the docker image to registry
-	docker push gosom/google-maps-scraper:${VERSION}
+	docker push gosom/google-maps-scraper:$(VERSION)
 	docker push gosom/google-maps-scraper:latest
 
 docker-dev: ## starts development environment with postgres
@@ -188,16 +202,16 @@ docker-dev-down: ## stops development environment
 
 docker-clean: ## removes all docker artifacts
 	docker-compose -f docker-compose.dev.yaml down -v
-	docker rmi gosom/google-maps-scraper:${VERSION} gosom/google-maps-scraper:latest || true
+	docker rmi gosom/google-maps-scraper:$(VERSION) gosom/google-maps-scraper:latest || true
 
 build: ## builds the executable
-	go build -o bin/$(APP_NAME)
+	go build $(LDFLAGS) -o bin/$(APP_NAME)
 
 run: build ## builds and runs the application
 	./bin/$(APP_NAME)
 
 docker-run: docker-build ## builds and runs the docker container
-	docker run -p 8080:8080 gosom/google-maps-scraper:${VERSION}
+	docker run -p 8080:8080 gosom/google-maps-scraper:$(VERSION)
 
 precommit: check-docker check-required-tools build docker-build test format vet quick-validate ## runs the precommit hooks
 
