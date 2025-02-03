@@ -35,24 +35,23 @@ func (db *Db) PreloadAccount(queryRef dal.IAccountORMDo) (*user.AccountORM, erro
 // BreakIntoBatches splits a slice of any type into smaller batches of the specified size.
 // Type parameter T can be any type (uint64, string, custom structs, etc.)
 func BreakIntoBatches[T any](items []T, batchSize int) [][]T {
-    if batchSize <= 0 {
-        batchSize = 1 // Ensure minimum batch size of 1
-    }
+	if batchSize <= 0 {
+		batchSize = 1 // Ensure minimum batch size of 1
+	}
 
-    numBatches := (len(items) + batchSize - 1) / batchSize
-    batches := make([][]T, 0, numBatches)
+	numBatches := (len(items) + batchSize - 1) / batchSize
+	batches := make([][]T, 0, numBatches)
 
-    for i := 0; i < len(items); i += batchSize {
-        end := i + batchSize
-        if end > len(items) {
-            end = len(items)
-        }
-        batches = append(batches, items[i:end])
-    }
+	for i := 0; i < len(items); i += batchSize {
+		end := i + batchSize
+		if end > len(items) {
+			end = len(items)
+		}
+		batches = append(batches, items[i:end])
+	}
 
-    return batches
-} 
-
+	return batches
+}
 
 func (db *Db) convertLeadsToORM(ctx context.Context, leads []*lead_scraper_servicev1.Lead) ([]*lead_scraper_servicev1.LeadORM, error) {
 	ormLeads := make([]*lead_scraper_servicev1.LeadORM, 0, len(leads))
@@ -64,4 +63,4 @@ func (db *Db) convertLeadsToORM(ctx context.Context, leads []*lead_scraper_servi
 		ormLeads = append(ormLeads, &ormLead)
 	}
 	return ormLeads, nil
-}			
+}

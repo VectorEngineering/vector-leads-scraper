@@ -235,4 +235,4 @@ func (db *Db) ListOrganizations(ctx context.Context, input *ListOrganizationsInp
 	}
 
 	return result, nil
-} 
+}

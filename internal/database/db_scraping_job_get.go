@@ -31,4 +31,4 @@ func (db *Db) GetScrapingJob(ctx context.Context, id uint64) (*lead_scraper_serv
 	}
 
 	return &pbResult, nil
-} 
+}

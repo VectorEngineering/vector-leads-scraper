@@ -42,4 +42,4 @@ func (db *Db) UpdateLead(ctx context.Context, lead *lead_scraper_servicev1.Lead)
 	}
 
 	return &pbResult, nil
-} 
+}

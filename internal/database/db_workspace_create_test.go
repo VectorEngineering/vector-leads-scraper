@@ -18,7 +18,7 @@ func TestDb_CreateWorkspace(t *testing.T) {
 	type args struct {
 		ctx       context.Context
 		workspace *lead_scraper_servicev1.Workspace
-		clean    func(t *testing.T, workspace *lead_scraper_servicev1.Workspace)
+		clean     func(t *testing.T, workspace *lead_scraper_servicev1.Workspace)
 	}
 
 	tests := []struct {

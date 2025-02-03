@@ -19,7 +19,7 @@ func (db *Db) CreateTenantApiKey(ctx context.Context, tenantId uint64, apiKey *l
 	var (
 		tQop = db.QueryOperator.TenantORM
 	)
-	
+
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
@@ -35,7 +35,7 @@ func (db *Db) CreateTenantApiKey(ctx context.Context, tenantId uint64, apiKey *l
 	tenant, err := tQop.WithContext(ctx).Where(tQop.Id.Eq(tenantId)).First()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
-	}	
+	}
 
 	apiKeyORM, err := apiKey.ToORM(ctx)
 	if err != nil {
@@ -43,7 +43,7 @@ func (db *Db) CreateTenantApiKey(ctx context.Context, tenantId uint64, apiKey *l
 	}
 
 	// append api key to tenant
-	if  err := tQop.ApiKeys.WithContext(ctx).Model(tenant).Append(&apiKeyORM); err != nil {
+	if err := tQop.ApiKeys.WithContext(ctx).Model(tenant).Append(&apiKeyORM); err != nil {
 		return nil, err
 	}
 
@@ -72,17 +72,17 @@ func (db *Db) GetTenantApiKey(ctx context.Context, tenantId uint64, apiKeyId uin
 	if tenantId == 0 || apiKeyId == 0 {
 		return nil, ErrInvalidInput
 	}
-	
+
 	res, err := tQop.WithContext(ctx).Where(tQop.TenantId.Eq(tenantId), tQop.Id.Eq(apiKeyId)).First()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant api key: %w", err)
 	}
 
-	pbResult, err := res.ToPB(ctx)	
+	pbResult, err := res.ToPB(ctx)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &pbResult, nil
 }
 

@@ -31,18 +31,18 @@ func TestListLeads(t *testing.T) {
 	// Create multiple test leads with explicit ordering
 	numLeads := 5
 	leadIDs := make([]uint64, 0, numLeads)
-	
+
 	// Create leads with a small delay to ensure ordering
 	for i := 0; i < numLeads; i++ {
 		lead := testutils.GenerateRandomLead()
 		// Ensure each lead has a unique name for ordering
 		lead.Name = fmt.Sprintf("Test Lead %d", i)
-		
+
 		created, err := conn.CreateLead(context.Background(), createdJob.Id, lead)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		leadIDs = append(leadIDs, created.Id)
-		
+
 		// Small delay to ensure consistent ordering
 		time.Sleep(time.Millisecond)
 	}
@@ -193,4 +193,4 @@ func TestListLeads_EmptyDatabase(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, results)
 	assert.Empty(t, results)
-} 
+}

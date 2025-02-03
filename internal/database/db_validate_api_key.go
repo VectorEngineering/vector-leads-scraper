@@ -10,9 +10,9 @@ import (
 // ValidateAPIKey checks if an API key hash exists and is valid
 func (db *Db) ValidateAPIKey(ctx context.Context, hash string) (*lead_scraper_servicev1.APIKey, error) {
 	var (
-		aQop = db.QueryOperator.APIKeyORM
+		aQop      = db.QueryOperator.APIKeyORM
 		apiKeyORM *lead_scraper_servicev1.APIKeyORM
-		err error
+		err       error
 	)
 
 	if hash == "" {
@@ -35,4 +35,4 @@ func (db *Db) ValidateAPIKey(ctx context.Context, hash string) (*lead_scraper_se
 	}
 
 	return &pbResult, nil
-} 
+}

@@ -40,4 +40,4 @@ func (db *Db) UpdateAccount(ctx context.Context, account *lead_scraper_servicev1
 	}
 
 	return result, nil
-} 
+}

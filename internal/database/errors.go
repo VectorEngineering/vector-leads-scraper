@@ -10,4 +10,4 @@ var (
 
 	// ErrTenantDoesNotExist is returned when a tenant is not found in the database
 	ErrTenantDoesNotExist = errors.New("tenant does not exist")
-) 
+)

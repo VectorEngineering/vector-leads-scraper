@@ -156,4 +156,4 @@ func TestGetLead_ConcurrentReads(t *testing.T) {
 		assert.Equal(t, createdLead.Phone, lead.Phone)
 		assert.Equal(t, createdLead.Address, lead.Address)
 	}
-} 
+}

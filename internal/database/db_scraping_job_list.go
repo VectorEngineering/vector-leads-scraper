@@ -40,4 +40,4 @@ func (db *Db) ListScrapingJobs(ctx context.Context, limit, offset uint64) ([]*le
 	}
 
 	return pbResults, nil
-} 
+}

@@ -14,9 +14,9 @@ func TestCreateWebhookConfig(t *testing.T) {
 
 	// Create a test workspace
 	workspace, err := conn.CreateWorkspace(ctx, &lead_scraper_servicev1.Workspace{
-		Name:        "Test Workspace",
-		Industry:    "Technology",
-		Domain:      "test.com",
+		Name:     "Test Workspace",
+		Industry: "Technology",
+		Domain:   "test.com",
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, workspace)
@@ -38,13 +38,13 @@ func TestCreateWebhookConfig(t *testing.T) {
 			name:        "valid webhook config",
 			workspaceId: workspace.Id,
 			webhook: &lead_scraper_servicev1.WebhookConfig{
-				WebhookName:    "Test Webhook",
+				WebhookName:   "Test Webhook",
 				Url:           "https://test.com/webhook",
 				AuthType:      "basic",
 				AuthToken:     "test-token",
 				CustomHeaders: map[string]string{"Content-Type": "application/json"},
 				MaxRetries:    3,
-				VerifySsl:    true,
+				VerifySsl:     true,
 				SigningSecret: "test-secret",
 			},
 			expectError: false,
@@ -92,22 +92,22 @@ func TestGetWebhookConfig(t *testing.T) {
 
 	// Create a test workspace
 	workspace, err := conn.CreateWorkspace(ctx, &lead_scraper_servicev1.Workspace{
-		Name:        "Test Workspace",
-		Industry:    "Technology",
-		Domain:      "test.com",
+		Name:     "Test Workspace",
+		Industry: "Technology",
+		Domain:   "test.com",
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, workspace)
 
 	// Create a test webhook config
 	webhook, err := conn.CreateWebhookConfig(ctx, workspace.Id, &lead_scraper_servicev1.WebhookConfig{
-		WebhookName:    "Test Webhook",
+		WebhookName:   "Test Webhook",
 		Url:           "https://test.com/webhook",
 		AuthType:      "basic",
 		AuthToken:     "test-token",
 		CustomHeaders: map[string]string{"Content-Type": "application/json"},
 		MaxRetries:    3,
-		VerifySsl:    true,
+		VerifySsl:     true,
 		SigningSecret: "test-secret",
 	})
 	assert.NoError(t, err)
@@ -187,22 +187,22 @@ func TestUpdateWebhookConfig(t *testing.T) {
 
 	// Create a test workspace
 	workspace, err := conn.CreateWorkspace(ctx, &lead_scraper_servicev1.Workspace{
-		Name:        "Test Workspace",
-		Industry:    "Technology",
-		Domain:      "test.com",
+		Name:     "Test Workspace",
+		Industry: "Technology",
+		Domain:   "test.com",
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, workspace)
 
 	// Create a test webhook config
 	webhook, err := conn.CreateWebhookConfig(ctx, workspace.Id, &lead_scraper_servicev1.WebhookConfig{
-		WebhookName:    "Test Webhook",
+		WebhookName:   "Test Webhook",
 		Url:           "https://test.com/webhook",
 		AuthType:      "basic",
 		AuthToken:     "test-token",
 		CustomHeaders: map[string]string{"Content-Type": "application/json"},
 		MaxRetries:    3,
-		VerifySsl:    true,
+		VerifySsl:     true,
 		SigningSecret: "test-secret",
 	})
 	assert.NoError(t, err)
@@ -227,12 +227,12 @@ func TestUpdateWebhookConfig(t *testing.T) {
 			webhook: &lead_scraper_servicev1.WebhookConfig{
 				Id:            webhook.Id,
 				WebhookName:   "Updated Webhook",
-				Url:          "https://updated.com/webhook",
-				AuthType:     "bearer",
-				AuthToken:    "updated-token",
+				Url:           "https://updated.com/webhook",
+				AuthType:      "bearer",
+				AuthToken:     "updated-token",
 				CustomHeaders: map[string]string{"Authorization": "Bearer token"},
-				MaxRetries:   5,
-				VerifySsl:   false,
+				MaxRetries:    5,
+				VerifySsl:     false,
 				SigningSecret: "updated-secret",
 			},
 			expectError: false,
@@ -288,28 +288,28 @@ func TestDeleteWebhookConfig(t *testing.T) {
 
 	// Create a test workspace
 	workspace, err := conn.CreateWorkspace(ctx, &lead_scraper_servicev1.Workspace{
-		Name:        "Test Workspace",
-		Industry:    "Technology",
-		Domain:      "test.com",
+		Name:     "Test Workspace",
+		Industry: "Technology",
+		Domain:   "test.com",
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, workspace)
 
 	// Create test webhook configs for soft and hard deletion
 	webhookSoft, err := conn.CreateWebhookConfig(ctx, workspace.Id, &lead_scraper_servicev1.WebhookConfig{
-		WebhookName:   "Soft Delete Webhook",
-		Url:          "https://test.com/webhook/soft",
-		AuthType:     "basic",
-		VerifySsl:    true,
+		WebhookName: "Soft Delete Webhook",
+		Url:         "https://test.com/webhook/soft",
+		AuthType:    "basic",
+		VerifySsl:   true,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, webhookSoft)
 
 	webhookHard, err := conn.CreateWebhookConfig(ctx, workspace.Id, &lead_scraper_servicev1.WebhookConfig{
-		WebhookName:   "Hard Delete Webhook",
-		Url:          "https://test.com/webhook/hard",
-		AuthType:     "basic",
-		VerifySsl:    true,
+		WebhookName: "Hard Delete Webhook",
+		Url:         "https://test.com/webhook/hard",
+		AuthType:    "basic",
+		VerifySsl:   true,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, webhookHard)
@@ -391,9 +391,9 @@ func TestListWebhookConfigs(t *testing.T) {
 
 	// Create a test workspace
 	workspace, err := conn.CreateWorkspace(ctx, &lead_scraper_servicev1.Workspace{
-		Name:        "Test Workspace",
-		Industry:    "Technology",
-		Domain:      "test.com",
+		Name:     "Test Workspace",
+		Industry: "Technology",
+		Domain:   "test.com",
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, workspace)
@@ -402,10 +402,10 @@ func TestListWebhookConfigs(t *testing.T) {
 	webhooks := make([]*lead_scraper_servicev1.WebhookConfig, 0)
 	for i := 0; i < 5; i++ {
 		webhook, err := conn.CreateWebhookConfig(ctx, workspace.Id, &lead_scraper_servicev1.WebhookConfig{
-			WebhookName:   fmt.Sprintf("Test Webhook %d", i),
-			Url:          fmt.Sprintf("https://test.com/webhook/%d", i),
-			AuthType:     "basic",
-			VerifySsl:    true,
+			WebhookName: fmt.Sprintf("Test Webhook %d", i),
+			Url:         fmt.Sprintf("https://test.com/webhook/%d", i),
+			AuthType:    "basic",
+			VerifySsl:   true,
 		})
 		assert.NoError(t, err)
 		assert.NotNil(t, webhook)
@@ -430,32 +430,32 @@ func TestListWebhookConfigs(t *testing.T) {
 		{
 			name:        "list all webhooks",
 			workspaceId: workspace.Id,
-			limit:      10,
-			offset:     0,
+			limit:       10,
+			offset:      0,
 			expectCount: 5,
 			expectError: false,
 		},
 		{
 			name:        "list with limit",
 			workspaceId: workspace.Id,
-			limit:      3,
-			offset:     0,
+			limit:       3,
+			offset:      0,
 			expectCount: 3,
 			expectError: false,
 		},
 		{
 			name:        "list with offset",
 			workspaceId: workspace.Id,
-			limit:      10,
-			offset:     2,
+			limit:       10,
+			offset:      2,
 			expectCount: 3,
 			expectError: false,
 		},
 		{
 			name:          "invalid workspace id",
 			workspaceId:   0,
-			limit:        10,
-			offset:       0,
+			limit:         10,
+			offset:        0,
 			expectError:   true,
 			errorContains: "invalid input",
 		},
@@ -483,4 +483,4 @@ func TestListWebhookConfigs(t *testing.T) {
 			}
 		})
 	}
-} 
+}

@@ -159,9 +159,9 @@ func New(client *postgresdb.Client, logger *zap.Logger) (*Db, error) {
 	}
 
 	database := &Db{
-		Client:          client,
-		QueryOperator:   dal.Use(client.Engine),
-		Logger:          logger,
+		Client:        client,
+		QueryOperator: dal.Use(client.Engine),
+		Logger:        logger,
 	}
 
 	// validate the database object

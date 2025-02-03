@@ -35,4 +35,4 @@ func (db *Db) CreateAPIKey(ctx context.Context, apiKey *lead_scraper_servicev1.A
 	}
 
 	return &pbResult, nil
-} 
+}

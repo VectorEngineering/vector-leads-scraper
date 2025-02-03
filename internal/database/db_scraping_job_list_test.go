@@ -19,7 +19,7 @@ func TestListScrapingJobs(t *testing.T) {
 	// Create multiple test jobs
 	numJobs := 5
 	jobIDs := make([]uint64, numJobs)
-	
+
 	for i := 0; i < numJobs; i++ {
 		job := testutils.GenerateRandomizedScrapingJob()
 		created, err := conn.CreateScrapingJob(context.Background(), job)

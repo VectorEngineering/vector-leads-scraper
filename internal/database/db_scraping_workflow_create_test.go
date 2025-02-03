@@ -15,22 +15,22 @@ import (
 
 func TestCreateScrapingWorkflow(t *testing.T) {
 	validWorkflow := &lead_scraper_servicev1.ScrapingWorkflow{
-		CronExpression:         "0 0 * * *",
+		CronExpression:        "0 0 * * *",
 		RetryCount:            0,
 		MaxRetries:            5,
 		AlertEmails:           "test@example.com",
-		GeoFencingRadius:     float32(1000.0),
-		GeoFencingLat:        40.7128,
-		GeoFencingLon:        -74.0060,
-		GeoFencingZoomMin:    1,
-		GeoFencingZoomMax:    20,
-		IncludeReviews:       true,
-		IncludePhotos:        true,
-		IncludeBusinessHours: true,
+		GeoFencingRadius:      float32(1000.0),
+		GeoFencingLat:         40.7128,
+		GeoFencingLon:         -74.0060,
+		GeoFencingZoomMin:     1,
+		GeoFencingZoomMax:     20,
+		IncludeReviews:        true,
+		IncludePhotos:         true,
+		IncludeBusinessHours:  true,
 		MaxReviewsPerBusiness: 100,
-		RespectRobotsTxt:     true,
+		RespectRobotsTxt:      true,
 		AcceptTermsOfService:  true,
-		UserAgent:            "TestBot/1.0",
+		UserAgent:             "TestBot/1.0",
 	}
 
 	tests := []struct {
@@ -74,8 +74,8 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 		{
 			name: "[failure scenario] - invalid cron expression",
 			workflow: &lead_scraper_servicev1.ScrapingWorkflow{
-				CronExpression: "99 99 99 99 99", // Obviously invalid cron
-				MaxRetries:    5,
+				CronExpression:    "99 99 99 99 99", // Obviously invalid cron
+				MaxRetries:        5,
 				GeoFencingZoomMin: 1,
 				GeoFencingZoomMax: 20,
 			},
@@ -86,10 +86,10 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 			name: "[failure scenario] - invalid geo fencing parameters",
 			workflow: &lead_scraper_servicev1.ScrapingWorkflow{
 				CronExpression:    "0 0 * * *",
-				MaxRetries:       5,
-				GeoFencingRadius: -1,
-				GeoFencingLat:    91.0,  // Invalid latitude (> 90)
-				GeoFencingLon:    181.0, // Invalid longitude (> 180)
+				MaxRetries:        5,
+				GeoFencingRadius:  -1,
+				GeoFencingLat:     91.0,  // Invalid latitude (> 90)
+				GeoFencingLon:     181.0, // Invalid longitude (> 180)
 				GeoFencingZoomMin: 1,
 				GeoFencingZoomMax: 20,
 			},
@@ -152,22 +152,22 @@ func TestCreateScrapingWorkflow_ConcurrentCreation(t *testing.T) {
 		go func(index int) {
 			defer wg.Done()
 			workflow := &lead_scraper_servicev1.ScrapingWorkflow{
-				CronExpression:         "0 0 * * *",
+				CronExpression:        "0 0 * * *",
 				RetryCount:            0,
 				MaxRetries:            5,
 				AlertEmails:           "test@example.com",
-				GeoFencingRadius:     float32(1000.0),
-				GeoFencingLat:        40.7128,
-				GeoFencingLon:        -74.0060,
-				GeoFencingZoomMin:    1,
-				GeoFencingZoomMax:    20,
-				IncludeReviews:       true,
-				IncludePhotos:        true,
-				IncludeBusinessHours: true,
+				GeoFencingRadius:      float32(1000.0),
+				GeoFencingLat:         40.7128,
+				GeoFencingLon:         -74.0060,
+				GeoFencingZoomMin:     1,
+				GeoFencingZoomMax:     20,
+				IncludeReviews:        true,
+				IncludePhotos:         true,
+				IncludeBusinessHours:  true,
 				MaxReviewsPerBusiness: 100,
-				RespectRobotsTxt:     true,
+				RespectRobotsTxt:      true,
 				AcceptTermsOfService:  true,
-				UserAgent:            fmt.Sprintf("TestBot/%d", index),
+				UserAgent:             fmt.Sprintf("TestBot/%d", index),
 			}
 
 			created, err := conn.CreateScrapingWorkflow(context.Background(), workflow)

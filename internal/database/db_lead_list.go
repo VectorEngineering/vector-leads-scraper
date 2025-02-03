@@ -40,4 +40,4 @@ func (db *Db) ListLeads(ctx context.Context, limit, offset int) ([]*lead_scraper
 	}
 
 	return leads, nil
-} 
+}

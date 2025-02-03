@@ -16,9 +16,9 @@ var ErrAccountAlreadyExists = errors.New("account already exists")
 
 // CreateAccountInput holds the input parameters for the CreateAccount function.
 type CreateAccountInput struct {
-	OrgID    string                           `validate:"required"`
-	TenantID string                           `validate:"required"`
-	Account  *lead_scraper_servicev1.Account  `validate:"required"`
+	OrgID    string                          `validate:"required"`
+	TenantID string                          `validate:"required"`
+	Account  *lead_scraper_servicev1.Account `validate:"required"`
 }
 
 func (d *CreateAccountInput) validate() error {
@@ -104,7 +104,7 @@ func (db *Db) CreateAccount(ctx context.Context, input *CreateAccountInput) (*le
 	if err == nil && existing != nil {
 		return nil, ErrAccountAlreadyExists
 	}
-	
+
 	// Set default account status if not specified
 	if input.Account.AccountStatus == lead_scraper_servicev1.Account_ACCOUNT_STATUS_UNSPECIFIED {
 		input.Account.AccountStatus = lead_scraper_servicev1.Account_ACCOUNT_STATUS_ACTIVE
@@ -119,7 +119,6 @@ func (db *Db) CreateAccount(ctx context.Context, input *CreateAccountInput) (*le
 	if err := u.WithContext(ctx).Create(&accountORM); err != nil {
 		return nil, err
 	}
-
 
 	// convert orm to pb
 	acct, err := accountORM.ToPB(ctx)

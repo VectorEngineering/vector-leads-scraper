@@ -39,14 +39,13 @@ var testContext *TestContext
 // TestContext represents a complete test context for database tests
 type TestContext struct {
 	// Base test data
-	Account          *lead_scraper_servicev1.Account
-	Workspace        *lead_scraper_servicev1.Workspace
-	AccountSettings  *lead_scraper_servicev1.AccountSettings
+	Account         *lead_scraper_servicev1.Account
+	Workspace       *lead_scraper_servicev1.Workspace
+	AccountSettings *lead_scraper_servicev1.AccountSettings
 
 	// Database connection
-	DB              *Db
+	DB *Db
 }
-
 
 type UserAccountTestContext struct {
 	// The org ID tied to the user account
@@ -58,7 +57,6 @@ type UserAccountTestContext struct {
 	// The user account
 	UserAccount *lead_scraper_servicev1.Account
 }
-
 
 type WorkspaceTestContext struct {
 	// The org ID tied to the team
@@ -91,9 +89,9 @@ func NewTestDatabase() *Db {
 	}
 
 	return &Db{
-		Client:          client,
-		QueryOperator:   dal.Use(client.Engine),
-		Logger:          zap.NewNop(),
+		Client:        client,
+		QueryOperator: dal.Use(client.Engine),
+		Logger:        zap.NewNop(),
 	}
 }
 
@@ -139,9 +137,9 @@ func NewTestContext(db *Db) *TestContext {
 
 	// Create the test context
 	ctx := &TestContext{
-		Account:          testData.Account,
-		Workspace:        testData.Workspace,
-		DB:              db,
+		Account:   testData.Account,
+		Workspace: testData.Workspace,
+		DB:        db,
 	}
 
 	// Initialize the database with test data
@@ -229,28 +227,28 @@ func TestNew(t *testing.T) {
 		{
 			name: "success - create new database instance",
 			args: args{
-				client:                conn.Client,
-				logger:                zap.NewNop(),
+				client: conn.Client,
+				logger: zap.NewNop(),
 			},
 			want: &Db{
-				Client:          conn.Client,
-				Logger:          zap.NewNop(),
+				Client: conn.Client,
+				Logger: zap.NewNop(),
 			},
 			wantErr: false,
 		},
 		{
 			name: "failure - nil client",
 			args: args{
-				client:                nil,
-				logger:                zap.NewNop(),
+				client: nil,
+				logger: zap.NewNop(),
 			},
 			wantErr: true,
 		},
 		{
 			name: "failure - nil logger",
 			args: args{
-				client:                conn.Client,
-				logger:                nil,
+				client: conn.Client,
+				logger: nil,
 			},
 			wantErr: true,
 		},
@@ -258,7 +256,7 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.client, tt.args.logger,)
+			got, err := New(tt.args.client, tt.args.logger)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -279,25 +277,25 @@ func TestDb_Validate(t *testing.T) {
 		{
 			name: "success - valid database instance",
 			db: &Db{
-				Client:          conn.Client,
-				QueryOperator:   dal.Use(conn.Client.Engine),
-				Logger:          zap.NewNop(),
+				Client:        conn.Client,
+				QueryOperator: dal.Use(conn.Client.Engine),
+				Logger:        zap.NewNop(),
 			},
 			wantErr: false,
 		},
 		{
 			name: "failure - nil client",
 			db: &Db{
-				Client:          nil,
-				Logger:          zap.NewNop(),
+				Client: nil,
+				Logger: zap.NewNop(),
 			},
 			wantErr: true,
 		},
 		{
 			name: "failure - nil logger",
 			db: &Db{
-				Client:          conn.Client,
-				Logger:          nil,
+				Client: conn.Client,
+				Logger: nil,
 			},
 			wantErr: true,
 		},
@@ -369,8 +367,8 @@ func TestDb_GetLogger(t *testing.T) {
 		{
 			name: "success - get logger",
 			db: &Db{
-				Client:          conn.Client,
-				Logger:          logger,
+				Client: conn.Client,
+				Logger: logger,
 			},
 			want: logger,
 		},

@@ -39,4 +39,4 @@ func (db *Db) GetLead(ctx context.Context, id uint64) (*lead_scraper_servicev1.L
 	}
 
 	return &pbResult, nil
-} 
+}

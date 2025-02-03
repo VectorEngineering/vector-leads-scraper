@@ -38,8 +38,8 @@ func TestDb_UpdateAccount(t *testing.T) {
 		{
 			name: "[failure scenario] - non-existent account",
 			account: &lead_scraper_servicev1.Account{
-				Id:       999999,
-				Email:    "nonexistent@example.com",
+				Id:    999999,
+				Email: "nonexistent@example.com",
 			},
 			wantErr: true,
 			errType: ErrAccountDoesNotExist,

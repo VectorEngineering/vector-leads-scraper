@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 func TestCreateScrapingJob(t *testing.T) {
 	validJob := testutils.GenerateRandomizedScrapingJob()
 
@@ -170,19 +169,19 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 
 	// Verify all jobs were created successfully
 	require.Equal(t, numJobs, len(createdJobs))
-	
+
 	// Track IDs to ensure uniqueness
 	seenIDs := make(map[uint64]bool)
-	
+
 	for _, job := range createdJobs {
 		require.NotNil(t, job)
 		require.NotZero(t, job.Id)
-		
+
 		// Verify ID uniqueness
 		_, exists := seenIDs[job.Id]
 		assert.False(t, exists, "Duplicate job ID found: %d", job.Id)
 		seenIDs[job.Id] = true
-		
+
 		// Validate timestamps
 		require.NotNil(t, job.CreatedAt)
 		require.NotNil(t, job.UpdatedAt)

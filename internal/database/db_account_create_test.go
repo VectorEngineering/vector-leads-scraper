@@ -31,8 +31,8 @@ func TestCreateAccountInput_validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "failure - nil input",
-			d: nil,
+			name:    "failure - nil input",
+			d:       nil,
 			wantErr: true,
 		},
 	}
@@ -170,7 +170,7 @@ func TestDb_CreateAccount(t *testing.T) {
 				// Create a new context with cancel for the actual operation
 				ctx, cancel := context.WithCancel(context.Background())
 				cancel() // Cancel immediately
-				
+
 				// Try to create account with cancelled context
 				_, err := conn.CreateAccount(ctx, &CreateAccountInput{
 					Account:  validAccount,

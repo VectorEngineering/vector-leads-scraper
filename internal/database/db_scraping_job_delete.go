@@ -39,7 +39,7 @@ func (db *Db) DeleteScrapingJob(ctx context.Context, id uint64) error {
 	}
 
 	return nil
-} 
+}
 
 func (db *Db) BatchDeleteScrapingJobs(ctx context.Context, ids []uint64) error {
 	var (

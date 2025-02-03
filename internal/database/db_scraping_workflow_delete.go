@@ -9,7 +9,6 @@ import (
 func (db *Db) DeleteScrapingWorkflow(ctx context.Context, id uint64) error {
 	var (
 		swQop = db.QueryOperator.ScrapingWorkflowORM
-
 	)
 
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
@@ -19,7 +18,6 @@ func (db *Db) DeleteScrapingWorkflow(ctx context.Context, id uint64) error {
 		return ErrInvalidInput
 	}
 
-	
 	// check and ensure the scraping workflow exists
 	swORM, err := swQop.WithContext(ctx).Where(swQop.Id.Eq(id)).First()
 	if err != nil {
@@ -76,4 +74,4 @@ func (db *Db) BatchDeleteScrapingWorkflows(ctx context.Context, ids []uint64) er
 	}
 
 	return nil
-} 
+}

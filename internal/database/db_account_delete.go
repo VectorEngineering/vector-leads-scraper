@@ -33,9 +33,9 @@ const (
 
 // DeleteAccountParams holds the parameters for deleting an account
 type DeleteAccountParams struct {
-	ID       uint64 `validate:"required,gt=0"`
-	DeletionType DeletionType `validate:"required"`
-	AccountStatus lead_scraper_servicev1.Account_AccountStatus `validate:"required"`	
+	ID            uint64                                       `validate:"required,gt=0"`
+	DeletionType  DeletionType                                 `validate:"required"`
+	AccountStatus lead_scraper_servicev1.Account_AccountStatus `validate:"required"`
 }
 
 func (d *DeleteAccountParams) validate() error {
@@ -85,7 +85,7 @@ func (db *Db) DeleteAccount(ctx context.Context, params *DeleteAccountParams) er
 
 	// perform soft deletion
 	b := db.QueryOperator.AccountORM
-	queryRef := b.WithContext(ctx)			
+	queryRef := b.WithContext(ctx)
 	if params.DeletionType == DeletionTypeSoft {
 		queryRef = queryRef.Where(b.Id.Eq(params.ID)).Select(field.AssociationFields)
 	} else {
@@ -93,10 +93,10 @@ func (db *Db) DeleteAccount(ctx context.Context, params *DeleteAccountParams) er
 	}
 
 	res, err := queryRef.Delete()
-	if err != nil {	
-			return err
-		}
-		if res.RowsAffected == 0 {
+	if err != nil {
+		return err
+	}
+	if res.RowsAffected == 0 {
 		return ErrFailedToDeleteAccount
 	}
 
@@ -129,17 +129,17 @@ func (db *Db) DeleteAccountByEmail(ctx context.Context, email string) error {
 
 	// Delete using the standard delete function
 	return db.DeleteAccount(ctx, &DeleteAccountParams{
-		ID:           account.Id,
-		DeletionType: DeletionTypeSoft, // Default to soft deletion for safety
+		ID:            account.Id,
+		DeletionType:  DeletionTypeSoft, // Default to soft deletion for safety
 		AccountStatus: acctPb.AccountStatus,
 	})
 }
 
 // BatchDeleteAccountsParams holds the parameters for batch deleting accounts
 type BatchDeleteAccountsParams struct {
-	IDs          []uint64 `validate:"required,min=1,dive,gt=0"`
+	IDs          []uint64     `validate:"required,min=1,dive,gt=0"`
 	DeletionType DeletionType `validate:"required"`
-	BatchSize    int      `validate:"required,gt=0"`
+	BatchSize    int          `validate:"required,gt=0"`
 }
 
 func (d *BatchDeleteAccountsParams) validate() error {
@@ -216,4 +216,4 @@ func (db *Db) BatchDeleteAccounts(ctx context.Context, params *BatchDeleteAccoun
 	}
 
 	return nil
-} 
+}

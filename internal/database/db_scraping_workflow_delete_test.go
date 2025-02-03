@@ -58,8 +58,8 @@ func TestDeleteScrapingWorkflow(t *testing.T) {
 			setup: func(t *testing.T) uint64 {
 				// Create and delete a workflow
 				workflow := &lead_scraper_servicev1.ScrapingWorkflow{
-					CronExpression: "0 0 * * *",
-					MaxRetries:    5,
+					CronExpression:    "0 0 * * *",
+					MaxRetries:        5,
 					GeoFencingZoomMin: 1,
 					GeoFencingZoomMax: 20,
 				}
@@ -122,22 +122,22 @@ func TestDeleteScrapingWorkflow_ConcurrentDeletions(t *testing.T) {
 	// Create test workflows
 	for i := 0; i < numWorkflows; i++ {
 		workflow := &lead_scraper_servicev1.ScrapingWorkflow{
-			CronExpression:         "0 0 * * *",
+			CronExpression:        "0 0 * * *",
 			RetryCount:            0,
 			MaxRetries:            5,
 			AlertEmails:           "test@example.com",
-			GeoFencingRadius:     1000.0,
-			GeoFencingLat:        40.7128,
-			GeoFencingLon:        -74.0060,
-			GeoFencingZoomMin:    1,
-			GeoFencingZoomMax:    20,
-			IncludeReviews:       true,
-			IncludePhotos:        true,
-			IncludeBusinessHours: true,
+			GeoFencingRadius:      1000.0,
+			GeoFencingLat:         40.7128,
+			GeoFencingLon:         -74.0060,
+			GeoFencingZoomMin:     1,
+			GeoFencingZoomMax:     20,
+			IncludeReviews:        true,
+			IncludePhotos:         true,
+			IncludeBusinessHours:  true,
 			MaxReviewsPerBusiness: 100,
-			RespectRobotsTxt:     true,
+			RespectRobotsTxt:      true,
 			AcceptTermsOfService:  true,
-			UserAgent:            "TestBot/1.0",
+			UserAgent:             "TestBot/1.0",
 		}
 		created, err := conn.CreateScrapingWorkflow(context.Background(), workflow)
 		require.NoError(t, err)

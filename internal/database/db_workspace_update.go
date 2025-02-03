@@ -45,4 +45,4 @@ func (db *Db) UpdateWorkspace(ctx context.Context, workspace *lead_scraper_servi
 	}
 
 	return result, nil
-} 
+}

@@ -138,7 +138,6 @@ func (db *Db) BatchCreateScrapingWorkflows(ctx context.Context, workspaceID uint
 		workflowORMs = append(workflowORMs, &workflowORM)
 	}
 
-
 	// Create workflows in batches
 	err := sQop.WithContext(ctx).Where(sQop.WorkspaceId.Eq(workspaceID)).CreateInBatches(workflowORMs, batchSize)
 	if err != nil {
@@ -156,4 +155,4 @@ func (db *Db) BatchCreateScrapingWorkflows(ctx context.Context, workspaceID uint
 	}
 
 	return pbResults, nil
-} 
+}

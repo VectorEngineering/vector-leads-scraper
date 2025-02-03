@@ -29,10 +29,10 @@ type TestDBFunc func(t *testing.T, testDb *Db) error
 
 // DBTestConfig holds configuration for database testing
 type DBTestConfig struct {
-	BaseDb         *Db
-	QueryTimeout   time.Duration
-	SetupFunc      func(t *testing.T, testDb *Db) error
-	CleanupFunc    func(t *testing.T, testDb *Db) error
+	BaseDb       *Db
+	QueryTimeout time.Duration
+	SetupFunc    func(t *testing.T, testDb *Db) error
+	CleanupFunc  func(t *testing.T, testDb *Db) error
 }
 
 // NewDBTestConfig creates a new configuration for database testing
@@ -96,7 +96,6 @@ func WithTransaction(config *DBTestConfig, testName string, testFn TestDBFunc) f
 			}
 		}()
 
-
 		// Run setup if provided
 		if config.SetupFunc != nil {
 			err := config.SetupFunc(t, testDb)
@@ -131,4 +130,4 @@ func WithTransaction(config *DBTestConfig, testName string, testFn TestDBFunc) f
 		}
 		committed = true
 	}
-} 
+}

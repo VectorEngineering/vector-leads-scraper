@@ -12,7 +12,7 @@ func (db *Db) CreateLead(ctx context.Context, scrapingJobID uint64, lead *lead_s
 	var (
 		sQop = db.QueryOperator.ScrapingJobORM
 	)
-	
+
 	if lead == nil {
 		return nil, ErrInvalidInput
 	}
@@ -52,11 +52,11 @@ func (db *Db) CreateLead(ctx context.Context, scrapingJobID uint64, lead *lead_s
 	}
 
 	return &pbResult, nil
-} 
+}
 
 func (db *Db) BatchCreateLeads(ctx context.Context, scrapingJobID uint64, leads []*lead_scraper_servicev1.Lead) ([]*lead_scraper_servicev1.Lead, error) {
 	var (
-		sQop = db.QueryOperator.ScrapingJobORM
+		sQop     = db.QueryOperator.ScrapingJobORM
 		sLeadQop = db.QueryOperator.LeadORM
 	)
 
@@ -78,7 +78,6 @@ func (db *Db) BatchCreateLeads(ctx context.Context, scrapingJobID uint64, leads 
 		return nil, fmt.Errorf("failed to convert to ORM model: %w", err)
 	}
 
-
 	// insert the leads in batches
 	if err := sLeadQop.WithContext(ctx).Where(sLeadQop.ScrapingJobId.Eq(scrapingJobID)).CreateInBatches(leadORMs, batchSize); err != nil {
 		return nil, fmt.Errorf("failed to insert leads: %w", err)
@@ -96,4 +95,3 @@ func (db *Db) BatchCreateLeads(ctx context.Context, scrapingJobID uint64, leads 
 
 	return pbResults, nil
 }
-

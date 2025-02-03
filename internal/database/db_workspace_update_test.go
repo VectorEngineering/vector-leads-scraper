@@ -41,15 +41,15 @@ func TestDb_UpdateWorkspace(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				workspace: &lead_scraper_servicev1.Workspace{
-					Id:   workspace.Id,
-					Name: "Updated Workspace Name",
-					Industry: "Technology",
-					Domain: "updated-domain.com",
-					GdprCompliant: true,
+					Id:             workspace.Id,
+					Name:           "Updated Workspace Name",
+					Industry:       "Technology",
+					Domain:         "updated-domain.com",
+					GdprCompliant:  true,
 					HipaaCompliant: true,
-					Soc2Compliant: true,
-					StorageQuota: 1000000,
-					UsedStorage: 500000,
+					Soc2Compliant:  true,
+					StorageQuota:   1000000,
+					UsedStorage:    500000,
 				},
 			},
 			wantErr: false,
@@ -144,15 +144,15 @@ func TestDb_UpdateWorkspace_ConcurrentUpdates(t *testing.T) {
 		go func(index int) {
 			defer wg.Done()
 			updateWorkspace := &lead_scraper_servicev1.Workspace{
-				Id:   workspace.Id,
-				Name: fmt.Sprintf("Updated Name %d", index),
-				Industry: fmt.Sprintf("Industry %d", index),
-				Domain: fmt.Sprintf("domain-%d.com", index),
-				GdprCompliant: true,
+				Id:             workspace.Id,
+				Name:           fmt.Sprintf("Updated Name %d", index),
+				Industry:       fmt.Sprintf("Industry %d", index),
+				Domain:         fmt.Sprintf("domain-%d.com", index),
+				GdprCompliant:  true,
 				HipaaCompliant: true,
-				Soc2Compliant: true,
-				StorageQuota: int64(1000000 + index),
-				UsedStorage: int64(500000 + index),
+				Soc2Compliant:  true,
+				StorageQuota:   int64(1000000 + index),
+				UsedStorage:    int64(500000 + index),
 			}
 			updated, err := conn.UpdateWorkspace(context.Background(), updateWorkspace)
 			if err != nil {

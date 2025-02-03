@@ -41,4 +41,4 @@ func (db *Db) ListScrapingWorkflows(ctx context.Context, limit, offset int) ([]*
 	}
 
 	return workflows, nil
-} 
+}

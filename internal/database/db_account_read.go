@@ -14,9 +14,9 @@ import (
 
 // GetAccountInput holds the input parameters for the GetAccount function.
 type GetAccountInput struct {
-	ID                          uint64 `validate:"required,gt=0"`
+	ID                          uint64                                       `validate:"required,gt=0"`
 	AccountStatus               lead_scraper_servicev1.Account_AccountStatus `validate:"omitempty"`
-	EnableAccountInactiveClause bool   // Kept for API compatibility but not used
+	EnableAccountInactiveClause bool                                         // Kept for API compatibility but not used
 }
 
 func (d *GetAccountInput) validate() error {
@@ -67,7 +67,7 @@ func (db *Db) GetAccount(ctx context.Context, input *GetAccountInput) (*lead_scr
 
 	// Query the account by id and account status. NOTE: we only include the account status if it is not unspecifed
 	var account *lead_scraper_servicev1.AccountORM
-	queryRef := b.WithContext(ctx)		
+	queryRef := b.WithContext(ctx)
 
 	if input.AccountStatus != lead_scraper_servicev1.Account_ACCOUNT_STATUS_UNSPECIFIED {
 		queryRef = queryRef.Where(b.AccountStatus.Eq(input.AccountStatus.String()))
@@ -99,8 +99,8 @@ func (db *Db) GetAccount(ctx context.Context, input *GetAccountInput) (*lead_scr
 
 // ListAccountsInput holds the input parameters for the ListAccounts function
 type ListAccountsInput struct {
-	Limit    int    `validate:"required,gt=0"`
-	Offset   int    `validate:"gte=0"`
+	Limit  int `validate:"required,gt=0"`
+	Offset int `validate:"gte=0"`
 }
 
 func (d *ListAccountsInput) validate() error {

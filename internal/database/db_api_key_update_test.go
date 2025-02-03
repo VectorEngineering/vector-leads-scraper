@@ -38,20 +38,20 @@ func TestUpdateAPIKey(t *testing.T) {
 		{
 			name: "[success scenario] - valid update",
 			apiKey: &lead_scraper_servicev1.APIKey{
-				Id:                 created.Id,
-				Name:              "Updated Key Name",
-				KeyHash:           "updated_hash",
-				KeyPrefix:         "updated_prefix",
-				OrgId:             "updated_org",
-				TenantId:          "updated_tenant",
-				Scopes:            []string{"read", "write", "admin"},
-				AllowedIps:        []string{"192.168.1.1", "192.168.1.2"},
-				IsTestKey:         true,
-				RequestsPerSecond: 50,
-				RequestsPerDay:    5000,
-				ConcurrentRequests: 5,
+				Id:                  created.Id,
+				Name:                "Updated Key Name",
+				KeyHash:             "updated_hash",
+				KeyPrefix:           "updated_prefix",
+				OrgId:               "updated_org",
+				TenantId:            "updated_tenant",
+				Scopes:              []string{"read", "write", "admin"},
+				AllowedIps:          []string{"192.168.1.1", "192.168.1.2"},
+				IsTestKey:           true,
+				RequestsPerSecond:   50,
+				RequestsPerDay:      5000,
+				ConcurrentRequests:  5,
 				MonthlyRequestQuota: 100000,
-				Status:             1, // Status 1 for active
+				Status:              1, // Status 1 for active
 			},
 			wantError: false,
 			validate: func(t *testing.T, apiKey *lead_scraper_servicev1.APIKey) {
@@ -158,20 +158,20 @@ func TestUpdateAPIKey_ConcurrentUpdates(t *testing.T) {
 			defer wg.Done()
 
 			updateKey := &lead_scraper_servicev1.APIKey{
-				Id:                 created.Id,
-				Name:              fmt.Sprintf("Updated Key %d", index),
-				KeyHash:           fmt.Sprintf("hash_%d", index),
-				KeyPrefix:         fmt.Sprintf("prefix_%d", index),
-				OrgId:             created.OrgId,
-				TenantId:          created.TenantId,
-				Scopes:            []string{"read", "write"},
-				AllowedIps:        []string{"192.168.1.1"},
-				IsTestKey:         true,
-				RequestsPerSecond: int32(index + 1),
-				RequestsPerDay:    int32((index + 1) * 1000),
-				ConcurrentRequests: int32(index + 1),
+				Id:                  created.Id,
+				Name:                fmt.Sprintf("Updated Key %d", index),
+				KeyHash:             fmt.Sprintf("hash_%d", index),
+				KeyPrefix:           fmt.Sprintf("prefix_%d", index),
+				OrgId:               created.OrgId,
+				TenantId:            created.TenantId,
+				Scopes:              []string{"read", "write"},
+				AllowedIps:          []string{"192.168.1.1"},
+				IsTestKey:           true,
+				RequestsPerSecond:   int32(index + 1),
+				RequestsPerDay:      int32((index + 1) * 1000),
+				ConcurrentRequests:  int32(index + 1),
 				MonthlyRequestQuota: int64((index + 1) * 10000),
-				Status:             1, // Status 1 for active
+				Status:              1, // Status 1 for active
 			}
 
 			result, err := conn.UpdateAPIKey(context.Background(), updateKey)

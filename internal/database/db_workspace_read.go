@@ -44,7 +44,7 @@ func (db *Db) ListWorkspaces(ctx context.Context, limit, offset int) ([]*lead_sc
 	}
 
 	workspaces, err := lead_scraper_servicev1.DefaultListWorkspace(
-		ctx, 
+		ctx,
 		db.Client.Engine.
 			Limit(limit).
 			Offset(offset))
@@ -57,4 +57,4 @@ func (db *Db) ListWorkspaces(ctx context.Context, limit, offset int) ([]*lead_sc
 	}
 
 	return workspaces, nil
-} 
+}

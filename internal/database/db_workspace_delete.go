@@ -26,7 +26,7 @@ func (db *Db) DeleteWorkspace(ctx context.Context, id uint64) error {
 		db.Logger.Error("failed to get workspace", zap.Error(err))
 		return fmt.Errorf("failed to get workspace: %w", err)
 	}
-	
+
 	if existing == nil {
 		return ErrWorkspaceDoesNotExist
 	}
@@ -40,4 +40,4 @@ func (db *Db) DeleteWorkspace(ctx context.Context, id uint64) error {
 	}
 
 	return nil
-} 
+}

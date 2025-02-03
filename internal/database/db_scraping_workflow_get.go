@@ -31,4 +31,4 @@ func (db *Db) GetScrapingWorkflow(ctx context.Context, id uint64) (*lead_scraper
 	}
 
 	return &pbResult, nil
-} 
+}

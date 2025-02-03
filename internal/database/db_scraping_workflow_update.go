@@ -39,4 +39,4 @@ func (db *Db) UpdateScrapingWorkflow(ctx context.Context, workflow *lead_scraper
 	}
 
 	return &pbResult, nil
-} 
+}

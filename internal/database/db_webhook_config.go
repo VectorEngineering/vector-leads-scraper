@@ -11,7 +11,7 @@ func (db *Db) CreateWebhookConfig(ctx context.Context, tenantId uint64, webhook 
 	var (
 		tQop = db.QueryOperator.WorkspaceORM
 	)
-	
+
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
@@ -27,7 +27,7 @@ func (db *Db) CreateWebhookConfig(ctx context.Context, tenantId uint64, webhook 
 	tenant, err := tQop.WithContext(ctx).Where(tQop.Id.Eq(tenantId)).First()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
-	}	
+	}
 
 	webhookORM, err := webhook.ToORM(ctx)
 	if err != nil {
@@ -64,17 +64,17 @@ func (db *Db) GetWebhookConfig(ctx context.Context, workspaceId uint64, webhookI
 	if workspaceId == 0 || webhookId == 0 {
 		return nil, ErrInvalidInput
 	}
-	
+
 	res, err := wQop.WithContext(ctx).Where(wQop.WorkspaceId.Eq(workspaceId), wQop.Id.Eq(webhookId)).First()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get webhook config: %w", err)
 	}
 
-	pbResult, err := res.ToPB(ctx)	
+	pbResult, err := res.ToPB(ctx)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &pbResult, nil
 }
 
@@ -199,4 +199,4 @@ func (db *Db) ListWebhookConfigs(ctx context.Context, workspaceId uint64, limit 
 	}
 
 	return result, nil
-} 
+}

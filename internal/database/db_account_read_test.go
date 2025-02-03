@@ -147,8 +147,8 @@ func TestListAccountsInput_validate(t *testing.T) {
 		{
 			name: "success - valid input",
 			d: &ListAccountsInput{
-				Limit:    10,
-				Offset:   0,
+				Limit:  10,
+				Offset: 0,
 			},
 			wantErr: false,
 		},
@@ -164,20 +164,20 @@ func TestListAccountsInput_validate(t *testing.T) {
 
 func TestDb_ListAccounts(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    *ListAccountsInput
+		name        string
+		input       *ListAccountsInput
 		numAccounts int
-		wantErr  bool
-		errType  error
-		validate func(t *testing.T, accounts []*lead_scraper_servicev1.Account)
+		wantErr     bool
+		errType     error
+		validate    func(t *testing.T, accounts []*lead_scraper_servicev1.Account)
 	}{
 		{
-			name:    "[success scenario] - list all accounts",
-			wantErr: false,
+			name:        "[success scenario] - list all accounts",
+			wantErr:     false,
 			numAccounts: 5,
 			input: &ListAccountsInput{
-				Limit:    10,
-				Offset:   0,
+				Limit:  10,
+				Offset: 0,
 			},
 			validate: func(t *testing.T, accounts []*lead_scraper_servicev1.Account) {
 				assert.NotNil(t, accounts)
@@ -185,12 +185,12 @@ func TestDb_ListAccounts(t *testing.T) {
 			},
 		},
 		{
-			name:    "[success scenario] - list accounts with offset",
-			wantErr: false,
+			name:        "[success scenario] - list accounts with offset",
+			wantErr:     false,
 			numAccounts: 5,
 			input: &ListAccountsInput{
-				Limit:    2,
-				Offset:   2,
+				Limit:  2,
+				Offset: 2,
 			},
 			validate: func(t *testing.T, accounts []*lead_scraper_servicev1.Account) {
 				assert.NotNil(t, accounts)
@@ -202,8 +202,8 @@ func TestDb_ListAccounts(t *testing.T) {
 			wantErr: true,
 			errType: ErrInvalidInput,
 			input: &ListAccountsInput{
-				Limit:    0,
-				Offset:   0,
+				Limit:  0,
+				Offset: 0,
 			},
 		},
 		{
@@ -211,8 +211,8 @@ func TestDb_ListAccounts(t *testing.T) {
 			wantErr: true,
 			errType: ErrInvalidInput,
 			input: &ListAccountsInput{
-				Limit:    10,
-				Offset:   -1,
+				Limit:  10,
+				Offset: -1,
 			},
 		},
 	}
@@ -272,14 +272,14 @@ func TestGetAccountInput_Validate(t *testing.T) {
 		{
 			name: "success - valid input",
 			input: &GetAccountInput{
-				ID:       123,
+				ID: 123,
 			},
 			wantErr: false,
 		},
 		{
 			name: "failure - zero account ID",
 			input: &GetAccountInput{
-				ID:       0,
+				ID: 0,
 			},
 			wantErr: true,
 		},
@@ -311,24 +311,24 @@ func TestListAccountsInput_Validate(t *testing.T) {
 		{
 			name: "success - valid input",
 			input: &ListAccountsInput{
-				Limit:    10,
-				Offset:   0,
+				Limit:  10,
+				Offset: 0,
 			},
 			wantErr: false,
 		},
 		{
 			name: "failure - zero limit",
 			input: &ListAccountsInput{
-				Limit:    0,
-				Offset:   0,
+				Limit:  0,
+				Offset: 0,
 			},
 			wantErr: true,
 		},
 		{
 			name: "failure - negative offset",
 			input: &ListAccountsInput{
-				Limit:    10,
-				Offset:   -1,
+				Limit:  10,
+				Offset: -1,
 			},
 			wantErr: true,
 		},

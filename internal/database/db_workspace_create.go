@@ -21,4 +21,4 @@ func (db *Db) CreateWorkspace(ctx context.Context, workspace *lead_scraper_servi
 	}
 
 	return result, nil
-} 
+}

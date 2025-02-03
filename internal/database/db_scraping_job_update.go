@@ -102,4 +102,4 @@ func isTerminalStatus(status lead_scraper_servicev1.BackgroundJobStatus) bool {
 	default:
 		return false
 	}
-} 
+}

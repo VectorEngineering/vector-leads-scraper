@@ -44,7 +44,7 @@ func (db *Db) CreateScrapingJob(ctx context.Context, job *lead_scraper_servicev1
 	}
 
 	return &pbResult, nil
-} 
+}
 
 func (db *Db) BatchCreateScrapingJobs(ctx context.Context, workspaceID uint64, jobs []*lead_scraper_servicev1.ScrapingJob) ([]*lead_scraper_servicev1.ScrapingJob, error) {
 	var (
@@ -58,7 +58,7 @@ func (db *Db) BatchCreateScrapingJobs(ctx context.Context, workspaceID uint64, j
 	if workspaceID == 0 {
 		return nil, ErrInvalidInput
 	}
-	
+
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
@@ -66,13 +66,13 @@ func (db *Db) BatchCreateScrapingJobs(ctx context.Context, workspaceID uint64, j
 	jobORMs, err := db.convertScrapingJobsToORM(ctx, jobs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to ORM model: %w", err)
-	}	
-	
+	}
+
 	// insert the jobs in batches
 	if err := sQop.WithContext(ctx).Where(sQop.WorkspaceId.Eq(workspaceID)).CreateInBatches(jobORMs, batchSize); err != nil {
 		return nil, fmt.Errorf("failed to insert jobs: %w", err)
 	}
-	
+
 	// convert back to protobuf
 	pbResults := make([]*lead_scraper_servicev1.ScrapingJob, 0, len(jobORMs))
 	for _, jobORM := range jobORMs {
@@ -83,7 +83,7 @@ func (db *Db) BatchCreateScrapingJobs(ctx context.Context, workspaceID uint64, j
 		pbResults = append(pbResults, &pbResult)
 	}
 
-	return pbResults, nil	
+	return pbResults, nil
 }
 
 func (db *Db) convertScrapingJobsToORM(ctx context.Context, jobs []*lead_scraper_servicev1.ScrapingJob) ([]*lead_scraper_servicev1.ScrapingJobORM, error) {

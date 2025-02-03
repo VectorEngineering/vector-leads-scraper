@@ -246,4 +246,4 @@ func (db *Db) ListTenants(ctx context.Context, input *ListTenantsInput) ([]*lead
 	}
 
 	return result, nil
-} 
+}

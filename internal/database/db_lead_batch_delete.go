@@ -50,4 +50,4 @@ func (db *Db) BatchDeleteLeads(ctx context.Context, ids []uint64, deletionType D
 	}
 
 	return nil
-} 
+}

@@ -51,4 +51,4 @@ func (db *Db) BatchUpdateScrapingJobs(ctx context.Context, jobs []*lead_scraper_
 	}
 
 	return resultingJobs, nil
-} 
+}

@@ -81,15 +81,15 @@ func TestUpdateScrapingJob(t *testing.T) {
 				// Verify timestamps
 				assert.NotNil(t, job.CreatedAt)
 				assert.NotNil(t, job.UpdatedAt)
-				
+
 				// Verify the timestamps are in the correct order
-				assert.True(t, job.CreatedAt.AsTime().Before(job.UpdatedAt.AsTime()) || 
-							job.CreatedAt.AsTime().Equal(job.UpdatedAt.AsTime()),
-							"CreatedAt should be before or equal to UpdatedAt")
-				
+				assert.True(t, job.CreatedAt.AsTime().Before(job.UpdatedAt.AsTime()) ||
+					job.CreatedAt.AsTime().Equal(job.UpdatedAt.AsTime()),
+					"CreatedAt should be before or equal to UpdatedAt")
+
 				// Compare with the actual creation time from the database
 				assert.Equal(t, creationTime, job.CreatedAt.AsTime(),
-							"CreatedAt time should match the original creation time")
+					"CreatedAt time should match the original creation time")
 			},
 		},
 		{
@@ -207,10 +207,10 @@ func TestUpdateScrapingJob_ConcurrentUpdates(t *testing.T) {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			
+
 			// Add a small delay to ensure a specific order of updates
 			time.Sleep(time.Duration(index) * time.Millisecond)
-			
+
 			updateJob := &lead_scraper_servicev1.ScrapingJob{
 				Id:          created.Id,
 				Status:      validTransitions[index],
