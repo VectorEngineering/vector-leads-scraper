@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Vector/vector-leads-scraper/internal/testutils"
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,21 +15,7 @@ import (
 
 func TestUpdateScrapingJob(t *testing.T) {
 	// Create a test job first
-	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-		Priority:    1,
-		PayloadType: "scraping_job",
-		Payload:     []byte(`{"query": "test query"}`),
-		Name:        "Test Job",
-		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        "en",
-		Zoom:        15,
-		Lat:         "40.7128",
-		Lon:         "-74.0060",
-		FastMode:    false,
-		Radius:      10000,
-		MaxTime:     3600,
-	}
+	testJob := testutils.GenerateRandomizedScrapingJob()
 
 	created, err := conn.CreateScrapingJob(context.Background(), testJob)
 	require.NoError(t, err)
@@ -55,22 +42,7 @@ func TestUpdateScrapingJob(t *testing.T) {
 	}{
 		{
 			name: "[success scenario] - valid update",
-			job: &lead_scraper_servicev1.ScrapingJob{
-				Id:          created.Id,
-				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS,
-				Priority:    2,
-				PayloadType: "scraping_job",
-				Payload:     []byte(`{"query": "updated query"}`),
-				Name:        "Updated Test Job",
-				Keywords:    []string{"updated_keyword"},
-				Lang:        "fr",
-				Zoom:        10,
-				Lat:         "48.8566",
-				Lon:         "2.3522",
-				FastMode:    true,
-				Radius:      5000,
-				MaxTime:     1800,
-			},
+			job: testutils.GenerateRandomizedScrapingJob(),	
 			wantError: false,
 			validate: func(t *testing.T, job *lead_scraper_servicev1.ScrapingJob) {
 				assert.NotNil(t, job)
@@ -81,7 +53,7 @@ func TestUpdateScrapingJob(t *testing.T) {
 				assert.Equal(t, []byte(`{"query": "updated query"}`), job.Payload)
 				assert.Equal(t, "Updated Test Job", job.Name)
 				assert.Equal(t, []string{"updated_keyword"}, job.Keywords)
-				assert.Equal(t, "fr", job.Lang)
+				assert.Equal(t, lead_scraper_servicev1.ScrapingJob_LANGUAGE_FRENCH, job.Lang)
 				assert.Equal(t, int32(10), job.Zoom)
 				assert.Equal(t, "48.8566", job.Lat)
 				assert.Equal(t, "2.3522", job.Lon)
@@ -128,21 +100,7 @@ func TestUpdateScrapingJob(t *testing.T) {
 			name: "[failure scenario] - invalid status transition",
 			setup: func(t *testing.T) *lead_scraper_servicev1.ScrapingJob {
 				// Create a new job in QUEUED state
-				job := &lead_scraper_servicev1.ScrapingJob{
-					Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-					Priority:    1,
-					PayloadType: "scraping_job",
-					Payload:     []byte(`{"query": "test query"}`),
-					Name:        "Test Job",
-					Keywords:    []string{"keyword1", "keyword2"},
-					Lang:        "en",
-					Zoom:        15,
-					Lat:         "40.7128",
-					Lon:         "-74.0060",
-					FastMode:    false,
-					Radius:      10000,
-					MaxTime:     3600,
-				}
+				job := testutils.GenerateRandomizedScrapingJob()
 				created, err := conn.CreateScrapingJob(context.Background(), job)
 				require.NoError(t, err)
 				require.NotNil(t, created)
@@ -156,7 +114,7 @@ func TestUpdateScrapingJob(t *testing.T) {
 					Payload:     []byte(`{"query": "test query"}`),
 					Name:        "Updated Test Job",
 					Keywords:    []string{"keyword1", "keyword2"},
-					Lang:        "en",
+					Lang:        lead_scraper_servicev1.ScrapingJob_LANGUAGE_ENGLISH,
 					Zoom:        15,
 					Lat:         "40.7128",
 					Lon:         "-74.0060",
@@ -221,21 +179,7 @@ func TestUpdateScrapingJob(t *testing.T) {
 
 func TestUpdateScrapingJob_ConcurrentUpdates(t *testing.T) {
 	// Create a test job first
-	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-		Priority:    1,
-		PayloadType: "scraping_job",
-		Payload:     []byte(`{"query": "test query"}`),
-		Name:        "Test Job",
-		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        "en",
-		Zoom:        15,
-		Lat:         "40.7128",
-		Lon:         "-74.0060",
-		FastMode:    false,
-		Radius:      10000,
-		MaxTime:     3600,
-	}
+	testJob := testutils.GenerateRandomizedScrapingJob()
 
 	created, err := conn.CreateScrapingJob(context.Background(), testJob)
 	require.NoError(t, err)
@@ -278,7 +222,7 @@ func TestUpdateScrapingJob_ConcurrentUpdates(t *testing.T) {
 				Payload:     []byte(fmt.Sprintf(`{"query": "concurrent update %d"}`, index)),
 				Name:        fmt.Sprintf("Updated Job %d", index),
 				Keywords:    []string{fmt.Sprintf("keyword%d", index)},
-				Lang:        "en",
+				Lang:        lead_scraper_servicev1.ScrapingJob_LANGUAGE_ENGLISH,
 				Zoom:        15,
 				Lat:         "40.7128",
 				Lon:         "-74.0060",

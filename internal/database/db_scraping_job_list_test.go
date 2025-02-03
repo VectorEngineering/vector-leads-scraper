@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Vector/vector-leads-scraper/internal/testutils"
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,26 +22,12 @@ func TestListScrapingJobs(t *testing.T) {
 	jobIDs := make([]uint64, numJobs)
 	
 	for i := 0; i < numJobs; i++ {
-		job := &lead_scraper_servicev1.ScrapingJob{
-			Status:      lead_scraper_servicev1.BackgroundJobStatus(i % 3), // Mix of different statuses
-			Priority:    int32(numJobs - i), // Descending priorities: 5, 4, 3, 2, 1
-			PayloadType: "scraping_job",
-			Payload:     []byte(fmt.Sprintf(`{"query": "test query %d"}`, i)),
-			Name:        fmt.Sprintf("Test Job %d", i),
-			Keywords:    []string{fmt.Sprintf("keyword%d", i)},
-			Lang:        "en",
-			Zoom:        15,
-			Lat:         "40.7128",
-			Lon:         "-74.0060",
-			FastMode:    false,
-			Radius:      10000,
-			MaxTime:     3600,
-		}
+		job := testutils.GenerateRandomizedScrapingJob()
 		created, err := conn.CreateScrapingJob(context.Background(), job)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		jobIDs[i] = created.Id
-		
+
 		// Add a small delay to ensure consistent ordering by creation time
 		time.Sleep(10 * time.Millisecond)
 	}

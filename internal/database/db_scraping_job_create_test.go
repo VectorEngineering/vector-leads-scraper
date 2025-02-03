@@ -20,7 +20,7 @@ func testScrapingJob() *lead_scraper_servicev1.ScrapingJob {
 		Payload:     []byte(`{"query": "test query"}`),
 		Name:        "Test Job",
 		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        "en",
+		Lang:        lead_scraper_servicev1.ScrapingJob_LANGUAGE_ENGLISH,
 		Zoom:        15,
 		Lat:         "40.7128",
 		Lon:         "-74.0060",

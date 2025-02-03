@@ -10,6 +10,8 @@ import (
 	"time"
 
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -202,38 +204,42 @@ func GenerateRandomizedAccount() *proto.Account {
 		Email:               GenerateRandomEmail(10),
 		AuthPlatformUserId:  fmt.Sprintf("auth0|%s", GenerateRandomString(24, true, false)),
 		AccountStatus:       proto.Account_AccountStatus(GenerateRandomInt(0, 2)),
-		Roles:               []string{"role_1", "role_2"},
-		Permissions:         []string{"permission_1", "permission_2"},
-		MfaEnabled:          false,
+		Roles:               []proto.Account_Role{proto.Account_Role(GenerateRandomInt(0, 2))},
+		Permissions:         []proto.Account_Permission{proto.Account_Permission(GenerateRandomInt(0, 2))},
+		MfaEnabled:          GenerateRandomInt(0, 1) == 1,
 		LastLoginAt:         nil,
+		Timezone:            proto.Account_Timezone(GenerateRandomInt(0, 2)),
 		TotalJobsRun:        0,
 		MonthlyJobLimit:     int32(GenerateRandomInt(1, 100)),
 		ConcurrentJobLimit:  int32(GenerateRandomInt(1, 100)),
-		Workspaces:          nil,
+		Workspaces:          GenerateRandomWorkspaces(GenerateRandomInt(0, 1)),
 		Settings:            nil,
-		Timezone:            "America/New_York",
 	}
 }
+
 
 func GenerateRandomWorkspace() *proto.Workspace {
 	return &proto.Workspace{
 		Name: GenerateRandomString(10, false, false),
 		Industry: industries[GenerateRandomInt(0, len(industries)-1)],
 		Domain: GenerateRandomizeUrl(),
-		GdprCompliant: false,
-		HipaaCompliant: false,
-		Soc2Compliant: false,
+		GdprCompliant: GenerateRandomInt(0, 1) == 1,
+		HipaaCompliant: GenerateRandomInt(0, 1) == 1,
+		Soc2Compliant: GenerateRandomInt(0, 1) == 1,
 		StorageQuota: int64(GenerateRandomInt(1, 1000000)),
 		UsedStorage: int64(GenerateRandomInt(1, 1000000)),
 		CreatedAt: nil,
 		UpdatedAt: nil,
 		DeletedAt: nil,
-		Workflows: nil,
-		JobsRunThisMonth: 0,
-		WorkspaceJobLimit: 0,
-		DailyJobQuota:     0,
-		ActiveScrapers:     0,
-		TotalLeadsCollected: 0,
+		// Workflows: GenerateRandomScrapingWorkflows(GenerateRandomInt(0, 1)),
+		JobsRunThisMonth: int32(GenerateRandomInt(0, 1000)),
+		WorkspaceJobLimit: int32(GenerateRandomInt(1, 1000)),
+		DailyJobQuota: int32(GenerateRandomInt(1, 1000)),
+		ActiveScrapers: int32(GenerateRandomInt(1, 1000)),
+		TotalLeadsCollected: int32(GenerateRandomInt(1, 1000000)),
+		// ScrapingJobs: GenerateRandomScrapingJobs(GenerateRandomInt(0, 1)),
+		// ApiKeys: GenerateRandomAPIKeys(GenerateRandomInt(0, 1)),
+		Webhooks: GenerateRandomWebhookConfigs(GenerateRandomInt(0, 1)),
 		LastJobRun:          nil,
 	}
 }
@@ -250,13 +256,19 @@ func GenerateRandomizedScrapingJob() *proto.ScrapingJob {
 		Payload: []byte(GenerateRandomString(100, true, false)),
 		Name: GenerateRandomString(10, false, false),
 		Keywords: []string{"keyword_1", "keyword_2"},
-		Lang: "en",
+		Lang: proto.ScrapingJob_Language(GenerateRandomInt(0, 2)),
 		Zoom: int32(GenerateRandomInt(1, 20)),
 		Lat: "40.7128",
 		Lon: "-74.0060",
 		FastMode: false,
 		Radius: int32(GenerateRandomInt(1, 1000000)),
+		Depth: int32(GenerateRandomInt(1, 9)),
+		Email: GenerateRandomInt(0, 1) == 1,
 		MaxTime: int32(GenerateRandomInt(1, 3600)),
+		Proxies: []string{GenerateRandomIP(), GenerateRandomIP()},
+		UpdatedAt: nil,
+		DeletedAt: nil,
+		Leads: GenerateRandomLeads(GenerateRandomInt(0, 1)),
 	}
 }
 
@@ -292,50 +304,6 @@ func GenerateRandomBusinessHours() *proto.BusinessHours {
 	}
 }
 
-// GenerateRandomLead creates a new Lead instance with random test data
-func GenerateRandomLead() *proto.Lead {
-	socialMedia := make(map[string]string)
-	for _, platform := range socialMediaPlatforms {
-		if GenerateRandomInt(0, 1) == 1 {
-			socialMedia[platform] = GenerateRandomizeUrl()
-		}
-	}
-
-	return &proto.Lead{
-		Name:              fmt.Sprintf("%s Business", GenerateRandomString(10, false, false)),
-		Website:           GenerateRandomizeUrl(),
-		Phone:             fmt.Sprintf("+1%d", GenerateRandomInt(1000000000, 9999999999)),
-		Address:           fmt.Sprintf("%d %s St", GenerateRandomInt(1, 999), GenerateRandomString(8, false, false)),
-		City:              cities[GenerateRandomInt(0, len(cities)-1)],
-		State:             states[GenerateRandomInt(0, len(states)-1)],
-		Country:           "USA",
-		Latitude:          GenerateRandomFloat(-90, 90),
-		Longitude:         GenerateRandomFloat(-180, 180),
-		GoogleRating:      float32(GenerateRandomFloat(1.0, 5.0)),
-		ReviewCount:       int32(GenerateRandomInt(0, 1000)),
-		Industry:          industries[GenerateRandomInt(0, len(industries)-1)],
-		EmployeeCount:     int32(GenerateRandomInt(1, 1000)),
-		EstimatedRevenue:  int64(GenerateRandomInt(100000, 10000000)),
-		OrgId:             fmt.Sprintf("org_%s", GenerateRandomString(10, true, false)),
-		TenantId:          fmt.Sprintf("tenant_%s", GenerateRandomString(10, true, false)),
-		CreatedAt:         nil,
-		UpdatedAt:         nil,
-		DeletedAt:         nil,
-		PlaceId:           fmt.Sprintf("ChIJ_%s", GenerateRandomString(20, true, false)),
-		GoogleMapsUrl:     fmt.Sprintf("https://maps.google.com/?q=%f,%f", GenerateRandomFloat(-90, 90), GenerateRandomFloat(-180, 180)),
-		BusinessStatus:    "OPERATIONAL",
-		MainPhotoUrl:      GenerateRandomizeUrl(),
-		SocialMedia:       socialMedia,
-		BusinessType:      businessTypes[GenerateRandomInt(0, len(businessTypes)-1)],
-		FundingStage:      fundingStages[GenerateRandomInt(0, len(fundingStages)-1)],
-		IsPublicCompany:   GenerateRandomInt(0, 1) == 1,
-		WebsiteLoadSpeed:  float32(GenerateRandomFloat(0.1, 5.0)),
-		HasSslCertificate: GenerateRandomInt(0, 1) == 1,
-		CmsUsed:           cmsPlatforms[GenerateRandomInt(0, len(cmsPlatforms)-1)],
-		Timezone:          "America/New_York",
-	}
-}
-
 // GenerateRandomAccountSettings creates a new AccountSettings instance with random test data
 func GenerateRandomAccountSettings() *proto.AccountSettings {
 	return &proto.AccountSettings{
@@ -343,6 +311,8 @@ func GenerateRandomAccountSettings() *proto.AccountSettings {
 		SlackNotifications: GenerateRandomInt(0, 1) == 1,
 		AutoPurgeEnabled:   GenerateRandomInt(0, 1) == 1,
 		Require_2Fa:        GenerateRandomInt(0, 1) == 1,
+		SessionTimeout:     &durationpb.Duration{Seconds: int64(GenerateRandomInt(1, 3600))},
+		DefaultDataRetention: &durationpb.Duration{Seconds: int64(GenerateRandomInt(1, 3600))},
 		CreatedAt:          nil,
 		UpdatedAt:          nil,
 		DeletedAt:          nil,
@@ -354,21 +324,82 @@ func GenerateRandomAPIKey() *proto.APIKey {
 	keyPrefix := GenerateRandomString(8, true, false)
 	return &proto.APIKey{
 		Name:                fmt.Sprintf("API Key %s", GenerateRandomString(6, false, false)),
-		KeyHash:             fmt.Sprintf("hash_%s", GenerateRandomString(32, true, false)),
+		KeyHash:             GenerateRandomString(32, true, false),
 		KeyPrefix:           keyPrefix,
 		OrgId:               fmt.Sprintf("org_%s", GenerateRandomString(10, true, false)),
 		TenantId:            fmt.Sprintf("tenant_%s", GenerateRandomString(10, true, false)),
 		Scopes:              []string{"read", "write"},
 		AllowedIps:          []string{GenerateRandomIP(), GenerateRandomIP()},
+		AllowedDomains:      []string{GenerateRandomizeUrl(), GenerateRandomizeUrl()},
+		AllowedEnvironments: []string{"dev", "staging", "production"},
 		IsTestKey:           GenerateRandomInt(0, 1) == 1,
 		RequestsPerSecond:   int32(GenerateRandomInt(1, 100)),
 		RequestsPerDay:      int32(GenerateRandomInt(1000, 10000)),
 		ConcurrentRequests:  int32(GenerateRandomInt(1, 10)),
 		MonthlyRequestQuota: int64(GenerateRandomInt(10000, 1000000)),
+		CostPerRequest:      float32(GenerateRandomFloat(0.01, 0.10)),
+		BillingTier:         "free",
+		TotalRequests:       int64(GenerateRandomInt(0, 1000000)),
+		AverageResponseTime: float32(GenerateRandomFloat(0.1, 5.0)),
+		EndpointUsageJson:   []byte(GenerateRandomString(100, true, false)),
+		ErrorRatesJson:      []byte(GenerateRandomString(100, true, false)),
+		RecentErrors:        []byte(GenerateRandomString(100, true, false)),
+		SuccessfulRequestsCount: int32(GenerateRandomInt(0, 1000000)),
+		SuccessRate:             float32(GenerateRandomFloat(0.0, 1.0)),
 		Status:              proto.APIKey_Status(GenerateRandomInt(0, 2)),
 		CreatedAt:           nil,
 		UpdatedAt:           nil,
 		DeletedAt:           nil,
+		LastUsedAt:          nil,
+		ExpiresAt:           nil,
+		LastRotatedAt:       nil,
+		LastSecurityReviewAt: nil,
+		RequiresClientSecret: GenerateRandomInt(0, 1) == 1,
+		ClientSecretHash:     fmt.Sprintf("hash_%s", GenerateRandomString(32, true, false)),
+		EnforceHttps:         GenerateRandomInt(0, 1) == 1,
+		EnforceSigning:      GenerateRandomInt(0, 1) == 1,
+		AllowedSignatureAlgorithms: []string{"sha256", "sha384", "sha512"},
+		EnforceMutualTls:      GenerateRandomInt(0, 1) == 1,
+		ClientCertificateHash: fmt.Sprintf("hash_%s", GenerateRandomString(32, true, false)),
+		RequireRequestSigning: GenerateRandomInt(0, 1) == 1,
+		Description: GenerateRandomString(100, true, true),
+		MetadataJson: []byte(GenerateRandomString(100, true, false)),
+		Tags: []string{"tag1", "tag2", "tag3"},
+		ApiVersion: "1.0.0",
+		SupportedFeatures: []string{"feature1", "feature2", "feature3"},
+		DocumentationUrl: GenerateRandomizeUrl(),
+		SupportContact: GenerateRandomEmail(10),
+		LogAllRequests: GenerateRandomInt(0, 1) == 1,
+		LastRotationReason: GenerateRandomString(100, true, true),
+		LastRotationDate: nil,
+		RotationFrequencyDays: int32(GenerateRandomInt(1, 30)),
+		ComplianceStandards: []string{"standard1", "standard2", "standard3"},
+		RequiresAuditLogging: GenerateRandomInt(0, 1) == 1,
+		DataResidency: "US",
+		ApprovedIntegrations: []string{"integration1", "integration2", "integration3"},
+		AlertEmails: []string{GenerateRandomEmail(10), GenerateRandomEmail(10), GenerateRandomEmail(10)},
+		WebhookUrl: GenerateRandomizeUrl(),
+		AlertOnQuotaThreshold: GenerateRandomInt(0, 1) == 1,
+		QuotaAlertThreshold: float32(GenerateRandomFloat(0.0, 1.0)),
+		AlertOnErrorSpike: GenerateRandomInt(0, 1) == 1,
+		ErrorAlertThreshold: float32(GenerateRandomFloat(0.0, 1.0)),
+		MonitoringIntegrations: []string{"integration1", "integration2", "integration3"},
+		Encrypted: GenerateRandomInt(0, 1) == 1,
+		DataClassification: "public",
+	}
+}
+
+func GenerateRandomTenantAPIKey() *proto.TenantAPIKey {
+	return &proto.TenantAPIKey{
+		Id: uint64(GenerateRandomInt(1, 1000000)),
+		KeyHash: GenerateRandomString(32, true, false),
+		KeyPrefix: fmt.Sprintf("prefix_%s", GenerateRandomString(8, true, false)),
+		Name: GenerateRandomString(10, false, false),
+		Description: GenerateRandomString(100, true, true),
+		Status: "active",
+		CreatedAt: nil,
+		UpdatedAt: nil,
+		DeletedAt: nil,
 	}
 }
 
@@ -376,11 +407,16 @@ func GenerateRandomAPIKey() *proto.APIKey {
 func GenerateRandomScrapingWorkflow() *proto.ScrapingWorkflow {
 	return &proto.ScrapingWorkflow{
 		CronExpression:         "0 0 * * *",
+		NextRunTime:            nil,
+		LastRunTime:            nil,
+		Status:                 proto.WorkflowStatus(GenerateRandomInt(0, 2)),
 		RetryCount:            0,
 		MaxRetries:            5,
 		AlertEmails:           GenerateRandomEmail(10),
-		OrgId:                fmt.Sprintf("org-%s", GenerateRandomString(8, false, false)),
-		TenantId:             fmt.Sprintf("tenant-%s", GenerateRandomString(8, false, false)),
+		CreatedAt:              nil,
+		UpdatedAt:              nil,
+		DeletedAt:              nil,
+		Jobs:                   []*proto.ScrapingJob{GenerateRandomizedScrapingJob()},
 		GeoFencingRadius:     float32(GenerateRandomInt(1000, 5000)),
 		GeoFencingLat:        float64(GenerateRandomFloat(-90, 90)),
 		GeoFencingLon:        float64(GenerateRandomFloat(-180, 180)),
@@ -390,10 +426,149 @@ func GenerateRandomScrapingWorkflow() *proto.ScrapingWorkflow {
 		IncludePhotos:        true,
 		IncludeBusinessHours: true,
 		MaxReviewsPerBusiness: int32(GenerateRandomInt(50, 200)),
-		RespectRobotsTxt:     true,
-		AcceptTermsOfService:  true,
+		OutputFormat:         proto.ScrapingWorkflow_OutputFormat(GenerateRandomInt(0, 2)),
+		OutputDestination:    "s3://bucket/path",
+		DataRetention:        &durationpb.Duration{Seconds: int64(GenerateRandomInt(1, 3600))},
+		AnonymizePii:         true,
+		NotificationSlackChannel: "channel",
+		NotificationEmailGroup:   "group",
+		NotificationNotifyOnStart: true,
+		NotificationNotifyOnComplete: true,
+		NotificationNotifyOnFailure: true,
+		ContentFilterAllowedCountries: []string{"US", "CA"},
+		ContentFilterExcludedTypes: []string{"type1", "type2", "type3"},
+		ContentFilterMinimumRating: 4.5,
+		ContentFilterMinimumReviews: 10,
+		QosMaxConcurrentRequests: 10,
+		QosMaxRetries: 3,
+		QosRequestTimeout: &durationpb.Duration{Seconds: int64(GenerateRandomInt(1, 3600))},
+		QosEnableJavascript: true,
+		RespectRobotsTxt: true,
+		AcceptTermsOfService: true,
 		UserAgent:            fmt.Sprintf("TestBot/%s", GenerateRandomString(8, false, false)),
-		NotificationWebhookUrl: fmt.Sprintf("https://example.com/webhook/%s", GenerateRandomString(8, false, false)),
+	}
+}
+
+func GenerateRandomWebhookConfig() *proto.WebhookConfig {
+	return &proto.WebhookConfig{
+		Id: uint64(GenerateRandomInt(1, 1000000)),
+	
+		Url: GenerateRandomizeUrl(),
+		AuthType: "basic",
+		AuthToken: "token",
+		CustomHeaders: map[string]string{
+			"Content-Type": "application/json",
+		},
+		MaxRetries: 3,
+		RetryInterval: &durationpb.Duration{
+			Seconds: int64(GenerateRandomInt(1, 10)),
+		},
+		TriggerEvents: []proto.WebhookConfig_TriggerEvent{proto.WebhookConfig_TriggerEvent(GenerateRandomInt(0, 2))},
+		IncludedFields: []proto.WebhookConfig_IncludedField{proto.WebhookConfig_IncludedField(GenerateRandomInt(0, 2))},
+		IncludeFullResults: true,
+		PayloadFormat: proto.WebhookConfig_PayloadFormat(GenerateRandomInt(0, 2)),
+		VerifySsl: true,
+		SigningSecret: "secret",
+		RateLimit: int32(GenerateRandomInt(1, 1000)),
+		RateLimitInterval: &durationpb.Duration{
+			Seconds: int64(GenerateRandomInt(1, 10)),
+		},
+		CreatedAt: nil,
+		UpdatedAt: nil,
+		LastTriggeredAt: nil,
+		SuccessfulCalls: int32(GenerateRandomInt(0, 1000)),
+		FailedCalls: int32(GenerateRandomInt(0, 1000)),
+		Metadata: &structpb.Struct{
+			Fields: map[string]*structpb.Value{
+				"key": structpb.NewStringValue("value"),
+				"key2": structpb.NewStringValue("value2"),
+				"key3": structpb.NewStringValue("value3"),
+			},
+		},
+		WebhookName: GenerateRandomString(10, false, false),
+	}
+}
+
+// GenerateRandomLead creates a new Lead instance with random test data
+func GenerateRandomLead() *proto.Lead {
+	return &proto.Lead{
+		Name: GenerateRandomString(10, false, false),
+		Website: GenerateRandomizeUrl(),
+		Phone: fmt.Sprintf("+1%d", GenerateRandomInt(1000000000, 9999999999)),
+		Address: fmt.Sprintf("%d %s St", GenerateRandomInt(1, 999), GenerateRandomString(8, false, false)),
+		City: cities[GenerateRandomInt(0, len(cities)-1)],
+		State: states[GenerateRandomInt(0, len(states)-1)],
+		Country: "USA",
+		Latitude: GenerateRandomFloat(-90, 90),
+		Longitude: GenerateRandomFloat(-180, 180),
+		GoogleRating: float32(GenerateRandomFloat(1.0, 5.0)),
+		ReviewCount: int32(GenerateRandomInt(0, 1000)),
+		Industry: industries[GenerateRandomInt(0, len(industries)-1)],
+		EmployeeCount: int32(GenerateRandomInt(1, 1000)),
+		EstimatedRevenue: int64(GenerateRandomInt(100000, 10000000)),
+		OrgId: fmt.Sprintf("org_%s", GenerateRandomString(10, true, false)),
+		TenantId: fmt.Sprintf("tenant_%s", GenerateRandomString(10, true, false)),
+		CreatedAt: nil,
+		UpdatedAt: nil,
+		DeletedAt: nil,
+		PlaceId: GenerateRandomString(20, true, false),
+		GoogleMapsUrl: fmt.Sprintf("https://maps.google.com/?q=%f,%f", GenerateRandomFloat(-90, 90), GenerateRandomFloat(-180, 180)),
+		BusinessStatus: "OPERATIONAL",
+		MainPhotoUrl: GenerateRandomizeUrl(),
+		Reviews: []*proto.Review{GenerateRandomReview(), GenerateRandomReview()},
+		Types: []string{"restaurant", "bar", "cafe"},
+		Amenities: []string{"wheelchair_accessible", "restroom", "outdoor_seating"},
+		ServesVegetarianFood: GenerateRandomInt(0, 1) == 1,
+		OutdoorSeating: GenerateRandomInt(0, 1) == 1,
+		PaymentMethods: []string{"visa", "mastercard", "cash"},
+		WheelchairAccessible: GenerateRandomInt(0, 1) == 1,
+		ParkingAvailable: GenerateRandomInt(0, 1) == 1,
+		SocialMedia: map[string]string{
+			"facebook": GenerateRandomizeUrl(),
+			"twitter": GenerateRandomizeUrl(),
+			"instagram": GenerateRandomizeUrl(),
+		},
+		RatingCategory: "food",
+		Rating: float32(GenerateRandomFloat(1.0, 5.0)),
+		Count: int32(GenerateRandomInt(0, 1000)),
+		LastUpdated: nil,
+		DataSourceVersion: "1.0.0",
+		ScrapingSessionId: fmt.Sprintf("session_%s", GenerateRandomString(10, true, false)),
+		AlternatePhones: []string{fmt.Sprintf("+1%d", GenerateRandomInt(1000000000, 9999999999)), fmt.Sprintf("+1%d", GenerateRandomInt(1000000000, 9999999999))},
+		ContactPersonName: GenerateRandomString(10, false, false),
+		ContactPersonTitle: GenerateRandomString(10, false, false),
+		ContactEmail: GenerateRandomEmail(10),
+		FoundedYear: int32(GenerateRandomInt(1900, 2024)),
+		BusinessType: businessTypes[GenerateRandomInt(0, len(businessTypes)-1)],
+		Certifications: []string{"ISO", "LEED"},
+		LicenseNumber: fmt.Sprintf("license_%s", GenerateRandomString(10, true, false)),
+		RevenueRange: proto.Lead_RevenueRange(GenerateRandomInt(0, 2)),
+		FundingStage: fundingStages[GenerateRandomInt(0, len(fundingStages)-1)],
+		IsPublicCompany: GenerateRandomInt(0, 1) == 1,
+		WebsiteLoadSpeed: float32(GenerateRandomFloat(0.1, 5.0)),
+		HasSslCertificate: GenerateRandomInt(0, 1) == 1,
+		CmsUsed: cmsPlatforms[GenerateRandomInt(0, len(cmsPlatforms)-1)],
+		Timezone: "America/New_York",
+		Neighborhood: GenerateRandomString(10, false, false),
+		NearbyLandmarks: []string{"landmark1", "landmark2", "landmark3"},
+		TransportationAccess: "subway",
+		EmployeeBenefits: []proto.Lead_EmployeeBenefit{proto.Lead_EmployeeBenefit(GenerateRandomInt(0, 2))},
+		ParentCompany: GenerateRandomString(10, false, false),
+		Subsidiaries: []string{GenerateRandomString(10, false, false), GenerateRandomString(10, false, false)},
+		IsFranchise: GenerateRandomInt(0, 1) == 1,
+		SeoKeywords: []string{"keyword1", "keyword2", "keyword3"},
+		UsesGoogleAds: GenerateRandomInt(0, 1) == 1,
+		GoogleMyBusinessCategory: "restaurant",
+		NaicsCode: fmt.Sprintf("%06d", GenerateRandomInt(0, 999999)),
+		SicCode: fmt.Sprintf("%04d", GenerateRandomInt(0, 9999)),
+		UnspscCode: fmt.Sprintf("%08d", GenerateRandomInt(0, 99999999)),
+		IsGreenCertified: GenerateRandomInt(0, 1) == 1,
+		EnergySources: []string{"solar", "wind", "hydro"},
+		SustainabilityRating: "A",
+		RecentAnnouncements: []string{"announcement1", "announcement2", "announcement3"},
+		LastProductLaunch: nil,
+		HasLitigationHistory: GenerateRandomInt(0, 1) == 1,
+		ExportControlStatus: "EAR",
 	}
 }
 
@@ -403,6 +578,22 @@ func GenerateRandomResult() *proto.Result {
 		Id:   int32(GenerateRandomInt(1, 1000000)),
 		Data: []byte(fmt.Sprintf(`{"data": "%s"}`, GenerateRandomString(100, true, true))),
 	}
+}
+
+func GenerateRandomTenantAPIKeys(count int) []*proto.TenantAPIKey {
+	tenantAPIKeys := make([]*proto.TenantAPIKey, count)
+	for i := 0; i < count; i++ {
+		tenantAPIKeys[i] = GenerateRandomTenantAPIKey()
+	}
+	return tenantAPIKeys
+}
+
+func GenerateRandomWebhookConfigs(count int) []*proto.WebhookConfig {
+	webhookConfigs := make([]*proto.WebhookConfig, count)
+	for i := 0; i < count; i++ {
+		webhookConfigs[i] = GenerateRandomWebhookConfig()
+	}
+	return webhookConfigs
 }
 
 // GenerateRandomAccounts generates a slice of random Account instances

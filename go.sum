@@ -54,8 +54,8 @@ github.com/PuerkitoBio/goquery v1.10.0 h1:6fiXdLuUvYs2OJSvNRqlNPoBm6YABE226xrbav
 github.com/PuerkitoBio/goquery v1.10.0/go.mod h1:TjZZl68Q3eGHNBA8CWaxAN7rOU1EbDz3CWuolcO5Yu4=
 github.com/SolomonAIEngineering/backend-core-library v1.30.0 h1:c4W2Mvd7uh6wOVTLqV4TUzfj7IeHkycI//KXrWmrHTQ=
 github.com/SolomonAIEngineering/backend-core-library v1.30.0/go.mod h1:DQv8Xb1rljobwulkSPf+1fnknm/V2SkzVcIgP3lPT/w=
-github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250202110204-19e07159ab55 h1:J6oYQIg9L6vs85khNJWv0A4Rd/xfI2acAzPdOtvdB60=
-github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250202110204-19e07159ab55/go.mod h1:IxfUHQhLfFULZm7FwQ3Tx0qanQJQGwFpoAu6doCVOQo=
+github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250203154734-88320e1e5d11 h1:RlU7rBu5jgxRJBXJkxI7D4NBwPVtLVbENrs3+3044Qs=
+github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250203154734-88320e1e5d11/go.mod h1:IxfUHQhLfFULZm7FwQ3Tx0qanQJQGwFpoAu6doCVOQo=
 github.com/adhocore/gronx v1.19.5 h1:cwIG4nT1v9DvadxtHBe6MzE+FZ1JDvAUC45U2fl4eSQ=
 github.com/adhocore/gronx v1.19.5/go.mod h1:7oUY1WAU8rEJWmAxXR2DN0JaO4gi9khSgKjiRypqteg=
 github.com/alecthomas/assert/v2 v2.2.2 h1:Z/iVC0xZfWTaFNE6bA3z07T86hd45Xe2eLt6WVy2bbk=

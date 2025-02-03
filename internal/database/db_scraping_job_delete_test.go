@@ -6,28 +6,14 @@ import (
 	"testing"
 	"time"
 
-	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
+	"github.com/Vector/vector-leads-scraper/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDeleteScrapingJob(t *testing.T) {
 	// Create a test job first
-	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-		Priority:    1,
-		PayloadType: "scraping_job",
-		Payload:     []byte(`{"query": "test query"}`),
-		Name:        "Test Job",
-		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        "en",
-		Zoom:        15,
-		Lat:         "40.7128",
-		Lon:         "-74.0060",
-		FastMode:    false,
-		Radius:      10000,
-		MaxTime:     3600,
-	}
+	testJob := testutils.GenerateRandomizedScrapingJob()
 
 	created, err := conn.CreateScrapingJob(context.Background(), testJob)
 	require.NoError(t, err)
@@ -80,15 +66,7 @@ func TestDeleteScrapingJob(t *testing.T) {
 			errType:   ErrJobDoesNotExist,
 			setup: func(t *testing.T) uint64 {
 				// Create and delete a job
-				job := &lead_scraper_servicev1.ScrapingJob{
-					Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-					Priority:    1,
-					PayloadType: "scraping_job",
-					Name:        "Test Job",
-					Zoom:        15,
-					Lat:         "40.7128",
-					Lon:         "-74.0060",
-				}
+				job := testutils.GenerateRandomizedScrapingJob()
 				created, err := conn.CreateScrapingJob(context.Background(), job)
 				require.NoError(t, err)
 				require.NotNil(t, created)
@@ -153,21 +131,7 @@ func TestDeleteScrapingJob_ConcurrentDeletions(t *testing.T) {
 
 	// Create test jobs
 	for i := 0; i < numJobs; i++ {
-		job := &lead_scraper_servicev1.ScrapingJob{
-			Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
-			Priority:    int32(i + 1), // Different priority for each job
-			PayloadType: "scraping_job",
-			Payload:     []byte(`{"query": "test query"}`),
-			Name:        "Test Job",
-			Keywords:    []string{"keyword1", "keyword2"},
-			Lang:        "en",
-			Zoom:        15,
-			Lat:         "40.7128",
-			Lon:         "-74.0060",
-			FastMode:    false,
-			Radius:      10000,
-			MaxTime:     3600,
-		}
+		job := testutils.GenerateRandomizedScrapingJob()
 		created, err := conn.CreateScrapingJob(context.Background(), job)
 		require.NoError(t, err)
 		require.NotNil(t, created)

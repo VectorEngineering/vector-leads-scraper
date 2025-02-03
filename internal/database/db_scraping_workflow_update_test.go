@@ -15,8 +15,6 @@ func TestUpdateScrapingWorkflow(t *testing.T) {
 		RetryCount:           0,
 		MaxRetries:           5,
 		AlertEmails:          "test@example.com",
-		OrgId:               "test-org",
-		TenantId:            "test-tenant",
 		GeoFencingRadius:    1000.0,
 		GeoFencingLat:       40.7128,
 		GeoFencingLon:       -74.0060,
@@ -29,7 +27,6 @@ func TestUpdateScrapingWorkflow(t *testing.T) {
 		RespectRobotsTxt:     true,
 		AcceptTermsOfService:  true,
 		UserAgent:            "TestBot/1.0",
-		NotificationWebhookUrl: "https://example.com/webhook",
 	}
 	created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)
 	assert.NoError(t, err)
@@ -48,8 +45,6 @@ func TestUpdateScrapingWorkflow(t *testing.T) {
 				RetryCount:           1,
 				MaxRetries:           3,
 				AlertEmails:          "updated@example.com",
-				OrgId:               "updated-org",
-				TenantId:            "updated-tenant",
 				GeoFencingRadius:    2000.0,
 				GeoFencingLat:       41.8781,
 				GeoFencingLon:       -87.6298,
@@ -62,7 +57,6 @@ func TestUpdateScrapingWorkflow(t *testing.T) {
 				RespectRobotsTxt:     true,
 				AcceptTermsOfService:  true,
 				UserAgent:            "UpdatedTestBot/2.0",
-				NotificationWebhookUrl: "https://example.com/webhook/updated",
 			},
 			wantError: false,
 		},
@@ -111,8 +105,6 @@ func TestUpdateScrapingWorkflow(t *testing.T) {
 				assert.Equal(t, tt.workflow.RetryCount, result.RetryCount)
 				assert.Equal(t, tt.workflow.MaxRetries, result.MaxRetries)
 				assert.Equal(t, tt.workflow.AlertEmails, result.AlertEmails)
-				assert.Equal(t, tt.workflow.OrgId, result.OrgId)
-				assert.Equal(t, tt.workflow.TenantId, result.TenantId)
 			}
 		})
 	}

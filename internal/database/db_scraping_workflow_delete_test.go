@@ -59,12 +59,9 @@ func TestDeleteScrapingWorkflow(t *testing.T) {
 				// Create and delete a workflow
 				workflow := &lead_scraper_servicev1.ScrapingWorkflow{
 					CronExpression: "0 0 * * *",
-					OrgId:         "test-org",
-					TenantId:      "test-tenant",
 					MaxRetries:    5,
 					GeoFencingZoomMin: 1,
 					GeoFencingZoomMax: 20,
-					NotificationWebhookUrl: "https://example.com/webhook",
 				}
 				created, err := conn.CreateScrapingWorkflow(context.Background(), workflow)
 				require.NoError(t, err)
@@ -129,8 +126,6 @@ func TestDeleteScrapingWorkflow_ConcurrentDeletions(t *testing.T) {
 			RetryCount:            0,
 			MaxRetries:            5,
 			AlertEmails:           "test@example.com",
-			OrgId:                "test-org",
-			TenantId:             "test-tenant",
 			GeoFencingRadius:     1000.0,
 			GeoFencingLat:        40.7128,
 			GeoFencingLon:        -74.0060,
@@ -143,7 +138,6 @@ func TestDeleteScrapingWorkflow_ConcurrentDeletions(t *testing.T) {
 			RespectRobotsTxt:     true,
 			AcceptTermsOfService:  true,
 			UserAgent:            "TestBot/1.0",
-			NotificationWebhookUrl: "https://example.com/webhook",
 		}
 		created, err := conn.CreateScrapingWorkflow(context.Background(), workflow)
 		require.NoError(t, err)

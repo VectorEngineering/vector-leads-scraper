@@ -5,7 +5,7 @@ go 1.23.4
 require (
 	github.com/PuerkitoBio/goquery v1.10.0
 	github.com/SolomonAIEngineering/backend-core-library v1.30.0
-	github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250202110204-19e07159ab55
+	github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250203154734-88320e1e5d11
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/aws-sdk-go-v2 v1.32.3
 	github.com/aws/aws-sdk-go-v2/config v1.28.1

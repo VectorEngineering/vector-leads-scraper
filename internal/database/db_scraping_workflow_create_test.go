@@ -18,8 +18,6 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 		RetryCount:            0,
 		MaxRetries:            5,
 		AlertEmails:           "test@example.com",
-		OrgId:                "test-org",
-		TenantId:             "test-tenant",
 		GeoFencingRadius:     float32(1000.0),
 		GeoFencingLat:        40.7128,
 		GeoFencingLon:        -74.0060,
@@ -32,7 +30,6 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 		RespectRobotsTxt:     true,
 		AcceptTermsOfService:  true,
 		UserAgent:            "TestBot/1.0",
-		NotificationWebhookUrl: "https://example.com/webhook",
 	}
 
 	tests := []struct {
@@ -53,8 +50,6 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 				assert.Equal(t, validWorkflow.RetryCount, workflow.RetryCount)
 				assert.Equal(t, validWorkflow.MaxRetries, workflow.MaxRetries)
 				assert.Equal(t, validWorkflow.AlertEmails, workflow.AlertEmails)
-				assert.Equal(t, validWorkflow.OrgId, workflow.OrgId)
-				assert.Equal(t, validWorkflow.TenantId, workflow.TenantId)
 				assert.Equal(t, validWorkflow.GeoFencingRadius, workflow.GeoFencingRadius)
 				assert.Equal(t, validWorkflow.GeoFencingLat, workflow.GeoFencingLat)
 				assert.Equal(t, validWorkflow.GeoFencingLon, workflow.GeoFencingLon)
@@ -67,7 +62,6 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 				assert.Equal(t, validWorkflow.RespectRobotsTxt, workflow.RespectRobotsTxt)
 				assert.Equal(t, validWorkflow.AcceptTermsOfService, workflow.AcceptTermsOfService)
 				assert.Equal(t, validWorkflow.UserAgent, workflow.UserAgent)
-				assert.Equal(t, validWorkflow.NotificationWebhookUrl, workflow.NotificationWebhookUrl)
 			},
 		},
 		{
@@ -81,11 +75,8 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 			workflow: &lead_scraper_servicev1.ScrapingWorkflow{
 				CronExpression: "99 99 99 99 99", // Obviously invalid cron
 				MaxRetries:    5,
-				OrgId:         "test-org",
-				TenantId:      "test-tenant",
 				GeoFencingZoomMin: 1,
 				GeoFencingZoomMax: 20,
-				NotificationWebhookUrl: "https://example.com/webhook",
 			},
 			wantError: true,
 			errType:   ErrInvalidInput,
@@ -95,14 +86,11 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 			workflow: &lead_scraper_servicev1.ScrapingWorkflow{
 				CronExpression:    "0 0 * * *",
 				MaxRetries:       5,
-				OrgId:            "test-org",
-				TenantId:         "test-tenant",
 				GeoFencingRadius: -1,
 				GeoFencingLat:    91.0,  // Invalid latitude (> 90)
 				GeoFencingLon:    181.0, // Invalid longitude (> 180)
 				GeoFencingZoomMin: 1,
 				GeoFencingZoomMax: 20,
-				NotificationWebhookUrl: "https://example.com/webhook",
 			},
 			wantError: true,
 			errType:   ErrInvalidInput,
@@ -167,8 +155,6 @@ func TestCreateScrapingWorkflow_ConcurrentCreation(t *testing.T) {
 				RetryCount:            0,
 				MaxRetries:            5,
 				AlertEmails:           "test@example.com",
-				OrgId:                "test-org",
-				TenantId:             "test-tenant",
 				GeoFencingRadius:     float32(1000.0),
 				GeoFencingLat:        40.7128,
 				GeoFencingLon:        -74.0060,
@@ -181,7 +167,6 @@ func TestCreateScrapingWorkflow_ConcurrentCreation(t *testing.T) {
 				RespectRobotsTxt:     true,
 				AcceptTermsOfService:  true,
 				UserAgent:            fmt.Sprintf("TestBot/%d", index),
-				NotificationWebhookUrl: fmt.Sprintf("https://example.com/webhook/%d", index),
 			}
 
 			created, err := conn.CreateScrapingWorkflow(context.Background(), workflow)
@@ -224,8 +209,6 @@ func TestCreateScrapingWorkflow_ConcurrentCreation(t *testing.T) {
 	for _, workflow := range createdWorkflows {
 		require.NotNil(t, workflow)
 		require.NotZero(t, workflow.Id)
-		assert.Equal(t, "test-org", workflow.OrgId)
-		assert.Equal(t, "test-tenant", workflow.TenantId)
 		assert.Equal(t, float32(1000.0), workflow.GeoFencingRadius)
 		assert.Equal(t, float64(40.7128), workflow.GeoFencingLat)
 		assert.Equal(t, float64(-74.0060), workflow.GeoFencingLon)

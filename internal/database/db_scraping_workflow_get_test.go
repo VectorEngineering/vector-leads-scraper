@@ -18,8 +18,6 @@ func TestGetScrapingWorkflow(t *testing.T) {
 		RetryCount:            0,
 		MaxRetries:            5,
 		AlertEmails:           "test@example.com",
-		OrgId:                "test-org",
-		TenantId:             "test-tenant",
 		GeoFencingRadius:     1000.0,
 		GeoFencingLat:        40.7128,
 		GeoFencingLon:        -74.0060,
@@ -32,7 +30,6 @@ func TestGetScrapingWorkflow(t *testing.T) {
 		RespectRobotsTxt:     true,
 		AcceptTermsOfService:  true,
 		UserAgent:            "TestBot/1.0",
-		NotificationWebhookUrl: "https://example.com/webhook",
 	}
 
 	created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)
@@ -65,8 +62,6 @@ func TestGetScrapingWorkflow(t *testing.T) {
 				assert.Equal(t, created.RetryCount, workflow.RetryCount)
 				assert.Equal(t, created.MaxRetries, workflow.MaxRetries)
 				assert.Equal(t, created.AlertEmails, workflow.AlertEmails)
-				assert.Equal(t, created.OrgId, workflow.OrgId)
-				assert.Equal(t, created.TenantId, workflow.TenantId)
 				assert.Equal(t, created.GeoFencingRadius, workflow.GeoFencingRadius)
 				assert.Equal(t, created.GeoFencingLat, workflow.GeoFencingLat)
 				assert.Equal(t, created.GeoFencingLon, workflow.GeoFencingLon)
@@ -132,8 +127,6 @@ func TestGetScrapingWorkflow_ConcurrentReads(t *testing.T) {
 		RetryCount:            0,
 		MaxRetries:            5,
 		AlertEmails:           "test@example.com",
-		OrgId:                "test-org",
-		TenantId:             "test-tenant",
 		GeoFencingRadius:     1000.0,
 		GeoFencingLat:        40.7128,
 		GeoFencingLon:        -74.0060,
@@ -146,7 +139,6 @@ func TestGetScrapingWorkflow_ConcurrentReads(t *testing.T) {
 		RespectRobotsTxt:     true,
 		AcceptTermsOfService:  true,
 		UserAgent:            "TestBot/1.0",
-		NotificationWebhookUrl: "https://example.com/webhook",
 	}
 
 	created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)

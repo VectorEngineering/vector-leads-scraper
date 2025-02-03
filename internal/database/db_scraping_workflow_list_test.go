@@ -26,42 +26,33 @@ func TestListScrapingWorkflows(t *testing.T) {
 			RetryCount:           0,
 			MaxRetries:           5,
 			AlertEmails:          "test1@example.com",
-			OrgId:               "test-org-1",
-			TenantId:            "test-tenant-1",
 			GeoFencingRadius:    1000.0,
 			GeoFencingLat:       40.7128,
 			GeoFencingLon:       -74.0060,
 			GeoFencingZoomMin:    1,
 			GeoFencingZoomMax:    20,
-			NotificationWebhookUrl: "https://example.com/webhook1",
 		},
 		{
 			CronExpression:       "0 12 * * *",
 			RetryCount:           1,
 			MaxRetries:           3,
 			AlertEmails:          "test2@example.com",
-			OrgId:               "test-org-2",
-			TenantId:            "test-tenant-2",
 			GeoFencingRadius:    2000.0,
 			GeoFencingLat:       41.8781,
 			GeoFencingLon:       -87.6298,
 			GeoFencingZoomMin:    1,
 			GeoFencingZoomMax:    20,
-			NotificationWebhookUrl: "https://example.com/webhook2",
 		},
 		{
 			CronExpression:       "0 0 1 * *",
 			RetryCount:           2,
 			MaxRetries:           4,
 			AlertEmails:          "test3@example.com",
-			OrgId:               "test-org-3",
-			TenantId:            "test-tenant-3",
 			GeoFencingRadius:    3000.0,
 			GeoFencingLat:       34.0522,
 			GeoFencingLon:       -118.2437,
 			GeoFencingZoomMin:    1,
 			GeoFencingZoomMax:    20,
-			NotificationWebhookUrl: "https://example.com/webhook3",
 		},
 	}
 
@@ -175,8 +166,6 @@ func TestListScrapingWorkflows(t *testing.T) {
 				assert.NotZero(t, first.Id)
 				assert.NotEmpty(t, first.CronExpression)
 				assert.NotEmpty(t, first.AlertEmails)
-				assert.NotEmpty(t, first.OrgId)
-				assert.NotEmpty(t, first.TenantId)
 
 				// For pagination test cases, verify we get the expected workflows in order
 				if tt.name == "[success scenario] - pagination first page" {

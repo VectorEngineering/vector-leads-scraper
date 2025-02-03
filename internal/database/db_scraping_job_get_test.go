@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Vector/vector-leads-scraper/internal/testutils"
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,21 +14,7 @@ import (
 
 func TestGetScrapingJob(t *testing.T) {
 	// Create a test job first
-	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      0, // Assuming 0 is PENDING in the protobuf enum
-		Priority:    1,
-		PayloadType: "scraping_job",
-		Payload:     []byte(`{"query": "test query"}`),
-		Name:        "Test Job",
-		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        "en",
-		Zoom:        15,
-		Lat:         "40.7128",
-		Lon:         "-74.0060",
-		FastMode:    false,
-		Radius:      10000,
-		MaxTime:     3600,
-	}
+	testJob := testutils.GenerateRandomizedScrapingJob()
 
 	created, err := conn.CreateScrapingJob(context.Background(), testJob)
 	require.NoError(t, err)
@@ -120,21 +107,7 @@ func TestGetScrapingJob(t *testing.T) {
 
 func TestGetScrapingJob_ConcurrentReads(t *testing.T) {
 	// Create a test job first
-	testJob := &lead_scraper_servicev1.ScrapingJob{
-		Status:      0, // Assuming 0 is PENDING in the protobuf enum
-		Priority:    1,
-		PayloadType: "scraping_job",
-		Payload:     []byte(`{"query": "test query"}`),
-		Name:        "Test Job",
-		Keywords:    []string{"keyword1", "keyword2"},
-		Lang:        "en",
-		Zoom:        15,
-		Lat:         "40.7128",
-		Lon:         "-74.0060",
-		FastMode:    false,
-		Radius:      10000,
-		MaxTime:     3600,
-	}
+	testJob := testutils.GenerateRandomizedScrapingJob()
 
 	created, err := conn.CreateScrapingJob(context.Background(), testJob)
 	require.NoError(t, err)

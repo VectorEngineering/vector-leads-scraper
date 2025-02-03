@@ -18,7 +18,7 @@ func setupTestLeads(t *testing.T, numLeads int) (*lead_scraper_servicev1.Scrapin
 	defer cancel()
 
 	// Create a test scraping job
-	testJob := testScrapingJob()
+	testJob := testutils.GenerateRandomizedScrapingJob()
 	createdJob, err := conn.CreateScrapingJob(ctx, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, createdJob)
