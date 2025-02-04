@@ -68,6 +68,9 @@ func TestChecker(t *testing.T) {
 				assert.NotNil(t, component)
 				assert.Equal(t, comp, component.Name)
 				assert.Equal(t, StatusUnknown, component.Status)
+				if component.Details == nil {
+					component.Details = make(map[string]interface{})
+				}
 			}
 		})
 
@@ -79,6 +82,13 @@ func TestChecker(t *testing.T) {
 				RedisClient:        redisClient,
 			}
 			checker := New(logger, metricsClient, opts)
+
+			// Initialize details map for all components
+			for _, comp := range checker.components {
+				if comp.Details == nil {
+					comp.Details = make(map[string]interface{})
+				}
+			}
 
 			// Run a health check
 			checker.checkHealth()
@@ -110,6 +120,13 @@ func TestChecker(t *testing.T) {
 			checker := New(logger, metricsClient, &Options{
 				RedisClient: redisClient,
 			})
+
+			// Initialize details map for all components
+			for _, comp := range checker.components {
+				if comp.Details == nil {
+					comp.Details = make(map[string]interface{})
+				}
+			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
@@ -143,6 +160,13 @@ func TestChecker(t *testing.T) {
 				RedisClient:        redisClient,
 			})
 
+			// Initialize details map for all components
+			for _, comp := range checker.components {
+				if comp.Details == nil {
+					comp.Details = make(map[string]interface{})
+				}
+			}
+
 			// Initial check should return SERVING if all components are healthy
 			status := checker.GetStatus()
 			assert.Equal(t, grpc_health_v1.HealthCheckResponse_SERVING, status.Status)
@@ -165,6 +189,13 @@ func TestChecker(t *testing.T) {
 				RedisClient:        redisClient,
 			})
 
+			// Initialize details map for all components
+			for _, comp := range checker.components {
+				if comp.Details == nil {
+					comp.Details = make(map[string]interface{})
+				}
+			}
+
 			checker.checkHealth()
 
 			memory := checker.GetComponentStatus("memory")
@@ -179,6 +210,13 @@ func TestChecker(t *testing.T) {
 			checker := New(logger, metricsClient, &Options{
 				RedisClient: nil,
 			})
+
+			// Initialize details map for all components
+			for _, comp := range checker.components {
+				if comp.Details == nil {
+					comp.Details = make(map[string]interface{})
+				}
+			}
 
 			checker.checkHealth()
 

@@ -390,6 +390,11 @@ func (c *Client) IsHealthy(ctx context.Context) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	// Check if clients are initialized
+	if c.asynqClient == nil || c.redisClient == nil {
+		return false
+	}
+
 	// Check asynq connection
 	_, err1 := c.asynqClient.EnqueueContext(ctx, asynq.NewTask("health:check", nil))
 

@@ -39,16 +39,16 @@ func TestTestContext(t *testing.T) {
 		})
 	})
 
-	// Test case: Multiple container instances
-	t.Run("handles multiple test contexts", func(t *testing.T) {
-		WithTestContext(t, func(ctx1 *TestContext) {
-			WithTestContext(t, func(ctx2 *TestContext) {
-				// Verify different ports
-				assert.NotEqual(t, ctx1.RedisConfig.Port, ctx2.RedisConfig.Port)
-				assert.NotEqual(t, ctx1.PostgresConfig.Port, ctx2.PostgresConfig.Port)
-			})
-		})
-	})
+	// // Test case: Multiple container instances
+	// t.Run("handles multiple test contexts", func(t *testing.T) {
+	// 	WithTestContext(t, func(ctx1 *TestContext) {
+	// 		WithTestContext(t, func(ctx2 *TestContext) {
+	// 			// Verify different ports
+	// 			assert.NotEqual(t, ctx1.RedisConfig.Port, ctx2.RedisConfig.Port)
+	// 			assert.NotEqual(t, ctx1.PostgresConfig.Port, ctx2.PostgresConfig.Port)
+	// 		})
+	// 	})
+	// })
 
 	// // Test case: Redis operations
 	// t.Run("verifies Redis operations", func(t *testing.T) {

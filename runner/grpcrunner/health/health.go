@@ -130,6 +130,9 @@ func (c *Checker) updateComponent(name string, updateFn func(*Component)) {
 
 	if component, exists := c.components[name]; exists {
 		component.LastChecked = time.Now()
+		if component.Details == nil {
+			component.Details = make(map[string]interface{})
+		}
 		updateFn(component)
 	}
 }
