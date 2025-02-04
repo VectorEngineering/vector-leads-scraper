@@ -8,13 +8,13 @@ import (
 
 // HtmlToMarkdownConfig holds configuration options for HTML to Markdown conversion
 type HtmlToMarkdownConfig struct {
-	EmDelimiter        string // Delimiter for emphasis (default: *)
-	StrongDelimiter    string // Delimiter for strong emphasis (default: **)
-	BulletListMarker   string // Marker for bullet lists (default: -)
-	CodeBlockFence     string // Fence for code blocks (default: ```)
-	HorizontalRule     string // Rule for horizontal lines (default: * * *)
-	HeadingStyle       string // Style for headings: "atx" or "setext" (default: atx)
-	ListEndComment     bool   // Whether to add list end comments (default: false)
+	EmDelimiter      string // Delimiter for emphasis (default: *)
+	StrongDelimiter  string // Delimiter for strong emphasis (default: **)
+	BulletListMarker string // Marker for bullet lists (default: -)
+	CodeBlockFence   string // Fence for code blocks (default: ```)
+	HorizontalRule   string // Rule for horizontal lines (default: * * *)
+	HeadingStyle     string // Style for headings: "atx" or "setext" (default: atx)
+	ListEndComment   bool   // Whether to add list end comments (default: false)
 }
 
 // DefaultConfig returns a HtmlToMarkdownConfig with default values

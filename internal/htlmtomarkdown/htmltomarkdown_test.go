@@ -159,9 +159,9 @@ func TestHtmlToMarkdownWithConfig(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:  "nil config should use defaults",
-			input: "<strong>Bold</strong>",
-			config: nil,
+			name:     "nil config should use defaults",
+			input:    "<strong>Bold</strong>",
+			config:   nil,
 			expected: "__Bold__",
 			wantErr:  false,
 		},
@@ -224,4 +224,4 @@ func TestDefaultConfig(t *testing.T) {
 	if config.ListEndComment != false {
 		t.Errorf("DefaultConfig().ListEndComment = %v, want %v", config.ListEndComment, false)
 	}
-} 
+}
