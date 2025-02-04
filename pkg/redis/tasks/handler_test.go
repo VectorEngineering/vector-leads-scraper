@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -80,7 +81,7 @@ func TestProcessTask(t *testing.T) {
 			WithDataFolder(t.TempDir()),
 			WithConcurrency(1),
 		)
-		task := asynq.NewTask(TypeScrapeGMaps, []byte(`{}`))
+		task := asynq.NewTask(TypeScrapeGMaps.String(), []byte(`{}`))
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "no keywords provided")
@@ -96,7 +97,7 @@ func TestProcessTask(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 		defer cancel()
 
-		task := asynq.NewTask(TypeScrapeGMaps, []byte(`{"keywords": ["test"]}`))
+		task := asynq.NewTask(TypeScrapeGMaps.String(), []byte(`{"keywords": ["test"]}`))
 
 		errCh := make(chan error, 1)
 		go func() {
@@ -119,30 +120,192 @@ func TestTaskValidation(t *testing.T) {
 	)
 
 	t.Run("invalid scrape task payload", func(t *testing.T) {
-		task := asynq.NewTask(TypeScrapeGMaps, []byte(`{invalid json}`))
+		task := asynq.NewTask(TypeScrapeGMaps.String(), []byte(`{invalid json}`))
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal scrape payload")
 	})
 
 	t.Run("invalid email task payload", func(t *testing.T) {
-		task := asynq.NewTask(TypeEmailExtract, []byte(`{invalid json}`))
+		task := asynq.NewTask(TypeEmailExtract.String(), []byte(`{invalid json}`))
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal email payload")
 	})
 
 	t.Run("empty scrape task payload", func(t *testing.T) {
-		task := asynq.NewTask(TypeScrapeGMaps, nil)
+		task := asynq.NewTask(TypeScrapeGMaps.String(), nil)
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal scrape payload")
 	})
 
 	t.Run("empty email task payload", func(t *testing.T) {
-		task := asynq.NewTask(TypeEmailExtract, nil)
+		task := asynq.NewTask(TypeEmailExtract.String(), nil)
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal email payload")
 	})
+}
+
+func TestWithMaxRetries(t *testing.T) {
+	type args struct {
+		retries int
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithMaxRetries(tt.args.retries); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithMaxRetries() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithRetryInterval(t *testing.T) {
+	type args struct {
+		interval time.Duration
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithRetryInterval(tt.args.interval); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithRetryInterval() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithTaskTimeout(t *testing.T) {
+	type args struct {
+		timeout time.Duration
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithTaskTimeout(tt.args.timeout); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithTaskTimeout() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithDataFolder(t *testing.T) {
+	type args struct {
+		folder string
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithDataFolder(tt.args.folder); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithDataFolder() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithConcurrency(t *testing.T) {
+	type args struct {
+		n int
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithConcurrency(tt.args.n); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithConcurrency() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithProxies(t *testing.T) {
+	type args struct {
+		proxies []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithProxies(tt.args.proxies); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithProxies() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithDisablePageReuse(t *testing.T) {
+	type args struct {
+		disable bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithDisablePageReuse(tt.args.disable); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithDisablePageReuse() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHandler_ProcessTask(t *testing.T) {
+	type args struct {
+		ctx  context.Context
+		task *asynq.Task
+	}
+	tests := []struct {
+		name    string
+		h       *Handler
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.h.ProcessTask(tt.args.ctx, tt.args.task); (err != nil) != tt.wantErr {
+				t.Errorf("Handler.ProcessTask() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }

@@ -1,5 +1,92 @@
 // Package redis provides Redis-based task queue functionality with support for
-// task scheduling, aggregation, and archival.
+// task scheduling, aggregation, and archival. It implements a robust task queue
+// system with features like task deduplication, grouping, and retention policies.
+//
+// Example usage of the task queue system:
+//
+//	// Create a Redis client
+//	client := redis.NewClient(&redis.Options{
+//		Addr: "localhost:6379",
+//	})
+//
+//	// Create tasks with different configurations
+//	tasks := []*Task{
+//		{
+//			Type: "email",
+//			Payload: map[string]interface{}{
+//				"to":      "user@example.com",
+//				"subject": "Welcome",
+//				"body":    "Welcome to our service!",
+//			},
+//			Queue:    "notifications",
+//			Retry:    3,
+//			Timeout:  5 * time.Minute,
+//			Deadline: time.Now().Add(time.Hour),
+//		},
+//		{
+//			Type: "report",
+//			Payload: map[string]interface{}{
+//				"user_id": "123",
+//				"type":    "monthly",
+//			},
+//			Queue:     "reports",
+//			Retry:     5,
+//			Timeout:   30 * time.Minute,
+//			Deadline:  time.Now().Add(24 * time.Hour),
+//			Retention: 30 * 24 * time.Hour, // Keep for 30 days
+//		},
+//	}
+//
+//	// Process tasks in different ways
+//	ctx := context.Background()
+//
+//	// 1. Enqueue for immediate processing
+//	info, err := client.EnqueueTaskV2(ctx, tasks[0])
+//
+//	// 2. Schedule for future processing
+//	info, err = client.ScheduleTask(ctx, tasks[1], tomorrow)
+//
+//	// 3. Enqueue with uniqueness constraint
+//	info, err = client.EnqueueTaskUniqueV2(ctx, tasks[0], time.Hour)
+//
+//	// 4. Add to a group for aggregation
+//	info, err = client.AddToGroup(ctx, tasks[1], "monthly-reports")
+//
+//	// 5. Archive completed task
+//	err = client.ArchiveTask(ctx, tasks[0])
+//
+// Example of task aggregation and batch processing:
+//
+//	// Create related tasks
+//	notifications := []*Task{
+//		{
+//			Type: "notification",
+//			Payload: map[string]interface{}{
+//				"user_id": "123",
+//				"event":   "like",
+//			},
+//			Queue: "notifications",
+//		},
+//		{
+//			Type: "notification",
+//			Payload: map[string]interface{}{
+//				"user_id": "123",
+//				"event":   "comment",
+//			},
+//			Queue: "notifications",
+//		},
+//	}
+//
+//	// Add to group with uniqueness constraint
+//	for _, task := range notifications {
+//		info, err := client.AddToGroupUnique(ctx, task,
+//			"user-123-notifications", time.Hour)
+//		if err != nil {
+//			log.Printf("Failed to add task to group: %v", err)
+//			continue
+//		}
+//		log.Printf("Added task to group: %s", info.Task.ID)
+//	}
 package redis
 
 import (
@@ -11,7 +98,21 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// TaskState represents the state of a task in the queue
+// TaskState represents the state of a task in the queue.
+// Tasks can be in various states throughout their lifecycle.
+//
+// Example usage:
+//
+//	switch taskInfo.State {
+//	case TaskStatePending:
+//		log.Printf("Task %s is ready for processing", taskInfo.Task.ID)
+//	case TaskStateScheduled:
+//		log.Printf("Task %s will be processed at %v", taskInfo.Task.ID, taskInfo.ProcessAt)
+//	case TaskStateAggregating:
+//		log.Printf("Task %s is waiting for aggregation", taskInfo.Task.ID)
+//	case TaskStateArchived:
+//		log.Printf("Task %s has been archived", taskInfo.Task.ID)
+//	}
 type TaskState string
 
 const (
@@ -28,19 +129,42 @@ const (
 // Task represents a task to be processed. Tasks can be scheduled for immediate
 // or future processing, grouped for aggregation, or archived after completion.
 //
-// Example:
+// Example usage:
 //
+//	// Create a basic task
 //	task := &Task{
-//	    Type: "email",
-//	    Payload: map[string]interface{}{
-//	        "to": "user@example.com",
-//	        "subject": "Welcome",
-//	        "body": "Welcome to our service!",
-//	    },
-//	    Queue: "notifications",
-//	    Retry: 3,
-//	    Timeout: 5 * time.Minute,
-//	    Deadline: time.Now().Add(time.Hour),
+//		Type: "email",
+//		Payload: map[string]interface{}{
+//			"to":      "user@example.com",
+//			"subject": "Welcome",
+//			"body":    "Welcome to our service!",
+//		},
+//		Queue:    "notifications",
+//		Retry:    3,
+//		Timeout:  5 * time.Minute,
+//		Deadline: time.Now().Add(time.Hour),
+//	}
+//
+//	// Create a task with grouping and retention
+//	task := &Task{
+//		Type: "report",
+//		Payload: map[string]interface{}{
+//			"user_id": "123",
+//			"type":    "monthly",
+//		},
+//		Queue:     "reports",
+//		GroupKey:  "monthly-reports",
+//		Retention: 30 * 24 * time.Hour,
+//	}
+//
+//	// Create a unique task
+//	task := &Task{
+//		Type: "welcome_email",
+//		Payload: map[string]interface{}{
+//			"user_id": "123",
+//		},
+//		Queue:     "emails",
+//		UniqueKey: "welcome:user:123",
 //	}
 type Task struct {
 	// ID uniquely identifies the task

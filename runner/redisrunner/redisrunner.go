@@ -32,7 +32,7 @@ func New(cfg *runner.Config) (*RedisRunner, error) {
 	handlerOpts := &taskhandler.Options{
 		MaxRetries:    3,
 		RetryInterval: 5 * time.Second,
-		TaskTypes:     []string{tasks.TypeScrapeGMaps},
+		TaskTypes:     tasks.DefaultTaskTypes(),
 		Logger:        logger,
 	}
 
@@ -61,7 +61,7 @@ func (r *RedisRunner) Close(ctx context.Context) error {
 }
 
 // EnqueueTask enqueues a new task for processing.
-func (r *RedisRunner) EnqueueTask(ctx context.Context, taskType string, payload []byte, opts ...asynq.Option) error {
+func (r *RedisRunner) EnqueueTask(ctx context.Context, taskType tasks.TaskType, payload []byte, opts ...asynq.Option) error {
 	return r.handler.EnqueueTask(ctx, taskType, payload, opts...)
 }
 

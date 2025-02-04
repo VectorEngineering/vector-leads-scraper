@@ -228,7 +228,7 @@ func New(cfg *runner.Config) (runner.Runner, error) {
 		handlerOpts := &taskhandler.Options{
 			MaxRetries:    3,
 			RetryInterval: 5 * time.Second,
-			TaskTypes:     []string{tasks.TypeScrapeGMaps},
+			TaskTypes:     tasks.DefaultTaskTypes(),
 			Logger:        logger.NewStandardLogger(log),
 		}
 
