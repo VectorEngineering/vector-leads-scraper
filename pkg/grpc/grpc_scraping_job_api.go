@@ -32,7 +32,11 @@ import (
 //	    Lang: "el",
 //	})
 func (s *Server) CreateScrapingJob(ctx context.Context, req *proto.CreateScrapingJobRequest) (*proto.CreateScrapingJobResponse, error) {
-	s.logger.Info("creating scraping job", zap.String("name", req.Name))
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "create-scraping-job")
+	defer cleanup()
+
+	logger.Info("creating scraping job", zap.String("name", req.Name))
 	// TODO: Implement job creation logic
 	return &proto.CreateScrapingJobResponse{}, nil
 }
@@ -61,6 +65,11 @@ func (s *Server) CreateScrapingJob(ctx context.Context, req *proto.CreateScrapin
 //	    StatusFilter: []string{"RUNNING", "COMPLETED"},
 //	})
 func (s *Server) ListScrapingJobs(ctx context.Context, req *proto.ListScrapingJobsRequest) (*proto.ListScrapingJobsResponse, error) {
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "list-scraping-jobs")
+	defer cleanup()
+
+	logger.Info("listing scraping jobs", zap.String("organization_id", req.OrgId))
 	// TODO: Implement job listing logic
 	return &proto.ListScrapingJobsResponse{}, nil
 }
@@ -87,7 +96,11 @@ func (s *Server) ListScrapingJobs(ctx context.Context, req *proto.ListScrapingJo
 //	    JobId: "job_123abc",
 //	})
 func (s *Server) GetScrapingJob(ctx context.Context, req *proto.GetScrapingJobRequest) (*proto.GetScrapingJobResponse, error) {
-	s.logger.Info("getting scraping job", zap.String("job_id", req.JobId))
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "get-scraping-job")
+	defer cleanup()
+
+	logger.Info("getting scraping job", zap.String("job_id", req.JobId))
 	// TODO: Implement job retrieval logic
 	return &proto.GetScrapingJobResponse{}, nil
 }
@@ -114,7 +127,11 @@ func (s *Server) GetScrapingJob(ctx context.Context, req *proto.GetScrapingJobRe
 //	    JobId: "job_123abc",
 //	})
 func (s *Server) DeleteScrapingJob(ctx context.Context, req *proto.DeleteScrapingJobRequest) (*proto.DeleteScrapingJobResponse, error) {
-	s.logger.Info("deleting scraping job", zap.String("job_id", req.JobId))
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "delete-scraping-job")
+	defer cleanup()
+
+	logger.Info("deleting scraping job", zap.String("job_id", req.JobId))
 	// TODO: Implement job deletion logic
 	return &proto.DeleteScrapingJobResponse{
 		Success: true,
@@ -147,7 +164,11 @@ func (s *Server) DeleteScrapingJob(ctx context.Context, req *proto.DeleteScrapin
 //	    Format: "CSV",
 //	})
 func (s *Server) DownloadScrapingResults(ctx context.Context, req *proto.DownloadScrapingResultsRequest) (*proto.DownloadScrapingResultsResponse, error) {
-	s.logger.Info("downloading scraping results", zap.String("job_id", req.JobId))
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "download-scraping-results")
+	defer cleanup()
+
+	logger.Info("downloading scraping results", zap.String("job_id", req.JobId))
 	// TODO: Implement results download logic
 	return &proto.DownloadScrapingResultsResponse{}, nil
 }

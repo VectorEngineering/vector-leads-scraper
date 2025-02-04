@@ -83,7 +83,10 @@ func (db *Db) GetOrganization(ctx context.Context, input *GetOrganizationInput) 
 	}
 
 	var org *lead_scraper_servicev1.OrganizationORM
-	if err := db.Client.Engine.WithContext(ctx).First(&org, input.ID).Error; err != nil {
+	var orgOrm = db.QueryOperator.OrganizationORM
+	if err := db.Client.Engine.WithContext(ctx).Where(
+		orgOrm.Id.Eq(input.ID),
+	).First(&org).Error; err != nil {
 		if err.Error() == "record not found" {
 			return nil, ErrOrganizationDoesNotExist
 		}

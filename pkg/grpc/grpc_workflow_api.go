@@ -4,6 +4,7 @@ import (
 	"context"
 
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
+	"go.uber.org/zap"
 )
 
 // CreateWorkflow initializes a new automated workflow for scraping and processing data.
@@ -34,6 +35,11 @@ import (
 //	    },
 //	})
 func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRequest) (*proto.CreateWorkflowResponse, error) {
+		// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "create-workflow")
+	defer cleanup()
+
+	logger.Info("creating workflow", zap.String("workflow_name", req.GetWorkflow().GetName()))
 	// TODO: Implement workflow creation logic
 	return &proto.CreateWorkflowResponse{}, nil
 }
@@ -55,6 +61,11 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRe
 //	    WorkflowId: "wf_123abc",
 //	})
 func (s *Server) GetWorkflow(ctx context.Context, req *proto.GetWorkflowRequest) (*proto.GetWorkflowResponse, error) {
+		// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "get-workflow")
+	defer cleanup()
+
+	logger.Info("getting workflow", zap.String("workflow_id", req.GetId()))
 	// TODO: Implement workflow retrieval logic
 	return &proto.GetWorkflowResponse{}, nil
 }
@@ -86,6 +97,11 @@ func (s *Server) GetWorkflow(ctx context.Context, req *proto.GetWorkflowRequest)
 //	    },
 //	})
 func (s *Server) UpdateWorkflow(ctx context.Context, req *proto.UpdateWorkflowRequest) (*proto.UpdateWorkflowResponse, error) {
+		// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "update-workflow")
+	defer cleanup()
+
+	logger.Info("updating workflow", zap.String("workflow_id", req.Workflow.Name))
 	// TODO: Implement workflow update logic
 	return &proto.UpdateWorkflowResponse{}, nil
 }
@@ -108,7 +124,11 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *proto.UpdateWorkflowRe
 //	    StatusFilter: []string{"ACTIVE", "PAUSED"},
 //	})
 func (s *Server) ListWorkflows(ctx context.Context, req *proto.ListWorkflowsRequest) (*proto.ListWorkflowsResponse, error) {
-	s.logger.Info("listing workflows")
+		// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "list-workflows")
+	defer cleanup()
+
+	logger.Info("listing workflows")
 	// TODO: Implement workflow listing logic
 	return &proto.ListWorkflowsResponse{}, nil
 }
@@ -130,6 +150,11 @@ func (s *Server) ListWorkflows(ctx context.Context, req *proto.ListWorkflowsRequ
 //	    WorkflowId: "wf_123abc",
 //	})
 func (s *Server) TriggerWorkflow(ctx context.Context, req *proto.TriggerWorkflowRequest) (*proto.TriggerWorkflowResponse, error) {
+		// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "trigger-workflow")
+	defer cleanup()
+
+	logger.Info("triggering workflow", zap.String("workflow_id", req.GetId()))
 	// TODO: Implement workflow triggering logic
 	return &proto.TriggerWorkflowResponse{}, nil
 }
@@ -150,7 +175,12 @@ func (s *Server) TriggerWorkflow(ctx context.Context, req *proto.TriggerWorkflow
 //	resp, err := server.PauseWorkflow(ctx, &PauseWorkflowRequest{
 //	    WorkflowId: "wf_123abc",
 //	})
-func (s *Server) PauseWorkflow(ctx context.Context, req *proto.PauseWorkflowRequest) (*proto.PauseWorkflowResponse, error) {
+	func (s *Server) PauseWorkflow(ctx context.Context, req *proto.PauseWorkflowRequest) (*proto.PauseWorkflowResponse, error) {
+		// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "pause-workflow")
+	defer cleanup()
+
+	logger.Info("pausing workflow", zap.String("workflow_id", req.GetId()))
 	// TODO: Implement workflow pausing logic
 	return &proto.PauseWorkflowResponse{}, nil
 }

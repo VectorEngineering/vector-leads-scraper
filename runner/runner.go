@@ -90,7 +90,7 @@ type Config struct {
 	GRPCRetries    int           `mapstructure:"grpc-retries"`
 	GRPCRetryDelay time.Duration `mapstructure:"grpc-retry-delay"`
 	ServiceName    string        `mapstructure:"service-name"`
-
+	Environment    string        `mapstructure:"environment"`
 	// Redis-specific configurations
 	RedisEnabled       bool
 	RedisURL           string
@@ -106,6 +106,19 @@ type Config struct {
 	RedisRetryInterval time.Duration
 	RedisMaxRetries    int
 	RedisRetentionDays int
+
+	// database-specific configurations
+	DatabaseURL string
+	MaxIdleConnections int
+	MaxOpenConnections int
+	MaxConnectionLifetime time.Duration
+	MaxConnectionRetryTimeout time.Duration
+	RetrySleep time.Duration
+	QueryTimeout time.Duration
+	MaxConnectionRetries int
+
+	// telemetry configuration
+	MetricsReportingEnabled bool
 
 	// Logging configuration
 	LogLevel string `mapstructure:"log-level"` // Possible values: debug, info, warn, error
@@ -176,13 +189,25 @@ func ParseConfig() *Config {
 	flag.IntVar(&cfg.GRPCPort, "grpc-port", 50051, "gRPC server port")
 	flag.DurationVar(&cfg.GRPCDeadline, "grpc-deadline", 5*time.Second, "gRPC deadline")
 	flag.StringVar(&cfg.NewRelicKey, "newrelic-key", "", "New Relic key")
+	flag.BoolVar(&cfg.MetricsReportingEnabled, "metrics-reporting-enabled", true, "enable metrics reporting")
 	flag.IntVar(&cfg.GRPCRetries, "grpc-retries", 3, "gRPC retries")
 	flag.DurationVar(&cfg.GRPCRetryDelay, "grpc-retry-delay", 1*time.Second, "gRPC retry delay")
 	flag.StringVar(&cfg.ServiceName, "service-name", "lead-scraper-service", "service name for gRPC server")
+	flag.StringVar(&cfg.Environment, "environment", "development", "service environment for gRPC server")
 
 	// Logging configuration
 	flag.StringVar(&cfg.LogLevel, "log-level", "info", "log level (debug, info, warn, error)")
 
+	// database configuration
+	flag.StringVar(&cfg.DatabaseURL, "db-url", "", "database connection string")
+	flag.IntVar(&cfg.MaxIdleConnections, "db-max-idel-connections", 10, "maximum number of idle connections to the database")
+	flag.IntVar(&cfg.MaxOpenConnections, "db-max-open-connections", 100, "maximum number of open connections to the database")
+	flag.DurationVar(&cfg.MaxConnectionLifetime, "db-max-connection-lifetime", 10*time.Minute, "maximum amount of time a connection may be reused")
+	flag.DurationVar(&cfg.MaxConnectionRetryTimeout, "db-max-connection-retry-timeout", 10*time.Second, "maximum amount of time to wait for a connection to be established")
+	flag.DurationVar(&cfg.RetrySleep, "db-retry-sleep", 1*time.Second, "amount of time to wait between retries")
+	flag.DurationVar(&cfg.QueryTimeout, "db-query-timeout", 10*time.Second, "maximum amount of time to wait for a query to complete")
+	flag.IntVar(&cfg.MaxConnectionRetries, "db-max-connection-retries", 3, "maximum number of retries to establish a connection")
+	
 	flag.Parse()
 
 	if cfg.AwsAccessKey == "" {

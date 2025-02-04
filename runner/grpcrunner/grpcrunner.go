@@ -12,10 +12,14 @@ import (
 
 	"runtime/debug"
 
+	postgresdb "github.com/SolomonAIEngineering/backend-core-library/database/postgres"
+	"github.com/SolomonAIEngineering/backend-core-library/instrumentation"
+	"github.com/Vector/vector-leads-scraper/internal/database"
 	"github.com/Vector/vector-leads-scraper/internal/taskhandler"
 	pkggrpc "github.com/Vector/vector-leads-scraper/pkg/grpc"
 	"github.com/Vector/vector-leads-scraper/pkg/redis"
 	"github.com/Vector/vector-leads-scraper/pkg/redis/tasks"
+	"github.com/Vector/vector-leads-scraper/pkg/version"
 	"github.com/Vector/vector-leads-scraper/runner"
 	"github.com/Vector/vector-leads-scraper/runner/grpcrunner/health"
 	"github.com/Vector/vector-leads-scraper/runner/grpcrunner/logger"
@@ -23,6 +27,7 @@ import (
 	"github.com/Vector/vector-leads-scraper/runner/grpcrunner/middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"github.com/newrelic/go-agent/v3/integrations/nrgrpc"
+
 	"github.com/newrelic/go-agent/v3/newrelic"
 	rkboot "github.com/rookie-ninja/rk-boot/v2"
 	rkgrpc "github.com/rookie-ninja/rk-grpc/v2/boot"
@@ -259,18 +264,6 @@ func New(cfg *runner.Config) (runner.Runner, error) {
 		grpc_zap.ReplaceGrpcLoggerV2(log)
 	}()
 
-	// Initialize New Relic with configuration from environment
-	nrApp, err := newrelic.NewApplication(
-		newrelic.ConfigAppName(cfg.ServiceName),
-		newrelic.ConfigLicense(cfg.NewRelicKey),
-		newrelic.ConfigAppLogForwardingEnabled(true),
-		newrelic.ConfigEnabled(true),
-		newrelic.ConfigDistributedTracerEnabled(true),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize New Relic: %w", err)
-	}
-
 	// Create a new boot instance
 	boot := rkboot.NewBoot()
 
@@ -288,12 +281,20 @@ func New(cfg *runner.Config) (runner.Runner, error) {
 		RpcTimeout:  cfg.GRPCDeadline,
 	}
 
+	// configure postgres client
+	coreDependencies, err := configurePostgresClient(cfg, log)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create postgres client: %w", err)
+	}
+
 	// Initialize the gRPC server
-	srv, err := pkggrpc.NewServer(serverConfig, log)
+	srv, err := pkggrpc.NewServer(serverConfig, log, coreDependencies.dbOperations, taskHandler)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gRPC server: %w", err)
 	}
 
+	// extract the new relic app client
+	nrApp := coreDependencies.instrumentationClient.Client
 	// Create middleware interceptors
 	unaryInterceptors, streamInterceptors := middleware.CreateInterceptors(log, []grpc_zap.Option{})
 
@@ -441,4 +442,84 @@ func (g *GRPCRunner) Close(ctx context.Context) error {
 
 	close(g.shutdown)
 	return g.performShutdown(ctx)
+}
+
+type coreDependencies struct {
+	postgresClient *postgresdb.Client
+	dbOperations *database.Db
+	instrumentationClient *instrumentation.Client
+}
+
+func configurePostgresClient(cfg *runner.Config, logger *zap.Logger) (*coreDependencies, error) {
+	// configure instrumentation client
+	instrumentationClient, err := configureInstrumentationClient(cfg, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := []postgresdb.Option{
+		postgresdb.WithConnectionString(&cfg.DatabaseURL),
+		postgresdb.WithQueryTimeout(&cfg.QueryTimeout),
+		postgresdb.WithMaxConnectionRetries(&cfg.MaxConnectionRetries),
+		postgresdb.WithMaxConnectionRetryTimeout(&cfg.MaxConnectionRetryTimeout),
+		postgresdb.WithRetrySleep(&cfg.RetrySleep),
+		postgresdb.WithMaxIdleConnections(&cfg.MaxIdleConnections),
+		postgresdb.WithMaxOpenConnections(&cfg.MaxOpenConnections),
+		postgresdb.WithMaxConnectionLifetime(&cfg.MaxConnectionLifetime),
+		postgresdb.WithInstrumentationClient(instrumentationClient),
+		postgresdb.WithLogger(logger),
+	}
+
+	client, err := postgresdb.New(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create postgres client: %w", err)
+	}
+
+	// initialize database operations
+	dbOperations, err := database.New(client, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create database operations: %w", err)
+	}
+
+	return &coreDependencies{
+		postgresClient: client,
+		dbOperations: dbOperations,
+		instrumentationClient: instrumentationClient,
+	}, nil
+}
+
+// initializeInstrumentationClient initializes a new relic instrumentation client
+func configureInstrumentationClient(cfg *runner.Config, logger *zap.Logger) (*instrumentation.Client, error) {
+	enableMetricsReporting := cfg.MetricsReportingEnabled
+	serviceName := cfg.ServiceName
+	apiKey := cfg.NewRelicKey
+
+	app, err := newrelic.NewApplication(
+		newrelic.ConfigAppName(serviceName),
+		newrelic.ConfigLicense(apiKey),
+		newrelic.ConfigAppLogForwardingEnabled(enableMetricsReporting),
+		newrelic.ConfigEnabled(enableMetricsReporting),
+		newrelic.ConfigDistributedTracerEnabled(enableMetricsReporting),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// configure new relic sdk
+	opts := []instrumentation.Option{
+		instrumentation.WithServiceName(cfg.ServiceName),
+		instrumentation.WithServiceVersion(version.Version),
+		instrumentation.WithServiceEnvironment(cfg.Environment),
+		instrumentation.WithEnabled(enableMetricsReporting), // enables instrumentation
+		instrumentation.WithNewrelicKey(cfg.NewRelicKey),
+		instrumentation.WithLogger(logger),
+		instrumentation.WithEnableEvents(enableMetricsReporting),
+		instrumentation.WithEnableMetrics(enableMetricsReporting),
+		instrumentation.WithEnableTracing(enableMetricsReporting),
+		instrumentation.WithEnableLogger(enableMetricsReporting),
+		instrumentation.WithClient(app),
+	}
+
+	return instrumentation.New(opts...)
 }

@@ -85,6 +85,20 @@ var (
 // Thread Safety:
 // All methods should be safe for concurrent use by multiple goroutines.
 type DatabaseOperations interface {
+	// Organization operations
+	CreateOrganization(ctx context.Context, input *CreateOrganizationInput) (*lead_scraper_servicev1.Organization, error)
+	GetOrganization(context.Context, *GetOrganizationInput) (*lead_scraper_servicev1.Organization, error)
+	UpdateOrganization(context.Context, *UpdateOrganizationInput) (*lead_scraper_servicev1.Organization, error)
+	DeleteOrganization(context.Context, *DeleteOrganizationInput) error
+	ListOrganizations(context.Context, *ListOrganizationsInput) ([]*lead_scraper_servicev1.Organization, error)
+
+		// Tenant operations
+	CreateTenant(ctx context.Context, input *CreateTenantInput) (*lead_scraper_servicev1.Tenant, error)
+	GetTenant(context.Context, *GetTenantInput) (*lead_scraper_servicev1.Tenant, error)
+	UpdateTenant(context.Context, *UpdateTenantInput) (*lead_scraper_servicev1.Tenant, error)
+	DeleteTenant(context.Context, *DeleteTenantInput) error
+	ListTenants(context.Context, *ListTenantsInput) ([]*lead_scraper_servicev1.Tenant, error)
+
 	// Account operations
 	CreateAccount(ctx context.Context, input *CreateAccountInput) (*lead_scraper_servicev1.Account, error)
 	GetAccount(context.Context, *GetAccountInput) (*lead_scraper_servicev1.Account, error)

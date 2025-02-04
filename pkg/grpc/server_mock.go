@@ -5,12 +5,23 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 
-	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
+	postgresdb "github.com/SolomonAIEngineering/backend-core-library/database/postgres"
+	redisC "github.com/Vector/vector-leads-scraper/pkg/redis"
+	"github.com/Vector/vector-leads-scraper/runner"
 
+	"github.com/SolomonAIEngineering/backend-core-library/instrumentation"
+	"github.com/Vector/vector-leads-scraper/internal/database"
+	"github.com/Vector/vector-leads-scraper/internal/taskhandler"
+	"github.com/Vector/vector-leads-scraper/pkg/redis/config"
+	"github.com/Vector/vector-leads-scraper/pkg/redis/tasks"
+	"github.com/Vector/vector-leads-scraper/testcontainers"
+	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -32,9 +43,15 @@ import (
 //	}
 var MockServer *Server
 
+type GrpcTestContext struct {
+	Database *database.Db
+	Redis *redisC.Client
+	TaskHandler *taskhandler.Handler
+}
+
 // NewMockGrpcServer creates a new mock gRPC server instance with default configuration
 // for testing purposes. The server comes preconfigured with:
-// - In-memory listener (bufconn)
+// - Test containers for Redis and PostgreSQL
 // - Development logger
 // - Default test port (9999)
 // - No TLS security
@@ -72,10 +89,100 @@ func NewMockGrpcServer() *Server {
 
 	logger, _ := zap.NewDevelopment()
 
-	return &Server{
-		logger: logger,
-		config: config,
+	// Create test containers
+	ctx := context.Background()
+	testCtx, err := setupTestContainers(ctx, logger)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	return &Server{
+		logger:    logger,
+		config:    config,
+		db:        testCtx.Database,
+		telemetry: &instrumentation.Client{},
+		taskHandler: testCtx.TaskHandler,
+	}
+}
+
+// setupTestContainers initializes Redis and PostgreSQL test containers
+// and returns configured database and Redis clients.
+//
+// Returns:
+//   - *database.Db: A configured database instance
+//   - error: Any error that occurred during setup
+func setupTestContainers(ctx context.Context, logger *zap.Logger) (*GrpcTestContext, error) {
+	// Start Redis container
+	redisContainer, err := testcontainers.NewRedisContainer(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Redis container: %w", err)
+	}
+
+	// Start PostgreSQL container
+	postgresContainer, err := testcontainers.NewPostgresContainer(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create PostgreSQL container: %w", err)
+	}
+
+
+	cfg := &config.RedisConfig{
+		Host:     redisContainer.GetAddress(),
+		Port:     redisContainer.Port,
+		Password: redisContainer.Password,
+	}
+
+	redisClient, err := redisC.NewClient(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Redis client: %w", err)
+	}
+
+	// Create PostgreSQL client
+	connStr := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		postgresContainer.Host,
+		postgresContainer.Port,
+		postgresContainer.User,
+		postgresContainer.Password,
+		postgresContainer.Database,
+	)
+	pgClient, err := postgresdb.New(
+		postgresdb.WithConnectionString(&connStr),
+		postgresdb.WithLogger(logger),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create PostgreSQL client: %w", err)
+	}
+
+	// Create database instance
+	db, err := database.New(pgClient, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create database instance: %w", err)
+	}
+
+	// initialize the task handler
+	opts := &taskhandler.Options{
+		MaxRetries:    3,
+		RetryInterval: time.Second,
+		TaskTypes: []string{
+			tasks.TypeEmailExtract.String(),
+		},
+		Logger: log.New(os.Stdout, "[TEST] ", log.LstdFlags),
+	}
+
+	runnerCfg := &runner.Config{
+		RedisURL: redisContainer.GetAddress(),	
+	}
+
+	taskHandler, err := taskhandler.New(runnerCfg, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create task handler: %w", err)
+	}
+
+	return &GrpcTestContext{
+		Database: db,
+		Redis: redisClient,
+		TaskHandler: taskHandler,
+	}, nil
 }
 
 // MockDialOption is a function type that represents a dialer option for creating

@@ -31,6 +31,11 @@ import (
 //	    OrganizationId: "org_123",
 //	})
 func (s *Server) CreateAccount(ctx context.Context, req *proto.CreateAccountRequest) (*proto.CreateAccountResponse, error) {
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "create-account")
+	defer cleanup()
+
+	logger.Info("creating account", zap.String("email", req.InitialWorkspaceName))
 	// TODO: Implement account creation logic
 	return &proto.CreateAccountResponse{
 		Account: testutils.GenerateRandomizedAccount(),
@@ -57,7 +62,11 @@ func (s *Server) CreateAccount(ctx context.Context, req *proto.CreateAccountRequ
 //	    AccountId: "acc_123abc",
 //	})
 func (s *Server) GetAccount(ctx context.Context, req *proto.GetAccountRequest) (*proto.GetAccountResponse, error) {
-	s.logger.Info("getting account", zap.Any("account_id", req.GetId()))
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "get-account")
+	defer cleanup()
+
+	logger.Info("getting account", zap.Any("account_id", req.GetId()))
 	// TODO: Implement account retrieval logic
 	return &proto.GetAccountResponse{
 		Account: testutils.GenerateRandomizedAccount(),
@@ -88,7 +97,11 @@ func (s *Server) GetAccount(ctx context.Context, req *proto.GetAccountRequest) (
 //	    },
 //	})
 func (s *Server) UpdateAccount(ctx context.Context, req *proto.UpdateAccountRequest) (*proto.UpdateAccountResponse, error) {
-	s.logger.Info("updating account", zap.Any("account_id", req.GetAccount()))
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "update-account")
+	defer cleanup()
+
+	logger.Info("updating account", zap.Any("account_id", req.GetAccount()))
 	// TODO: Implement account update logic
 	return &proto.UpdateAccountResponse{
 		Account: testutils.GenerateRandomizedAccount(),
@@ -115,7 +128,11 @@ func (s *Server) UpdateAccount(ctx context.Context, req *proto.UpdateAccountRequ
 //	    AccountId: "acc_123abc",
 //	})
 func (s *Server) DeleteAccount(ctx context.Context, req *proto.DeleteAccountRequest) (*proto.DeleteAccountResponse, error) {
-	s.logger.Info("deleting account", zap.Any("account_id", req.GetId()))
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "delete-account")
+	defer cleanup()
+
+	logger.Info("deleting account", zap.Any("account_id", req.GetId()))
 	// TODO: Implement account deletion logic
 	return &proto.DeleteAccountResponse{
 		Success: true,
@@ -144,7 +161,11 @@ func (s *Server) DeleteAccount(ctx context.Context, req *proto.DeleteAccountRequ
 //	    StatusFilter: []string{"ACTIVE"},
 //	})
 func (s *Server) ListAccounts(ctx context.Context, req *proto.ListAccountsRequest) (*proto.ListAccountsResponse, error) {
-	s.logger.Info("listing accounts")
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "list-accounts")
+	defer cleanup()
+
+	logger.Info("listing accounts")
 	// TODO: Implement account listing logic
 	return &proto.ListAccountsResponse{
 		Accounts: []*proto.Account{
@@ -171,7 +192,11 @@ func (s *Server) ListAccounts(ctx context.Context, req *proto.ListAccountsReques
 //	    TimeRange: "LAST_30_DAYS",
 //	})
 func (s *Server) GetAccountUsage(ctx context.Context, req *proto.GetAccountUsageRequest) (*proto.GetAccountUsageResponse, error) {
-	s.logger.Info("getting account usage", zap.Any("account_id", req.GetId()))
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "get-account-usage")
+	defer cleanup()
+
+	logger.Info("getting account usage", zap.Any("account_id", req.GetId()))
 	// TODO: Implement usage retrieval logic
 	return &proto.GetAccountUsageResponse{}, nil
 }
@@ -197,6 +222,11 @@ func (s *Server) GetAccountUsage(ctx context.Context, req *proto.GetAccountUsage
 //	    },
 //	})
 func (s *Server) UpdateAccountSettings(ctx context.Context, req *proto.UpdateAccountSettingsRequest) (*proto.UpdateAccountSettingsResponse, error) {
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "update-account-settings")
+	defer cleanup()
+
+	logger.Info("updating account settings")
 	// TODO: Implement settings update logic
 	return &proto.UpdateAccountSettingsResponse{}, nil
 }
