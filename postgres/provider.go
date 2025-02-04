@@ -12,6 +12,8 @@ import (
 	"github.com/gosom/scrapemate"
 
 	"github.com/Vector/vector-leads-scraper/gmaps"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -277,4 +279,83 @@ func decodeJob(payloadType string, payload []byte) (scrapemate.IJob, error) {
 	default:
 		return nil, fmt.Errorf("invalid payload type: %s", payloadType)
 	}
+}
+
+func (p *provider) fetchJobsGorm(ctx context.Context, db *gorm.DB, oldStatus, newStatus string, limit int) ([]struct {
+	PayloadType string
+	Payload     string
+}, error) {
+	// First, define a transaction to ensure atomicity
+	tx := db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Get the jobs to update using FOR UPDATE SKIP LOCKED
+	var jobsToUpdate []scrapemate.Job
+	if err := tx.Table("gmaps_jobs").
+		Where("status = ?", oldStatus).
+		Order("priority ASC, created_at ASC").
+		Limit(limit).
+		Clauses(clause.Locking{
+			Strength: "UPDATE",
+			Options:  "SKIP LOCKED",
+		}).
+		Find(&jobsToUpdate).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Update the jobs' status
+	if err := tx.Model(&scrapemate.Job{}).
+		Where("id IN ?", getJobIDs(jobsToUpdate)).
+		Update("status", newStatus).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Get the updated jobs ordered by priority and created_at
+	var result []scrapemate.Job
+	if err := tx.Model(&scrapemate.Job{}).
+		Where("id IN ?", getJobIDs(jobsToUpdate)).
+		Order("priority ASC, created_at ASC").
+		Find(&result).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+
+	// Convert to the expected return format
+	var payloads []struct {
+		PayloadType string
+		Payload     string
+	}
+	for range result {
+		payloads = append(payloads, struct {
+			PayloadType string
+			Payload     string
+		}{
+			PayloadType: "",
+			Payload:     "",
+		})
+	}
+
+	return payloads, nil
+}
+
+// Helper function to extract job IDs
+func getJobIDs(jobs []scrapemate.Job) []string {
+	ids := make([]string, len(jobs))
+	for i, job := range jobs {
+		ids[i] = job.GetID()
+	}
+	return ids
 }

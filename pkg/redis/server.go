@@ -13,9 +13,10 @@ import (
 
 // Server wraps asynq server functionality
 type Server struct {
-	server *asynq.Server
-	cfg    *config.RedisConfig
-	mu     sync.RWMutex
+	server    *asynq.Server
+	cfg       *config.RedisConfig
+	mu        sync.RWMutex
+	inspector *asynq.Inspector
 }
 
 // NewServer creates a new Redis server with the provided configuration
@@ -53,8 +54,9 @@ func NewServer(cfg *config.RedisConfig) (*Server, error) {
 	)
 
 	return &Server{
-		server: srv,
-		cfg:    cfg,
+		server:    srv,
+		cfg:       cfg,
+		inspector: asynq.NewInspector(redisOpt),
 	}, nil
 }
 
