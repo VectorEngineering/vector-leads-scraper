@@ -3,6 +3,7 @@ module github.com/Vector/vector-leads-scraper
 go 1.23.4
 
 require (
+	github.com/JohannesKaufmann/html-to-markdown v1.6.0
 	github.com/PuerkitoBio/goquery v1.10.0
 	github.com/SolomonAIEngineering/backend-core-library v1.30.0
 	github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250203190927-78bef45fb41f
@@ -64,6 +65,8 @@ require (
 	github.com/Crocmagnon/fatcontext v0.5.2 // indirect
 	github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24 // indirect
 	github.com/GaijinEntertainment/go-exhaustruct/v3 v3.3.0 // indirect
+	github.com/JohannesKaufmann/dom v0.2.0 // indirect
+	github.com/JohannesKaufmann/html-to-markdown/v2 v2.2.2 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Noooste/azuretls-client v1.5.11 // indirect
@@ -77,7 +80,7 @@ require (
 	github.com/alexkohler/prealloc v1.0.0 // indirect
 	github.com/alingse/asasalint v0.0.11 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
-	github.com/andybalholm/cascadia v1.3.2 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/ashanbrown/forbidigo v1.6.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.7 // indirect
@@ -266,7 +269,7 @@ require (
 	github.com/quasilyte/regex/syntax v0.0.0-20210819130434-b3f0c404a727 // indirect
 	github.com/quasilyte/stdinfo v0.0.0-20220114132959-f7386bf02567 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rookie-ninja/rk-entry/v2 v2.2.22 // indirect
 	github.com/rookie-ninja/rk-logger v1.2.13 // indirect
@@ -281,6 +284,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/sashamelentyev/interfacebloat v1.1.0 // indirect
 	github.com/sashamelentyev/usestdlibvars v1.27.0 // indirect
+	github.com/sebdah/goldie/v2 v2.5.5 // indirect
 	github.com/securego/gosec/v2 v2.21.2 // indirect
 	github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c // indirect
 	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
@@ -320,6 +324,7 @@ require (
 	github.com/yagipy/maintidx v1.0.0 // indirect
 	github.com/yeya24/promlinter v0.3.0 // indirect
 	github.com/ykadowak/zerologlint v0.1.5 // indirect
+	github.com/yuin/goldmark v1.7.8 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	gitlab.com/bosi/decorder v0.4.2 // indirect
 	go-simpler.org/musttag v0.12.2 // indirect
