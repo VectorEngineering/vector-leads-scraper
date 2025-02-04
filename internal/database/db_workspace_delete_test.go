@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 
@@ -91,26 +92,29 @@ func TestDb_DeleteWorkspace_ConcurrentDeletions(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	errors := make(chan error, len(workspaces))
+	errChan := make(chan error, len(workspaces))
 
 	// Delete workspaces concurrently
 	for _, workspace := range workspaces {
 		wg.Add(1)
 		go func(id uint64) {
 			defer wg.Done()
-			if err := conn.DeleteWorkspace(context.Background(), id); err != nil {
-				errors <- err
+			err := conn.DeleteWorkspace(context.Background(), id)
+			if err != nil && !errors.Is(err, ErrWorkspaceDoesNotExist) {
+				errChan <- err
 			}
 		}(workspace.Id)
 	}
 
 	wg.Wait()
-	close(errors)
+	close(errChan)
 
-	// Check for errors
-	for err := range errors {
-		t.Errorf("Error during concurrent deletion: %v", err)
+	// Collect any unexpected errors
+	var unexpectedErrors []error
+	for err := range errChan {
+		unexpectedErrors = append(unexpectedErrors, err)
 	}
+	require.Empty(t, unexpectedErrors, "Got unexpected errors during concurrent deletions: %v", unexpectedErrors)
 
 	// Verify all workspaces are deleted
 	for _, workspace := range workspaces {
