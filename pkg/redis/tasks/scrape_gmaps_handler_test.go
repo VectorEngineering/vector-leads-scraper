@@ -76,7 +76,7 @@ func TestCreateScrapeTask(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, TypeScrapeGMaps, task.Type())
+			assert.Equal(t, TypeScrapeGMaps.String(), task.Type())
 
 			// Verify payload was properly serialized
 			var decodedPayload ScrapePayload
@@ -143,7 +143,7 @@ func TestProcessScrapeTask(t *testing.T) {
 				task, err = CreateScrapeTask(tt.payload)
 				require.NoError(t, err)
 			} else {
-				task = asynq.NewTask(TypeScrapeGMaps, []byte(`{invalid json`))
+				task = asynq.NewTask(TypeScrapeGMaps.String(), []byte(`{invalid json}`))
 			}
 
 			// Process task with timeout

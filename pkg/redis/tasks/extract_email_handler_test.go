@@ -159,7 +159,7 @@ func TestCreateEmailTask(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			task, err := CreateEmailTask(tt.url, tt.maxDepth, tt.userAgent)
 			require.NoError(t, err)
-			assert.Equal(t, TypeEmailExtract, task.Type())
+			assert.Equal(t, TypeEmailExtract.String(), task.Type())
 
 			// Verify task payload
 			var payload struct {

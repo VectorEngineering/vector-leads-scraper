@@ -93,6 +93,7 @@ import (
 // Users must call Close() when the client is no longer needed to prevent resource leaks.
 type Client struct {
 	asynqClient    *asynq.Client
+	inspector      *asynq.Inspector
 	redisClient    *redis.Client
 	cfg            *config.RedisConfig
 	mu             sync.RWMutex // Protects all client operations
@@ -190,12 +191,16 @@ func NewClient(cfg *config.RedisConfig) (*Client, error) {
 	// Initialize priority queue client
 	priorityClient := priorityqueue.NewClient(asynqOpt, priorityqueue.DefaultConfig())
 
+	// Initialize inspector
+	inspector := asynq.NewInspector(asynqOpt)
+
 	// Test connections
 	if err := testConnection(asynqClient, redisClient); err != nil {
 		// Clean up any successful connections before returning error
 		asynqClient.Close()
 		redisClient.Close()
 		priorityClient.Close()
+		inspector.Close()
 		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
@@ -204,6 +209,7 @@ func NewClient(cfg *config.RedisConfig) (*Client, error) {
 		redisClient:    redisClient,
 		cfg:            cfg,
 		priorityClient: priorityClient,
+		inspector:      inspector,
 	}, nil
 }
 
@@ -474,5 +480,157 @@ func testConnection(asynqClient *asynq.Client, redisClient *redis.Client) error 
 		return fmt.Errorf("failed to connect to Redis (redis): %w", err)
 	}
 
+	return nil
+}
+
+// GetTaskInfo retrieves task information given a task id and queue name.
+// Returns an error wrapping ErrQueueNotFound if a queue with the given name doesn't exist.
+// Returns an error wrapping ErrTaskNotFound if a task with the given id doesn't exist in the queue.
+func (c *Client) GetTaskInfo(ctx context.Context, queue, id string) (*asynq.TaskInfo, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.inspector == nil {
+		c.inspector = asynq.NewInspector(asynq.RedisClientOpt{
+			Addr:     c.cfg.GetRedisAddr(),
+			Password: c.cfg.Password,
+			DB:       c.cfg.DB,
+		})
+	}
+
+	info, err := c.inspector.GetTaskInfo(queue, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get task info: %w", err)
+	}
+	return info, nil
+}
+
+// ListPendingTasks retrieves pending tasks from the specified queue.
+// By default, it retrieves the first 30 tasks.
+func (c *Client) ListPendingTasks(ctx context.Context, queue string, opts ...asynq.ListOption) ([]*asynq.TaskInfo, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.inspector == nil {
+		c.inspector = asynq.NewInspector(asynq.RedisClientOpt{
+			Addr:     c.cfg.GetRedisAddr(),
+			Password: c.cfg.Password,
+			DB:       c.cfg.DB,
+		})
+	}
+
+	tasks, err := c.inspector.ListPendingTasks(queue, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pending tasks: %w", err)
+	}
+	return tasks, nil
+}
+
+// ListActiveTasks retrieves active tasks from the specified queue.
+// By default, it retrieves the first 30 tasks.
+func (c *Client) ListActiveTasks(ctx context.Context, queue string, opts ...asynq.ListOption) ([]*asynq.TaskInfo, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.inspector == nil {
+		c.inspector = asynq.NewInspector(asynq.RedisClientOpt{
+			Addr:     c.cfg.GetRedisAddr(),
+			Password: c.cfg.Password,
+			DB:       c.cfg.DB,
+		})
+	}
+
+	tasks, err := c.inspector.ListActiveTasks(queue, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list active tasks: %w", err)
+	}
+	return tasks, nil
+}
+
+// DeleteTask deletes a task with the given id from the given queue.
+// The task needs to be in pending, scheduled, retry, or archived state.
+// Returns an error if the task is in active state.
+func (c *Client) DeleteTask(ctx context.Context, queue, id string) error {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.inspector == nil {
+		c.inspector = asynq.NewInspector(asynq.RedisClientOpt{
+			Addr:     c.cfg.GetRedisAddr(),
+			Password: c.cfg.Password,
+			DB:       c.cfg.DB,
+		})
+	}
+
+	err := c.inspector.DeleteTask(queue, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete task: %w", err)
+	}
+	return nil
+}
+
+// RunTask updates the task to pending state given a queue name and task id.
+// The task needs to be in scheduled, retry, or archived state.
+// Returns an error if the task is in pending or active state.
+func (c *Client) RunTask(ctx context.Context, queue, id string) error {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.inspector == nil {
+		c.inspector = asynq.NewInspector(asynq.RedisClientOpt{
+			Addr:     c.cfg.GetRedisAddr(),
+			Password: c.cfg.Password,
+			DB:       c.cfg.DB,
+		})
+	}
+
+	err := c.inspector.RunTask(queue, id)
+	if err != nil {
+		return fmt.Errorf("failed to run task: %w", err)
+	}
+	return nil
+}
+
+// ArchiveAndStoreTask archives a task with the given id in the given queue.
+// The task needs to be in pending, scheduled, or retry state.
+// Returns an error if the task is already archived.
+func (c *Client) ArchiveAndStoreTask(ctx context.Context, queue, id string) error {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.inspector == nil {
+		c.inspector = asynq.NewInspector(asynq.RedisClientOpt{
+			Addr:     c.cfg.GetRedisAddr(),
+			Password: c.cfg.Password,
+			DB:       c.cfg.DB,
+		})
+	}
+
+	err := c.inspector.ArchiveTask(queue, id)
+	if err != nil {
+		return fmt.Errorf("failed to archive task: %w", err)
+	}
+	return nil
+}
+
+// CancelProcessing sends a signal to cancel processing of the task
+// given a task id. CancelProcessing is best-effort, which means that it does not
+// guarantee that the task with the given id will be canceled.
+func (c *Client) CancelProcessing(ctx context.Context, id string) error {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.inspector == nil {
+		c.inspector = asynq.NewInspector(asynq.RedisClientOpt{
+			Addr:     c.cfg.GetRedisAddr(),
+			Password: c.cfg.Password,
+			DB:       c.cfg.DB,
+		})
+	}
+
+	err := c.inspector.CancelProcessing(id)
+	if err != nil {
+		return fmt.Errorf("failed to cancel task processing: %w", err)
+	}
 	return nil
 }

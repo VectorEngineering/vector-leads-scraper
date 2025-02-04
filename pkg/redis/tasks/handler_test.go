@@ -80,7 +80,7 @@ func TestProcessTask(t *testing.T) {
 			WithDataFolder(t.TempDir()),
 			WithConcurrency(1),
 		)
-		task := asynq.NewTask(TypeScrapeGMaps, []byte(`{}`))
+		task := asynq.NewTask(TypeScrapeGMaps.String(), []byte(`{}`))
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "no keywords provided")
@@ -96,7 +96,7 @@ func TestProcessTask(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 		defer cancel()
 
-		task := asynq.NewTask(TypeScrapeGMaps, []byte(`{"keywords": ["test"]}`))
+		task := asynq.NewTask(TypeScrapeGMaps.String(), []byte(`{"keywords": ["test"]}`))
 
 		errCh := make(chan error, 1)
 		go func() {
@@ -119,28 +119,28 @@ func TestTaskValidation(t *testing.T) {
 	)
 
 	t.Run("invalid scrape task payload", func(t *testing.T) {
-		task := asynq.NewTask(TypeScrapeGMaps, []byte(`{invalid json}`))
+		task := asynq.NewTask(TypeScrapeGMaps.String(), []byte(`{invalid json}`))
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal scrape payload")
 	})
 
 	t.Run("invalid email task payload", func(t *testing.T) {
-		task := asynq.NewTask(TypeEmailExtract, []byte(`{invalid json}`))
+		task := asynq.NewTask(TypeEmailExtract.String(), []byte(`{invalid json}`))
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal email payload")
 	})
 
 	t.Run("empty scrape task payload", func(t *testing.T) {
-		task := asynq.NewTask(TypeScrapeGMaps, nil)
+		task := asynq.NewTask(TypeScrapeGMaps.String(), nil)
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal scrape payload")
 	})
 
 	t.Run("empty email task payload", func(t *testing.T) {
-		task := asynq.NewTask(TypeEmailExtract, nil)
+		task := asynq.NewTask(TypeEmailExtract.String(), nil)
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal email payload")
