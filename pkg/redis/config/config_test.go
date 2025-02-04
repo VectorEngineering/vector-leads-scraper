@@ -22,7 +22,11 @@ func setupRedis(ctx context.Context) (*redisContainer, error) {
 	req := testcontainers.ContainerRequest{
 		Image:        "redis:latest",
 		ExposedPorts: []string{"6379/tcp"},
-		WaitingFor:   wait.ForLog("Ready to accept connections"),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Ready to accept connections"),
+			wait.ForListeningPort("6379/tcp"),
+		),
+		Name: "redis-test",
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -30,17 +34,17 @@ func setupRedis(ctx context.Context) (*redisContainer, error) {
 		Started:          true,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to start container: %w", err)
 	}
 
 	mappedPort, err := container.MappedPort(ctx, "6379")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get container port: %w", err)
 	}
 
 	hostIP, err := container.Host(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get container host: %w", err)
 	}
 
 	uri := fmt.Sprintf("%s:%s", hostIP, mappedPort.Port())
