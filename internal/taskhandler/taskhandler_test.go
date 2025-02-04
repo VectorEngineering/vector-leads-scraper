@@ -2,6 +2,7 @@ package taskhandler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Vector/vector-leads-scraper/pkg/redis/tasks"
 	"github.com/Vector/vector-leads-scraper/runner"
 	"github.com/Vector/vector-leads-scraper/testcontainers"
 	"github.com/hibiken/asynq"
@@ -26,6 +28,357 @@ func (m *mockTaskHandler) ProcessTask(ctx context.Context, task *asynq.Task) err
 		return m.processTaskFunc(ctx, task)
 	}
 	return nil
+}
+
+type mockHandler struct{}
+
+func (h *mockHandler) ProcessTask(ctx context.Context, task *asynq.Task) error {
+	return nil
+}
+
+func setupTestHandler(t *testing.T) (*Handler, func()) {
+	var handler *Handler
+	var cleanup func()
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Start the test containers and create the handler
+	go testcontainers.WithTestContext(t, func(ctx *testcontainers.TestContext) {
+		defer wg.Done()
+		cfg := &runner.Config{
+			RedisHost:     ctx.RedisConfig.Host,
+			RedisPort:     ctx.RedisConfig.Port,
+			RedisPassword: ctx.RedisConfig.Password,
+			RedisDB:       0,
+		}
+
+		opts := &Options{
+			MaxRetries:    3,
+			RetryInterval: time.Second,
+			TaskTypes: []string{
+				tasks.TypeEmailExtract.String(),
+			},
+			Logger: log.New(os.Stdout, "[TEST] ", log.LstdFlags),
+		}
+
+		var err error
+		handler, err = New(cfg, opts)
+		require.NoError(t, err)
+		require.NotNil(t, handler)
+
+		cleanup = func() {
+			if handler != nil && handler.components != nil {
+				handler.Close(context.Background())
+			}
+		}
+	})
+
+	// Wait for handler to be created
+	wg.Wait()
+	require.NotNil(t, handler, "Handler should not be nil")
+
+	return handler, cleanup
+}
+
+func TestProcessTask(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name      string
+		taskID    string
+		queue     string
+		operation TaskProcessingOperation
+		wantErr   bool
+		errMsg    string
+	}{
+		{
+			name:      "Empty TaskID",
+			taskID:    "",
+			queue:     "default",
+			operation: RunTask,
+			wantErr:   true,
+			errMsg:    "taskId cannot be empty",
+		},
+		{
+			name:      "Empty Queue",
+			taskID:    "task123",
+			queue:     "",
+			operation: RunTask,
+			wantErr:   true,
+			errMsg:    "queue cannot be empty",
+		},
+		{
+			name:      "Invalid Operation",
+			taskID:    "task123",
+			queue:     "default",
+			operation: "invalid",
+			wantErr:   true,
+			errMsg:    "invalid operation: invalid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := handler.ProcessTask(ctx, tt.taskID, tt.queue, tt.operation)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGetTaskDetails(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		taskID  string
+		queue   string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "Empty TaskID",
+			taskID:  "",
+			queue:   "default",
+			wantErr: true,
+			errMsg:  "taskId cannot be empty",
+		},
+		{
+			name:    "Empty Queue",
+			taskID:  "task123",
+			queue:   "",
+			wantErr: true,
+			errMsg:  "queue cannot be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info, err := handler.GetTaskDetails(ctx, tt.taskID, tt.queue)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+				assert.Nil(t, info)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEnqueueTask(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name     string
+		taskType tasks.TaskType
+		payload  interface{}
+		opts     []asynq.Option
+		wantErr  bool
+		errMsg   string
+	}{
+		{
+			name:     "Empty TaskType",
+			taskType: "",
+			payload:  nil,
+			wantErr:  true,
+			errMsg:   "taskType cannot be empty",
+		},
+		{
+			name:     "Valid Email Task",
+			taskType: tasks.TypeEmailExtract,
+			payload: &tasks.EmailPayload{
+				URL:      "https://example.com",
+				MaxDepth: 2,
+			},
+			opts: []asynq.Option{
+				asynq.Queue("default"),
+				asynq.MaxRetry(3),
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var payload []byte
+			var err error
+			if tt.payload != nil {
+				payload, err = json.Marshal(tt.payload)
+				require.NoError(t, err)
+			}
+
+			err = handler.EnqueueTask(ctx, tt.taskType, payload, tt.opts...)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestHandlerRegistration(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	tests := []struct {
+		name      string
+		taskType  string
+		handler   tasks.TaskHandler
+		register  bool
+		wantErr   bool
+		errMsg    string
+	}{
+		{
+			name:     "Register New Handler",
+			taskType: "custom:task",
+			handler:  &mockHandler{},
+			register: true,
+			wantErr:  false,
+		},
+		{
+			name:     "Register Duplicate Handler",
+			taskType: "custom:task",
+			handler:  &mockHandler{},
+			register: true,
+			wantErr:  true,
+			errMsg:   "handler already registered",
+		},
+		{
+			name:     "Get Existing Handler",
+			taskType: "custom:task",
+			register: false,
+			wantErr:  false,
+		},
+		{
+			name:     "Get Non-Existent Handler",
+			taskType: "unknown:task",
+			register: false,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.register {
+				err := handler.RegisterHandler(tt.taskType, tt.handler)
+				if tt.wantErr {
+					assert.Error(t, err)
+					assert.Contains(t, err.Error(), tt.errMsg)
+				} else {
+					assert.NoError(t, err)
+				}
+			} else {
+				h, exists := handler.GetHandler(tt.taskType)
+				if tt.wantErr {
+					assert.False(t, exists)
+					assert.Nil(t, h)
+				} else {
+					assert.True(t, exists)
+					assert.NotNil(t, h)
+				}
+			}
+		})
+	}
+
+	// Test UnregisterHandler
+	t.Run("Unregister Handler", func(t *testing.T) {
+		taskType := "custom:task"
+		handler.UnregisterHandler(taskType)
+		h, exists := handler.GetHandler(taskType)
+		assert.False(t, exists)
+		assert.Nil(t, h)
+	})
+}
+
+func TestMonitorHealth(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Test initial health check
+	t.Run("Initial Health Check", func(t *testing.T) {
+		err := handler.MonitorHealth(ctx)
+		assert.NoError(t, err)
+	})
+
+	// Test health check after client close
+	t.Run("Health Check After Close", func(t *testing.T) {
+		handler.components.Client.Close()
+		err := handler.MonitorHealth(ctx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "redis health check failed")
+	})
+}
+
+func TestGetRedisClient(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	tests := []struct {
+		name      string
+		setupFunc func(*Handler)
+		wantNil   bool
+	}{
+		{
+			name:    "Valid Client",
+			wantNil: false,
+		},
+		{
+			name: "Nil Components",
+			setupFunc: func(h *Handler) {
+				h.components = nil
+			},
+			wantNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setupFunc != nil {
+				tt.setupFunc(handler)
+			}
+
+			client := handler.GetRedisClient()
+			if tt.wantNil {
+				assert.Nil(t, client)
+			} else {
+				assert.NotNil(t, client)
+			}
+		})
+	}
+}
+
+func TestGetMux(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	mux := handler.GetMux()
+	assert.NotNil(t, mux)
+
+	// Test registering a new handler on the mux
+	t.Run("Register New Handler on Mux", func(t *testing.T) {
+		taskType := "test:task"
+		mux.HandleFunc(taskType, func(ctx context.Context, task *asynq.Task) error {
+			return nil
+		})
+	})
 }
 
 func TestTaskHandler(t *testing.T) {
