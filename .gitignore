@@ -3,3 +3,4 @@ vendor
 bin
 webdata/
 */*.csv
+gen_test.db

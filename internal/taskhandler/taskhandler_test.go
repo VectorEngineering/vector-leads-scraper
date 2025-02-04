@@ -237,12 +237,12 @@ func TestHandlerRegistration(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		name      string
-		taskType  string
-		handler   tasks.TaskHandler
-		register  bool
-		wantErr   bool
-		errMsg    string
+		name     string
+		taskType string
+		handler  tasks.TaskHandler
+		register bool
+		wantErr  bool
+		errMsg   string
 	}{
 		{
 			name:     "Register New Handler",

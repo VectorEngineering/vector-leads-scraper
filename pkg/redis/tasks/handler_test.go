@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -145,4 +146,166 @@ func TestTaskValidation(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unmarshal email payload")
 	})
+}
+
+func TestWithMaxRetries(t *testing.T) {
+	type args struct {
+		retries int
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithMaxRetries(tt.args.retries); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithMaxRetries() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithRetryInterval(t *testing.T) {
+	type args struct {
+		interval time.Duration
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithRetryInterval(tt.args.interval); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithRetryInterval() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithTaskTimeout(t *testing.T) {
+	type args struct {
+		timeout time.Duration
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithTaskTimeout(tt.args.timeout); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithTaskTimeout() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithDataFolder(t *testing.T) {
+	type args struct {
+		folder string
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithDataFolder(tt.args.folder); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithDataFolder() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithConcurrency(t *testing.T) {
+	type args struct {
+		n int
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithConcurrency(tt.args.n); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithConcurrency() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithProxies(t *testing.T) {
+	type args struct {
+		proxies []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithProxies(tt.args.proxies); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithProxies() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithDisablePageReuse(t *testing.T) {
+	type args struct {
+		disable bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want HandlerOption
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WithDisablePageReuse(tt.args.disable); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithDisablePageReuse() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHandler_ProcessTask(t *testing.T) {
+	type args struct {
+		ctx  context.Context
+		task *asynq.Task
+	}
+	tests := []struct {
+		name    string
+		h       *Handler
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.h.ProcessTask(tt.args.ctx, tt.args.task); (err != nil) != tt.wantErr {
+				t.Errorf("Handler.ProcessTask() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }

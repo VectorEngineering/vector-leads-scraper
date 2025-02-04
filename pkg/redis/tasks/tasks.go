@@ -11,14 +11,14 @@ type TaskType string
 
 // Additional task types extending the existing ones in types.go
 const (
-	TypeLeadProcess     TaskType = "lead:process"
-	TypeLeadValidate    TaskType = "lead:validate"
-	TypeLeadEnrich      TaskType = "lead:enrich"
-	TypeReportGenerate  TaskType = "report:generate"
-	TypeDataExport      TaskType = "data:export"
-	TypeDataImport      TaskType = "data:import"
-	TypeDataCleanup     TaskType = "data:cleanup"
-	TypeScrapeGMaps    TaskType = "scrape:gmaps" // done
+	TypeLeadProcess    TaskType = "lead:process"
+	TypeLeadValidate   TaskType = "lead:validate"
+	TypeLeadEnrich     TaskType = "lead:enrich"
+	TypeReportGenerate TaskType = "report:generate"
+	TypeDataExport     TaskType = "data:export"
+	TypeDataImport     TaskType = "data:import"
+	TypeDataCleanup    TaskType = "data:cleanup"
+	TypeScrapeGMaps    TaskType = "scrape:gmaps"  // done
 	TypeEmailExtract   TaskType = "extract:email" // done
 	TypeHealthCheck    TaskType = "health:check"
 	TypeConnectionTest TaskType = "connection:test"
@@ -161,27 +161,6 @@ type TaskPayload interface {
 	Validate() error
 }
 
-// LeadProcessPayload represents the payload for lead processing tasks
-type LeadProcessPayload struct {
-	LeadID    string            `json:"lead_id"`
-	Source    string            `json:"source"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
-	BatchSize int               `json:"batch_size"`
-}
-
-func (p *LeadProcessPayload) Validate() error {
-	if p.LeadID == "" {
-		return ErrInvalidPayload{Field: "lead_id", Message: "lead ID is required"}
-	}
-	if p.Source == "" {
-		return ErrInvalidPayload{Field: "source", Message: "source is required"}
-	}
-	if p.BatchSize <= 0 {
-		return ErrInvalidPayload{Field: "batch_size", Message: "batch size must be positive"}
-	}
-	return nil
-}
-
 // ErrInvalidPayload represents a validation error in the task payload
 type ErrInvalidPayload struct {
 	Field   string
@@ -191,8 +170,6 @@ type ErrInvalidPayload struct {
 func (e ErrInvalidPayload) Error() string {
 	return "invalid payload: " + e.Field + " - " + e.Message
 }
-
-// Helper functions for task creation and payload handling
 
 // NewTask creates a new task with the given type and payload
 func NewTask(taskType string, payload TaskPayload) ([]byte, error) {
@@ -234,9 +211,63 @@ func ParsePayload(taskType TaskType, payloadBytes []byte) (interface{}, error) {
 			return nil, err
 		}
 		payload = p
+	case TypeLeadValidate:
+		p := &LeadValidatePayload{}
+		if err := json.Unmarshal(payloadBytes, p); err != nil {
+			return nil, err
+		}
+		if err := p.Validate(); err != nil {
+			return nil, err
+		}
+		payload = p
+	case TypeLeadEnrich:
+		p := &LeadEnrichPayload{}
+		if err := json.Unmarshal(payloadBytes, p); err != nil {
+			return nil, err
+		}
+		if err := p.Validate(); err != nil {
+			return nil, err
+		}
+		payload = p
+	case TypeReportGenerate:
+		p := &ReportGeneratePayload{}
+		if err := json.Unmarshal(payloadBytes, p); err != nil {
+			return nil, err
+		}
+		if err := p.Validate(); err != nil {
+			return nil, err
+		}
+		payload = p
+	case TypeDataExport:
+		p := &DataExportPayload{}
+		if err := json.Unmarshal(payloadBytes, p); err != nil {
+			return nil, err
+		}
+		if err := p.Validate(); err != nil {
+			return nil, err
+		}
+		payload = p
+	case TypeDataImport:
+		p := &DataImportPayload{}
+		if err := json.Unmarshal(payloadBytes, p); err != nil {
+			return nil, err
+		}
+		if err := p.Validate(); err != nil {
+			return nil, err
+		}
+		payload = p
+	case TypeDataCleanup:
+		p := &DataCleanupPayload{}
+		if err := json.Unmarshal(payloadBytes, p); err != nil {
+			return nil, err
+		}
+		if err := p.Validate(); err != nil {
+			return nil, err
+		}
+		payload = p
 	default:
 		return nil, ErrInvalidPayload{Field: "task_type", Message: "unsupported task type"}
 	}
 
 	return payload, nil
-} 
+}

@@ -95,23 +95,23 @@ import (
 // It provides functionality for task enqueueing, processing, monitoring,
 // and lifecycle management.
 type Handler struct {
-	mux        *asynq.ServeMux     // ServeMux for routing tasks to handlers
+	mux        *asynq.ServeMux              // ServeMux for routing tasks to handlers
 	handlers   map[string]tasks.TaskHandler // Map of task type to handlers
-	components *redis.Components    // Redis components for task operations
-	wg         sync.WaitGroup      // WaitGroup for graceful shutdown
-	done       chan struct{}       // Channel for shutdown signaling
-	logger     *log.Logger         // Logger for handler operations
+	components *redis.Components            // Redis components for task operations
+	wg         sync.WaitGroup               // WaitGroup for graceful shutdown
+	done       chan struct{}                // Channel for shutdown signaling
+	logger     *log.Logger                  // Logger for handler operations
 }
 
 // Options configures the task handler.
 // It provides configuration options for retry behavior, task types,
 // and handler-specific settings.
 type Options struct {
-	MaxRetries     int                    // Maximum number of retry attempts
-	RetryInterval  time.Duration          // Time to wait between retries
-	TaskTypes      []string               // List of supported task types
-	HandlerOptions []tasks.HandlerOption  // Options for task handlers
-	Logger         *log.Logger            // Custom logger for the handler
+	MaxRetries     int                   // Maximum number of retry attempts
+	RetryInterval  time.Duration         // Time to wait between retries
+	TaskTypes      []string              // List of supported task types
+	HandlerOptions []tasks.HandlerOption // Options for task handlers
+	Logger         *log.Logger           // Custom logger for the handler
 }
 
 // TaskProcessingOperation represents different operations that can be

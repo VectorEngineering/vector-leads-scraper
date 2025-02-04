@@ -69,18 +69,18 @@ import (
 //		MaxTime:  30 * time.Minute,
 //	}
 type ScrapePayload struct {
-	JobID    string        `json:"job_id"`    // Unique identifier for the scraping job
-	Keywords []string      `json:"keywords"`   // List of search terms to scrape
-	FastMode bool          `json:"fast_mode"` // Enable fast scraping mode
-	Lang     string        `json:"lang"`      // Language for search results
-	Depth    int           `json:"depth"`     // Maximum crawl depth
-	Email    bool          `json:"email"`     // Whether to extract email addresses
-	Lat      string        `json:"lat,omitempty"` // Latitude for location-based search
-	Lon      string        `json:"lon,omitempty"` // Longitude for location-based search
-	Zoom     int           `json:"zoom,omitempty"` // Map zoom level
-	Radius   int           `json:"radius,omitempty"` // Search radius in meters
+	JobID    string        `json:"job_id"`             // Unique identifier for the scraping job
+	Keywords []string      `json:"keywords"`           // List of search terms to scrape
+	FastMode bool          `json:"fast_mode"`          // Enable fast scraping mode
+	Lang     string        `json:"lang"`               // Language for search results
+	Depth    int           `json:"depth"`              // Maximum crawl depth
+	Email    bool          `json:"email"`              // Whether to extract email addresses
+	Lat      string        `json:"lat,omitempty"`      // Latitude for location-based search
+	Lon      string        `json:"lon,omitempty"`      // Longitude for location-based search
+	Zoom     int           `json:"zoom,omitempty"`     // Map zoom level
+	Radius   int           `json:"radius,omitempty"`   // Search radius in meters
 	MaxTime  time.Duration `json:"max_time,omitempty"` // Maximum execution time
-	Proxies  []string      `json:"proxies,omitempty"` // List of proxy servers to use
+	Proxies  []string      `json:"proxies,omitempty"`  // List of proxy servers to use
 }
 
 // EmailPayload represents the payload for an email extraction task.

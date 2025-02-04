@@ -147,9 +147,9 @@ type Handler struct {
 	retryInterval time.Duration // Time to wait between retry attempts
 	taskTimeout   time.Duration // Maximum time allowed for task execution
 	dataFolder    string        // Directory for storing task results and data
-	concurrency   int          // Number of concurrent scraping operations
-	proxies       []string     // List of proxy servers for scraping
-	disableReuse  bool         // Flag to disable page reuse in scraping
+	concurrency   int           // Number of concurrent scraping operations
+	proxies       []string      // List of proxy servers for scraping
+	disableReuse  bool          // Flag to disable page reuse in scraping
 }
 
 // HandlerOption defines a function type for configuring Handler instances.
@@ -306,6 +306,20 @@ func (h *Handler) ProcessTask(ctx context.Context, task *asynq.Task) error {
 		return nil // Health check task always succeeds
 	case TypeConnectionTest.String():
 		return nil // Connection test task always succeeds
+	case TypeLeadProcess.String():
+		return h.processLeadProcessTask(ctx, task)
+	case TypeLeadValidate.String():
+		return h.processLeadValidateTask(ctx, task)
+	case TypeLeadEnrich.String():
+		return h.processLeadEnrichTask(ctx, task)
+	case TypeReportGenerate.String():
+		return h.processReportGenerateTask(ctx, task)
+	case TypeDataExport.String():
+		return h.processDataExportTask(ctx, task)
+	case TypeDataImport.String():
+		return h.processDataImportTask(ctx, task)
+	case TypeDataCleanup.String():
+		return h.processDataCleanupTask(ctx, task)
 	default:
 		return fmt.Errorf("unknown task type: %s", task.Type())
 	}

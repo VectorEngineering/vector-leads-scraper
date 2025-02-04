@@ -87,8 +87,8 @@ import (
 //	}
 type EmailJob struct {
 	scrapemate.Job
-	maxDepth  int      // Maximum depth for recursive crawling
-	userAgent string   // User agent string for HTTP requests
+	maxDepth  int    // Maximum depth for recursive crawling
+	userAgent string // User agent string for HTTP requests
 }
 
 // NewEmailJob creates a new email extraction job with the specified parameters.
