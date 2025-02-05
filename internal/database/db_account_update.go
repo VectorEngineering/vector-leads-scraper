@@ -11,16 +11,16 @@ import (
 func (db *Db) UpdateAccount(ctx context.Context, orgId, tenantId uint64, account *lead_scraper_servicev1.Account) (*lead_scraper_servicev1.Account, error) {
 	// validate the org and tenant id
 	if orgId == 0 || tenantId == 0 {
-		return nil, fmt.Errorf("invalid org or tenant id", ErrInvalidInput)
+		return nil, fmt.Errorf("%w: invalid org or tenant id", ErrInvalidInput)
 	}
 
 	if account == nil {
-		return nil, fmt.Errorf("account is nil", ErrInvalidInput)
+		return nil, fmt.Errorf("%w: account is nil", ErrInvalidInput)
 	}
 
 	// Validate email
 	if account.Email == "" {
-		return nil, fmt.Errorf("account email is empty", ErrInvalidInput)
+		return nil, fmt.Errorf("%w: account email is empty", ErrInvalidInput)
 	}
 
 	// check that the account exists
