@@ -95,19 +95,20 @@ func (db *Db) DeleteAccount(ctx context.Context, params *DeleteAccountParams) er
 	b := db.QueryOperator.AccountORM
 	queryRef := b.WithContext(ctx)
 	if params.DeletionType == DeletionTypeSoft {
-		queryRef = queryRef.Where(b.Id.Eq(params.ID)).Select(field.AssociationFields)
+		if err = queryRef.SoftDelete(params.ID); err != nil {
+			return fmt.Errorf("failed to soft delete account: %w", err)
+		}
 	} else {
-		queryRef = queryRef.Where(b.Id.Eq(params.ID)).Unscoped().Select(field.AssociationFields)
-	}
+		res, err := queryRef.Where(b.Id.Eq(params.ID)).Unscoped().Select(field.AssociationFields).Delete()
+		if err != nil {
+			return fmt.Errorf("failed to hard delete account: %w", err)
+		}
 
-	res, err := queryRef.Delete()
-	if err != nil {
-		return err
+		if res.RowsAffected == 0 {
+			return ErrFailedToDeleteAccount
+		}
 	}
-	if res.RowsAffected == 0 {
-		return ErrFailedToDeleteAccount
-	}
-
+	
 	return nil
 }
 
