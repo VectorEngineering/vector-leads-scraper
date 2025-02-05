@@ -126,9 +126,10 @@ func setupTestContainers(ctx context.Context, logger *zap.Logger) (*GrpcTestCont
 
 
 	cfg := &config.RedisConfig{
-		Host:     redisContainer.GetAddress(),
+		Host:     "localhost",
 		Port:     redisContainer.Port,
 		Password: redisContainer.Password,
+		DB:       0,
 	}
 
 	redisClient, err := redisC.NewClient(cfg)
@@ -145,9 +146,25 @@ func setupTestContainers(ctx context.Context, logger *zap.Logger) (*GrpcTestCont
 		postgresContainer.Password,
 		postgresContainer.Database,
 	)
+	timeout := 30 * time.Second
+	maxRetries := 3
+	retryTimeout := 5 * time.Second
+	retrySleep := 1 * time.Second
+	maxIdleConns := 10
+	maxOpenConns := 100
+	maxConnLifetime := 1 * time.Hour
+	telemetry := &instrumentation.Client{}
 	pgClient, err := postgresdb.New(
 		postgresdb.WithConnectionString(&connStr),
 		postgresdb.WithLogger(logger),
+		postgresdb.WithQueryTimeout(&timeout),
+		postgresdb.WithMaxConnectionRetries(&maxRetries),
+		postgresdb.WithMaxConnectionRetryTimeout(&retryTimeout),
+		postgresdb.WithRetrySleep(&retrySleep),
+		postgresdb.WithMaxIdleConnections(&maxIdleConns),
+		postgresdb.WithMaxOpenConnections(&maxOpenConns),
+		postgresdb.WithMaxConnectionLifetime(&maxConnLifetime),
+		postgresdb.WithInstrumentationClient(telemetry),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PostgreSQL client: %w", err)
@@ -170,7 +187,7 @@ func setupTestContainers(ctx context.Context, logger *zap.Logger) (*GrpcTestCont
 	}
 
 	runnerCfg := &runner.Config{
-		RedisURL: redisContainer.GetAddress(),	
+		RedisURL: fmt.Sprintf("redis://%s:%d", "localhost", redisContainer.Port),
 	}
 
 	taskHandler, err := taskhandler.New(runnerCfg, opts)

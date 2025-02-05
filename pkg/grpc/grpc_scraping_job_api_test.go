@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"strconv"
 	"testing"
 
 	"github.com/Vector/vector-leads-scraper/internal/testutils"
@@ -16,7 +15,7 @@ import (
 func TestServer_CreateScrapingJob(t *testing.T) {
 	// Create test context with user and organization
 	userId := "user_123"
-	orgId := "org_123"
+	orgId := uint64(1)
 	testCtx := context.Background()
 	tests := []struct {
 		name    string
@@ -27,7 +26,7 @@ func TestServer_CreateScrapingJob(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.CreateScrapingJobRequest{
-				UserId: userId,
+				AuthPlatformUserId: userId,
 				OrgId:  orgId,
 			},
 		},
@@ -52,7 +51,7 @@ func TestServer_CreateScrapingJob(t *testing.T) {
 func TestServer_GetScrapingJob(t *testing.T) {
 	// Create test context and a test job
 	userId := "user_123"
-	orgId := "org_123"
+	orgId := uint64(1)
 	testCtx := context.Background()
 	job := testutils.GenerateRandomizedScrapingJob()
 
@@ -65,7 +64,7 @@ func TestServer_GetScrapingJob(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.GetScrapingJobRequest{
-				JobId:  strconv.FormatUint(job.Id, 10),
+				JobId:  job.Id,
 				UserId: userId,
 				OrgId:  orgId,
 			},
@@ -92,7 +91,7 @@ func TestServer_GetScrapingJob(t *testing.T) {
 func TestServer_ListScrapingJobs(t *testing.T) {
 	// Create test context and multiple test jobs
 	userId := "user_123"
-	orgId := "org_123"
+	orgId := uint64(1)
 	testCtx := context.Background()
 	for i := 0; i < 3; i++ {
 		testutils.GenerateRandomizedScrapingJob()
@@ -107,7 +106,7 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.ListScrapingJobsRequest{
-				UserId: userId,
+				AuthPlatformUserId: userId,
 				OrgId:  orgId,
 			},
 			wantErr: false,
@@ -133,7 +132,7 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 func TestServer_DeleteScrapingJob(t *testing.T) {
 	// Create test context and a test job
 	userId := "user_123"
-	orgId := "org_123"
+	orgId := uint64(1)
 	testCtx := context.Background()
 	job := testutils.GenerateRandomizedScrapingJob()
 
@@ -146,7 +145,7 @@ func TestServer_DeleteScrapingJob(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.DeleteScrapingJobRequest{
-				JobId:  strconv.FormatUint(job.Id, 10),
+				JobId:  job.Id,
 				UserId: userId,
 				OrgId:  orgId,
 			},

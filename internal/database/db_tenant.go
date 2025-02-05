@@ -12,9 +12,8 @@ import (
 
 // CreateTenantInput holds the input parameters for the CreateTenant function
 type CreateTenantInput struct {
-	Name           string `validate:"required"`
-	OrganizationID uint64 `validate:"required,gt=0"`
-	Description    string
+	Tenant         *lead_scraper_servicev1.Tenant `validate:"required"`
+	OrganizationID uint64                          `validate:"required,gt=0"`
 }
 
 func (d *CreateTenantInput) validate() error {
@@ -37,21 +36,40 @@ func (db *Db) CreateTenant(ctx context.Context, input *CreateTenantInput) (*lead
 		return nil, err
 	}
 
-	tenant := &lead_scraper_servicev1.TenantORM{
-		Name:           input.Name,
-		OrganizationId: &input.OrganizationID,
-		Description:    input.Description,
+	tenant := input.Tenant
+	// convert to orm
+	tenantORM, err := tenant.ToORM(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert tenant to orm: %w", err)
 	}
 
-	if err := db.Client.Engine.WithContext(ctx).Create(tenant).Error; err != nil {
-		db.Logger.Error("failed to create tenant",
-			zap.Error(err),
-			zap.String("name", input.Name))
-		return nil, fmt.Errorf("failed to create tenant: %w", err)
+	orgOp := db.QueryOperator.OrganizationORM
+
+	// query for the organization and check if it exists
+	org, err := orgOp.WithContext(ctx).Where(orgOp.Id.Eq(input.OrganizationID)).First()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get organization: %w", err)
+	}
+
+	if org == nil {
+		return nil, ErrOrganizationDoesNotExist
+	}
+
+	if err := orgOp.Tenants.WithContext(ctx).Model(org).Append(&tenantORM); err != nil {
+		return nil, fmt.Errorf("failed to append tenant to organization: %w", err)
+	}
+
+	res, err := orgOp.WithContext(ctx).Updates(org)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update organization: %w", err)
+	}
+
+	if res.RowsAffected == 0 {
+		return nil, fmt.Errorf("failed to update organization")
 	}
 
 	// Convert to protobuf
-	tenantPb, err := tenant.ToPB(ctx)
+	tenantPb, err := tenantORM.ToPB(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert tenant to protobuf: %w", err)
 	}
@@ -107,15 +125,22 @@ func (db *Db) GetTenant(ctx context.Context, input *GetTenantInput) (*lead_scrap
 // UpdateTenantInput holds the input parameters for the UpdateTenant function
 type UpdateTenantInput struct {
 	ID             uint64 `validate:"required,gt=0"`
-	Name           string `validate:"required"`
-	OrganizationID uint64 `validate:"required,gt=0"`
-	Description    string
+	Tenant         *lead_scraper_servicev1.Tenant
 }
 
 func (d *UpdateTenantInput) validate() error {
 	if err := validator.New(validator.WithRequiredStructEnabled()).Struct(d); err != nil {
 		return multierr.Append(ErrInvalidInput, err)
 	}
+
+	if d.Tenant == nil {
+		return ErrInvalidInput
+	}
+
+	if err := d.Tenant.ValidateAll(); err != nil {
+		return multierr.Append(ErrInvalidInput, err)
+	}
+
 	return nil
 }
 
@@ -132,18 +157,35 @@ func (db *Db) UpdateTenant(ctx context.Context, input *UpdateTenantInput) (*lead
 		return nil, err
 	}
 
-	tenant := &lead_scraper_servicev1.TenantORM{
-		Id:             input.ID,
-		Name:           input.Name,
-		OrganizationId: &input.OrganizationID,
-		Description:    input.Description,
+	tenantOp := db.QueryOperator.TenantORM
+
+	// query for the tenant and check if it exists
+	tenant, err := tenantOp.WithContext(ctx).Where(tenantOp.Id.Eq(input.ID)).Preload(tenantOp.Organization).First()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
 
-	if err := db.Client.Engine.WithContext(ctx).Save(tenant).Error; err != nil {
-		db.Logger.Error("failed to update tenant",
-			zap.Error(err),
-			zap.Uint64("tenant_id", input.ID))
-		return nil, fmt.Errorf("failed to update tenant: %w", err)
+	if tenant == nil {
+		return nil, ErrTenantDoesNotExist
+	}
+
+	org := tenant.Organization
+
+	// ensure an organization exists
+	orgOp := db.QueryOperator.OrganizationORM
+
+
+	if err := orgOp.Tenants.WithContext(ctx).Model(org).Replace(tenant); err != nil {
+		return nil, fmt.Errorf("failed to replace tenant: %w", err)
+	}
+
+	res, err := orgOp.WithContext(ctx).Updates(org)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update organization: %w", err)
+	}
+
+	if res.RowsAffected == 0 {
+		return nil, fmt.Errorf("failed to update organization")
 	}
 
 	// Convert to protobuf

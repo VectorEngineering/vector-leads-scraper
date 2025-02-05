@@ -42,6 +42,9 @@ on:
       REDIS_URL:
         required: false
         description: "Redis connection string override"
+      PROXIES:
+        required: false
+        description: "Comma-separated list of proxies to use"
 
 permissions:
   contents: write
@@ -124,3 +127,4 @@ jobs:
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
       REDIS_URL: ${{ secrets.REDIS_URL }}
+      PROXIES: ${{ secrets.PROXIES }}

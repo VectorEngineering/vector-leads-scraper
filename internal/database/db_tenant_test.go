@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Vector/vector-leads-scraper/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,8 +14,7 @@ func TestCreateTenant(t *testing.T) {
 
 	// Create test organization first
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 
@@ -26,9 +26,8 @@ func TestCreateTenant(t *testing.T) {
 		{
 			name: "success",
 			input: &CreateTenantInput{
-				Name:           "Test Tenant",
+				Tenant:         testutils.GenerateRandomizedTenant(),
 				OrganizationID: org.Id,
-				Description:    "Test Description",
 			},
 			wantErr: false,
 		},
@@ -38,20 +37,10 @@ func TestCreateTenant(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "empty name",
-			input: &CreateTenantInput{
-				Name:           "",
-				OrganizationID: org.Id,
-				Description:    "Test Description",
-			},
-			wantErr: true,
-		},
-		{
 			name: "invalid organization id",
 			input: &CreateTenantInput{
-				Name:           "Test Tenant",
+				Tenant: testutils.GenerateRandomizedTenant(),
 				OrganizationID: 0,
-				Description:    "Test Description",
 			},
 			wantErr: true,
 		},
@@ -67,8 +56,8 @@ func TestCreateTenant(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotNil(t, tenant)
 			assert.NotZero(t, tenant.Id)
-			assert.Equal(t, tt.input.Name, tenant.Name)
-			assert.Equal(t, tt.input.Description, tenant.Description)
+			assert.Equal(t, tt.input.Tenant.Name, tenant.Name)
+			assert.Equal(t, tt.input.Tenant.Description, tenant.Description)
 		})
 	}
 }
@@ -78,16 +67,14 @@ func TestGetTenant(t *testing.T) {
 
 	// Create test organization
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 
 	// Create test tenant
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Name:           "Test Tenant",
+		Tenant: testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
-		Description:    "Test Description",
 	})
 	require.NoError(t, err)
 
@@ -131,18 +118,20 @@ func TestUpdateTenant(t *testing.T) {
 
 	// Create test organization
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 
 	// Create test tenant
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Name:           "Test Tenant",
+		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
-		Description:    "Test Description",
 	})
 	require.NoError(t, err)
+
+	tenant.Name = "Updated Tenant"
+	tenant.Description = "Updated Description"
+	tenant.Organization = org
 
 	tests := []struct {
 		name    string
@@ -153,9 +142,7 @@ func TestUpdateTenant(t *testing.T) {
 			name: "success",
 			input: &UpdateTenantInput{
 				ID:             tenant.Id,
-				Name:           "Updated Tenant",
-				OrganizationID: org.Id,
-				Description:    "Updated Description",
+				Tenant:         tenant,
 			},
 			wantErr: false,
 		},
@@ -175,8 +162,8 @@ func TestUpdateTenant(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.NotNil(t, got)
-			assert.Equal(t, tt.input.Name, got.Name)
-			assert.Equal(t, tt.input.Description, got.Description)
+			assert.Equal(t, tt.input.Tenant.Name, got.Name)
+			assert.Equal(t, tt.input.Tenant.Description, got.Description)
 		})
 	}
 }
@@ -186,16 +173,14 @@ func TestDeleteTenant(t *testing.T) {
 
 	// Create test organization
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 
 	// Create test tenant
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Name:           "Test Tenant",
+		Tenant: testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
-		Description:    "Test Description",
 	})
 	require.NoError(t, err)
 
@@ -239,17 +224,15 @@ func TestListTenants(t *testing.T) {
 
 	// Create test organization
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 
 	// Create test tenants
 	for i := 0; i < 5; i++ {
 		_, err := conn.CreateTenant(ctx, &CreateTenantInput{
-			Name:           "Test Tenant",
+			Tenant: testutils.GenerateRandomizedTenant(),
 			OrganizationID: org.Id,
-			Description:    "Test Description",
 		})
 		require.NoError(t, err)
 	}

@@ -2,9 +2,10 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
+	"github.com/Vector/vector-leads-scraper/internal/testutils"
+	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,8 +21,7 @@ func TestCreateOrganization(t *testing.T) {
 		{
 			name: "success",
 			input: &CreateOrganizationInput{
-				Name:        "Test Organization",
-				Description: "Test Description",
+				Organization: testutils.GenerateRandomizedOrganization(),
 			},
 			wantErr: false,
 		},
@@ -33,8 +33,10 @@ func TestCreateOrganization(t *testing.T) {
 		{
 			name: "empty name",
 			input: &CreateOrganizationInput{
-				Name:        "",
-				Description: "Test Description",
+				Organization: &lead_scraper_servicev1.Organization{
+					Name:        "",
+					Description: "Test Description",
+				},
 			},
 			wantErr: true,
 		},
@@ -50,8 +52,8 @@ func TestCreateOrganization(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotNil(t, org)
 			assert.NotZero(t, org.Id)
-			assert.Equal(t, tt.input.Name, org.Name)
-			assert.Equal(t, tt.input.Description, org.Description)
+			assert.Equal(t, tt.input.Organization.Name, org.Name)
+			assert.Equal(t, tt.input.Organization.Description, org.Description)
 		})
 	}
 }
@@ -61,8 +63,7 @@ func TestGetOrganization(t *testing.T) {
 
 	// Create test organization
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 
@@ -113,8 +114,7 @@ func TestUpdateOrganization(t *testing.T) {
 
 	// Create test organization
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 
@@ -159,8 +159,7 @@ func TestDeleteOrganization(t *testing.T) {
 
 	// Create test organization
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 
@@ -209,8 +208,7 @@ func TestListOrganizations(t *testing.T) {
 	// Create test organizations with unique names
 	for i := 0; i < 5; i++ {
 		_, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-			Name:        fmt.Sprintf("Test Organization %d", i+1),
-			Description: "Test Description",
+			Organization: testutils.GenerateRandomizedOrganization(),
 		})
 		require.NoError(t, err)
 	}

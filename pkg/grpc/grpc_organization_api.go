@@ -63,8 +63,7 @@ func (s *Server) CreateOrganization(ctx context.Context, req *proto.CreateOrgani
 
 	// Create the organization using the database client.
 	organization, err := s.db.CreateOrganization(ctx, &database.CreateOrganizationInput{
-		Name:        org.GetName(),
-		Description: org.GetDescription(),
+		Organization: org,
 	})
 	if err != nil {
 		logger.Error("failed to create organization", zap.Error(err))

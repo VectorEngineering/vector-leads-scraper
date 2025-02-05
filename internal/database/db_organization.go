@@ -12,14 +12,23 @@ import (
 
 // CreateOrganizationInput holds the input parameters for the CreateOrganization function
 type CreateOrganizationInput struct {
-	Name        string `validate:"required"`
-	Description string
+	Organization *lead_scraper_servicev1.Organization
 }
 
 func (d *CreateOrganizationInput) validate() error {
 	if err := validator.New(validator.WithRequiredStructEnabled()).Struct(d); err != nil {
 		return multierr.Append(ErrInvalidInput, err)
 	}
+
+	if d.Organization == nil {
+		return ErrInvalidInput
+	}
+
+	// validate the organization
+	if err := d.Organization.Validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -36,25 +45,23 @@ func (db *Db) CreateOrganization(ctx context.Context, input *CreateOrganizationI
 		return nil, err
 	}
 
-	org := &lead_scraper_servicev1.OrganizationORM{
-		Name:        input.Name,
-		Description: input.Description,
+	org := input.Organization
+	// Convert to ORM
+	orgOrm, err := org.ToORM(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert organization to ORM: %w", err)
 	}
 
-	if err := db.Client.Engine.WithContext(ctx).Create(org).Error; err != nil {
+	orgQop := db.QueryOperator.OrganizationORM
+	if err := orgQop.WithContext(ctx).Create(&orgOrm); err != nil {
 		db.Logger.Error("failed to create organization",
 			zap.Error(err),
-			zap.String("name", input.Name))
+			zap.String("name", org.GetName()))
 		return nil, fmt.Errorf("failed to create organization: %w", err)
 	}
 
-	// Convert to protobuf
-	orgPb, err := org.ToPB(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert organization to protobuf: %w", err)
-	}
 
-	return &orgPb, nil
+	return org, nil
 }
 
 // GetOrganizationInput holds the input parameters for the GetOrganization function

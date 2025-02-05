@@ -71,9 +71,8 @@ func (s *Server) CreateTenant(ctx context.Context, req *proto.CreateTenantReques
 
 	// Create the tenant using the database client
 	result, err := s.db.CreateTenant(ctx, &database.CreateTenantInput{
-		Name:           tenant.GetName(),
-		Description:    tenant.GetDescription(),
-		OrganizationID: tenant.GetId(),
+		Tenant:         tenant,
+		OrganizationID: req.GetOrganizationId(),
 	})
 	if err != nil {
 		s.logger.Error("failed to create tenant", zap.Error(err))
@@ -210,8 +209,7 @@ func (s *Server) UpdateTenant(ctx context.Context, req *proto.UpdateTenantReques
 	// Update the tenant using the database client
 	result, err := s.db.UpdateTenant(ctx, &database.UpdateTenantInput{
 		ID:             req.GetTenant().GetId(),
-		Name:           req.GetTenant().GetName(),
-		Description:    req.GetTenant().GetDescription(),
+		Tenant:         req.GetTenant(),
 	})
 	if err != nil {
 		s.logger.Error("failed to update tenant", zap.Error(err))

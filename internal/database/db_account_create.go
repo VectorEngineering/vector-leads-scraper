@@ -5,6 +5,7 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/Vector/vector-leads-scraper/internal/constants"
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
@@ -16,8 +17,8 @@ var ErrAccountAlreadyExists = errors.New("account already exists")
 
 // CreateAccountInput holds the input parameters for the CreateAccount function.
 type CreateAccountInput struct {
-	OrgID    string                          `validate:"required"`
-	TenantID string                          `validate:"required"`
+	OrgID    uint64                          `validate:"required"`
+	TenantID uint64                          `validate:"required"`
 	Account  *lead_scraper_servicev1.Account `validate:"required"`
 }
 
@@ -82,10 +83,6 @@ func (d *CreateAccountInput) validate() error {
 //	    return err
 //	}
 func (db *Db) CreateAccount(ctx context.Context, input *CreateAccountInput) (*lead_scraper_servicev1.Account, error) {
-	var (
-		u = db.QueryOperator.AccountORM
-	)
-
 	// ensure the db operation executes within the specified timeout
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
@@ -98,6 +95,22 @@ func (db *Db) CreateAccount(ctx context.Context, input *CreateAccountInput) (*le
 	if err := input.validate(); err != nil {
 		return nil, err
 	}
+
+	// make sure the org and tenant exist
+	tenantQop := db.QueryOperator.TenantORM
+	tenantOrm, err := tenantQop.WithContext(ctx).Where(
+		tenantQop.Id.Eq(input.TenantID),
+		tenantQop.OrganizationId.Eq(input.OrgID),
+	).First()
+	if err != nil {
+		return nil, err
+	}
+
+	if tenantOrm == nil {
+		return nil, ErrTenantDoesNotExist
+	}
+	
+	
 
 	// Check if account with same email already exists
 	existing, err := db.GetAccountByEmail(ctx, input.Account.Email)
@@ -116,8 +129,18 @@ func (db *Db) CreateAccount(ctx context.Context, input *CreateAccountInput) (*le
 		return nil, err
 	}
 
-	if err := u.WithContext(ctx).Create(&accountORM); err != nil {
+	if err := tenantQop.Accounts.WithContext(ctx).Model(tenantOrm).Append(&accountORM); err != nil {
 		return nil, err
+	}
+
+	// update the tenant with the new account
+	res, err := tenantQop.WithContext(ctx).Updates(tenantOrm)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.RowsAffected == 0 {
+		return nil, fmt.Errorf("failed to update tenant")
 	}
 
 	// convert orm to pb

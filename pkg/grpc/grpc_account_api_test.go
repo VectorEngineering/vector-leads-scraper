@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"strconv"
 	"testing"
 
 	"github.com/Vector/vector-leads-scraper/internal/testutils"
@@ -13,7 +12,50 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type accountTestContext struct {
+	Organization *proto.Organization
+	TenantId     uint64
+	Cleanup      func()
+}
+
+func initializeTestContext(t *testing.T) (*accountTestContext) {
+	// create an organization and tenant first
+	org := testutils.GenerateRandomizedOrganization()
+	tenant := testutils.GenerateRandomizedTenant()
+	
+	createOrgResp, err := MockServer.CreateOrganization(context.Background(), &proto.CreateOrganizationRequest{
+		Organization: org,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, createOrgResp)
+	require.NotNil(t, createOrgResp.Organization)
+
+	createTenantResp, err := MockServer.CreateTenant(context.Background(), &proto.CreateTenantRequest{
+		Tenant:         tenant,
+		OrganizationId: createOrgResp.Organization.Id,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, createTenantResp)
+	require.NotNil(t, createTenantResp.TenantId)
+
+	cleanup := func() {
+		MockServer.DeleteOrganization(context.Background(), &proto.DeleteOrganizationRequest{
+			Id: createOrgResp.Organization.Id,
+		})
+	}
+
+	return &accountTestContext{
+		Organization: createOrgResp.Organization,
+		TenantId:     createTenantResp.TenantId,
+		Cleanup:     cleanup,
+	}
+}
+
 func TestServer_CreateAccount(t *testing.T) {
+	// create an organization and tenant first
+	testCtx := initializeTestContext(t)
+	defer testCtx.Cleanup()
+
 	tests := []struct {
 		name    string
 		req     *proto.CreateAccountRequest
@@ -23,9 +65,40 @@ func TestServer_CreateAccount(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.CreateAccountRequest{
-				Account: testutils.GenerateRandomizedAccount(),
+				Account:              testutils.GenerateRandomizedAccount(),
+				OrganizationId:      testCtx.Organization.Id,
+				TenantId:            testCtx.TenantId,
+				InitialWorkspaceName: "Test Workspace",
 			},
 			wantErr: false,
+		},
+		{
+			name:    "nil request",
+			req:     nil,
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "invalid organization id",
+			req: &proto.CreateAccountRequest{
+				Account:              testutils.GenerateRandomizedAccount(),
+				OrganizationId:      0,
+				TenantId:            testCtx.TenantId,
+				InitialWorkspaceName: "Test Workspace",
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "invalid tenant id",
+			req: &proto.CreateAccountRequest{
+				Account:              testutils.GenerateRandomizedAccount(),
+				OrganizationId:      testCtx.Organization.Id,
+				TenantId:            0,
+				InitialWorkspaceName: "Test Workspace",
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
 		},
 	}
 
@@ -48,7 +121,19 @@ func TestServer_CreateAccount(t *testing.T) {
 
 func TestServer_GetAccount(t *testing.T) {
 	// Create a test account first
-	account := testutils.GenerateRandomizedAccount()
+	testCtx := initializeTestContext(t)
+	defer testCtx.Cleanup()
+
+	// create an account first
+	createResp, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
+		Account:              testutils.GenerateRandomizedAccount(),
+		OrganizationId:      testCtx.Organization.Id,
+		TenantId:            testCtx.TenantId,
+		InitialWorkspaceName: "Test Workspace",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, createResp)
+	require.NotNil(t, createResp.Account)
 
 	tests := []struct {
 		name    string
@@ -59,9 +144,47 @@ func TestServer_GetAccount(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.GetAccountRequest{
-				Id: strconv.FormatUint(account.Id, 10),
+				Id:             createResp.Account.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
 			},
 			wantErr: false,
+		},
+		{
+			name:    "nil request",
+			req:     nil,
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "account not found",
+			req: &proto.GetAccountRequest{
+				Id:             999999,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+			},
+			wantErr: true,
+			errCode: codes.NotFound,
+		},
+		{
+			name: "invalid organization id",
+			req: &proto.GetAccountRequest{
+				Id:             createResp.Account.Id,
+				OrganizationId: 0,
+				TenantId:       testCtx.TenantId,
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "invalid tenant id",
+			req: &proto.GetAccountRequest{
+				Id:             createResp.Account.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       0,
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
 		},
 	}
 
@@ -78,13 +201,28 @@ func TestServer_GetAccount(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, resp)
 			require.NotNil(t, resp.Account)
+			assert.Equal(t, createResp.Account.Id, resp.Account.Id)
+			assert.Equal(t, createResp.Account.Email, resp.Account.Email)
 		})
 	}
 }
 
 func TestServer_UpdateAccount(t *testing.T) {
-	// Create a test account first
-	account := testutils.GenerateRandomizedAccount()
+	tc := initializeTestContext(t)
+	defer tc.Cleanup()
+
+	// create an account first
+	createResp, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
+		Account:              testutils.GenerateRandomizedAccount(),
+		OrganizationId:      tc.Organization.Id,
+		TenantId:            tc.TenantId,
+		InitialWorkspaceName: "Test Workspace",
+	})	
+	require.NoError(t, err)
+	require.NotNil(t, createResp)
+	require.NotNil(t, createResp.Account)
+
+	account := createResp.Account
 
 	tests := []struct {
 		name    string
@@ -119,6 +257,9 @@ func TestServer_UpdateAccount(t *testing.T) {
 }
 
 func TestServer_DeleteAccount(t *testing.T) {
+	tc := initializeTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test account first
 	account := testutils.GenerateRandomizedAccount()
 
@@ -131,7 +272,9 @@ func TestServer_DeleteAccount(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.DeleteAccountRequest{
-				Id: strconv.FormatUint(account.Id, 10),
+				Id:             account.Id,
+				OrganizationId: tc.Organization.Id,
+				TenantId:       tc.TenantId,
 			},
 			wantErr: false,
 		},

@@ -15,6 +15,7 @@ import (
 )
 
 func TestDeleteAccountParams_validate(t *testing.T) {
+	
 	tests := []struct {
 		name    string
 		d       *DeleteAccountParams
@@ -49,6 +50,9 @@ func TestDeleteAccountParams_validate(t *testing.T) {
 }
 
 func TestDb_DeleteAccount(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create test accounts
 	validAccount := testutils.GenerateRandomizedAccount()
 
@@ -78,8 +82,8 @@ func TestDb_DeleteAccount(t *testing.T) {
 					// Create the account first
 					acct, err := conn.CreateAccount(context.Background(), &CreateAccountInput{
 						Account:  validAccount,
-						OrgID:    "test-org",
-						TenantID: "test-tenant",
+						OrgID:    tc.Organization.Id,
+						TenantID: tc.Tenant.Id,
 					})
 					require.NoError(t, err)
 					require.NotNil(t, acct)
@@ -156,8 +160,8 @@ func TestDb_DeleteAccount(t *testing.T) {
 					// Create and then delete an account
 					acct, err := conn.CreateAccount(context.Background(), &CreateAccountInput{
 						Account:  validAccount,
-						OrgID:    "test-org",
-						TenantID: "test-tenant",
+						OrgID:    tc.Organization.Id,
+						TenantID: tc.Tenant.Id,
 					})
 					require.NoError(t, err)
 					require.NotNil(t, acct)
@@ -217,6 +221,9 @@ func TestDb_DeleteAccount(t *testing.T) {
 }
 
 func TestDb_DeleteAccount_StressTest(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	if testing.Short() {
 		t.Skip("Skipping stress test in short mode")
 	}
@@ -229,8 +236,8 @@ func TestDb_DeleteAccount_StressTest(t *testing.T) {
 		mockAccount := testutils.GenerateRandomizedAccount()
 		createdAcct, err := conn.CreateAccount(context.Background(), &CreateAccountInput{
 			Account:  mockAccount,
-			OrgID:    "test-org",
-			TenantID: "test-tenant",
+			OrgID:    tc.Organization.Id,
+			TenantID: tc.Tenant.Id,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, createdAcct)
@@ -316,6 +323,9 @@ func TestDeleteAccountParams_Validate(t *testing.T) {
 }
 
 func TestDb_DeleteAccountByEmail(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create test accounts
 	validAccount := testutils.GenerateRandomizedAccount()
 
@@ -345,8 +355,8 @@ func TestDb_DeleteAccountByEmail(t *testing.T) {
 					// Create the account first
 					acct, err := conn.CreateAccount(context.Background(), &CreateAccountInput{
 						Account:  validAccount,
-						OrgID:    "test-org",
-						TenantID: "test-tenant",
+						OrgID:    tc.Organization.Id,
+						TenantID: tc.Tenant.Id,
 					})
 					require.NoError(t, err)
 					require.NotNil(t, acct)
@@ -426,6 +436,9 @@ func TestDb_DeleteAccountByEmail(t *testing.T) {
 }
 
 func TestDb_BatchDeleteAccounts(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create multiple test accounts
 	numAccounts := 10
 	accounts := make([]*lead_scraper_servicev1.Account, 0, numAccounts)
@@ -435,8 +448,8 @@ func TestDb_BatchDeleteAccounts(t *testing.T) {
 		mockAccount := testutils.GenerateRandomizedAccount()
 		createdAcct, err := conn.CreateAccount(context.Background(), &CreateAccountInput{
 			Account:  mockAccount,
-			OrgID:    "test-org",
-			TenantID: "test-tenant",
+			OrgID:    tc.Organization.Id,
+			TenantID: tc.Tenant.Id,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, createdAcct)
@@ -532,6 +545,9 @@ func TestDb_BatchDeleteAccounts(t *testing.T) {
 }
 
 func TestDb_BatchDeleteAccounts_LargeBatch(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()	
+
 	if testing.Short() {
 		t.Skip("Skipping large batch test in short mode")
 	}
@@ -545,8 +561,8 @@ func TestDb_BatchDeleteAccounts_LargeBatch(t *testing.T) {
 		mockAccount := testutils.GenerateRandomizedAccount()
 		createdAcct, err := conn.CreateAccount(context.Background(), &CreateAccountInput{
 			Account:  mockAccount,
-			OrgID:    "test-org",
-			TenantID: "test-tenant",
+			OrgID:    tc.Organization.Id,
+			TenantID: tc.Tenant.Id,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, createdAcct)

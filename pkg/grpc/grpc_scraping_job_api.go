@@ -69,7 +69,7 @@ func (s *Server) ListScrapingJobs(ctx context.Context, req *proto.ListScrapingJo
 	ctx, logger, cleanup := s.setupRequest(ctx, "list-scraping-jobs")
 	defer cleanup()
 
-	logger.Info("listing scraping jobs", zap.String("organization_id", req.OrgId))
+	logger.Info("listing scraping jobs", zap.Uint64("organization_id", req.OrgId))
 	// TODO: Implement job listing logic
 	return &proto.ListScrapingJobsResponse{}, nil
 }
@@ -100,7 +100,7 @@ func (s *Server) GetScrapingJob(ctx context.Context, req *proto.GetScrapingJobRe
 	ctx, logger, cleanup := s.setupRequest(ctx, "get-scraping-job")
 	defer cleanup()
 
-	logger.Info("getting scraping job", zap.String("job_id", req.JobId))
+	logger.Info("getting scraping job", zap.Uint64("job_id", req.JobId))
 	// TODO: Implement job retrieval logic
 	return &proto.GetScrapingJobResponse{}, nil
 }
@@ -131,7 +131,7 @@ func (s *Server) DeleteScrapingJob(ctx context.Context, req *proto.DeleteScrapin
 	ctx, logger, cleanup := s.setupRequest(ctx, "delete-scraping-job")
 	defer cleanup()
 
-	logger.Info("deleting scraping job", zap.String("job_id", req.JobId))
+	logger.Info("deleting scraping job", zap.Uint64("job_id", req.JobId))
 	// TODO: Implement job deletion logic
 	return &proto.DeleteScrapingJobResponse{
 		Success: true,
@@ -168,7 +168,7 @@ func (s *Server) DownloadScrapingResults(ctx context.Context, req *proto.Downloa
 	ctx, logger, cleanup := s.setupRequest(ctx, "download-scraping-results")
 	defer cleanup()
 
-	logger.Info("downloading scraping results", zap.String("job_id", req.JobId))
+	logger.Info("downloading scraping results", zap.Uint64("job_id", req.JobId))
 	// TODO: Implement results download logic
 	return &proto.DownloadScrapingResultsResponse{}, nil
 }

@@ -201,19 +201,13 @@ func GenerateRandomizeUrl() string {
 //   - A pointer to a new UserAccount instance with randomized data
 func GenerateRandomizedAccount() *proto.Account {
 	return &proto.Account{
+		Id:                 uint64(GenerateRandomInt(1, 1000000)),
 		Email:              GenerateRandomEmail(10),
 		AuthPlatformUserId: fmt.Sprintf("auth0|%s", GenerateRandomString(24, true, false)),
-		AccountStatus:      proto.Account_AccountStatus(GenerateRandomInt(0, 2)),
-		Roles:              []proto.Account_Role{proto.Account_Role(GenerateRandomInt(0, 2))},
-		Permissions:        []proto.Account_Permission{proto.Account_Permission(GenerateRandomInt(0, 2))},
-		MfaEnabled:         GenerateRandomInt(0, 1) == 1,
-		LastLoginAt:        nil,
-		Timezone:           proto.Account_Timezone(GenerateRandomInt(0, 2)),
-		TotalJobsRun:       0,
-		MonthlyJobLimit:    int32(GenerateRandomInt(1, 100)),
-		ConcurrentJobLimit: int32(GenerateRandomInt(1, 100)),
-		Workspaces:         GenerateRandomWorkspaces(GenerateRandomInt(0, 1)),
-		Settings:           nil,
+		MonthlyJobLimit:    int32(GenerateRandomInt(1, 100)),    // Must be > 0
+		ConcurrentJobLimit: int32(GenerateRandomInt(1, 10)),     // Must be > 0
+		Workspaces:         []*proto.Workspace{GenerateRandomWorkspace()},
+		AccountStatus:      proto.Account_ACCOUNT_STATUS_ACTIVE,
 	}
 }
 
@@ -221,25 +215,22 @@ func GenerateRandomWorkspace() *proto.Workspace {
 	return &proto.Workspace{
 		Name:           GenerateRandomString(10, false, false),
 		Industry:       industries[GenerateRandomInt(0, len(industries)-1)],
-		Domain:         GenerateRandomizeUrl(),
+		Domain:         GenerateRandomEmail(10), // Must be a valid email address
 		GdprCompliant:  GenerateRandomInt(0, 1) == 1,
 		HipaaCompliant: GenerateRandomInt(0, 1) == 1,
 		Soc2Compliant:  GenerateRandomInt(0, 1) == 1,
 		StorageQuota:   int64(GenerateRandomInt(1, 1000000)),
 		UsedStorage:    int64(GenerateRandomInt(1, 1000000)),
-		CreatedAt:      nil,
-		UpdatedAt:      nil,
+		CreatedAt:      timestamppb.Now(),
+		UpdatedAt:      timestamppb.Now(),
 		DeletedAt:      nil,
-		// Workflows: GenerateRandomScrapingWorkflows(GenerateRandomInt(0, 1)),
 		JobsRunThisMonth:    int32(GenerateRandomInt(0, 1000)),
 		WorkspaceJobLimit:   int32(GenerateRandomInt(1, 1000)),
 		DailyJobQuota:       int32(GenerateRandomInt(1, 1000)),
 		ActiveScrapers:      int32(GenerateRandomInt(1, 1000)),
 		TotalLeadsCollected: int32(GenerateRandomInt(1, 1000000)),
-		// ScrapingJobs: GenerateRandomScrapingJobs(GenerateRandomInt(0, 1)),
-		// ApiKeys: GenerateRandomAPIKeys(GenerateRandomInt(0, 1)),
-		Webhooks:   GenerateRandomWebhookConfigs(GenerateRandomInt(0, 1)),
-		LastJobRun: nil,
+		Webhooks:            GenerateRandomWebhookConfigs(GenerateRandomInt(0, 1)),
+		LastJobRun:          timestamppb.Now(),
 	}
 }
 
@@ -345,7 +336,7 @@ func GenerateRandomAPIKey() *proto.APIKey {
 		RecentErrors:               []byte(GenerateRandomString(100, true, false)),
 		SuccessfulRequestsCount:    int32(GenerateRandomInt(0, 1000000)),
 		SuccessRate:                float32(GenerateRandomFloat(0.0, 1.0)),
-		Status:                     proto.APIKey_Status(GenerateRandomInt(0, 2)),
+		Status:                     proto.Status(GenerateRandomInt(0, 2)),
 		CreatedAt:                  nil,
 		UpdatedAt:                  nil,
 		DeletedAt:                  nil,
@@ -395,7 +386,7 @@ func GenerateRandomTenantAPIKey() *proto.TenantAPIKey {
 		KeyPrefix:   fmt.Sprintf("prefix_%s", GenerateRandomString(8, true, false)),
 		Name:        GenerateRandomString(10, false, false),
 		Description: GenerateRandomString(100, true, true),
-		Status:      "active",
+		Status:      proto.Status_STATUS_ACTIVE,
 		CreatedAt:   nil,
 		UpdatedAt:   nil,
 		DeletedAt:   nil,
@@ -405,46 +396,28 @@ func GenerateRandomTenantAPIKey() *proto.TenantAPIKey {
 // GenerateRandomScrapingWorkflow creates a new ScrapingWorkflow instance with random test data
 func GenerateRandomScrapingWorkflow() *proto.ScrapingWorkflow {
 	return &proto.ScrapingWorkflow{
-		CronExpression:                "0 0 * * *",
-		NextRunTime:                   nil,
-		LastRunTime:                   nil,
-		Status:                        proto.WorkflowStatus(GenerateRandomInt(0, 2)),
-		RetryCount:                    0,
-		MaxRetries:                    5,
-		AlertEmails:                   GenerateRandomEmail(10),
-		CreatedAt:                     nil,
-		UpdatedAt:                     nil,
-		DeletedAt:                     nil,
-		Jobs:                          []*proto.ScrapingJob{GenerateRandomizedScrapingJob()},
-		GeoFencingRadius:              float32(GenerateRandomInt(1000, 5000)),
-		GeoFencingLat:                 float64(GenerateRandomFloat(-90, 90)),
-		GeoFencingLon:                 float64(GenerateRandomFloat(-180, 180)),
-		GeoFencingZoomMin:             1,
-		GeoFencingZoomMax:             20,
-		IncludeReviews:                true,
-		IncludePhotos:                 true,
-		IncludeBusinessHours:          true,
-		MaxReviewsPerBusiness:         int32(GenerateRandomInt(50, 200)),
-		OutputFormat:                  proto.ScrapingWorkflow_OutputFormat(GenerateRandomInt(0, 2)),
-		OutputDestination:             "s3://bucket/path",
-		DataRetention:                 &durationpb.Duration{Seconds: int64(GenerateRandomInt(1, 3600))},
-		AnonymizePii:                  true,
-		NotificationSlackChannel:      "channel",
-		NotificationEmailGroup:        "group",
-		NotificationNotifyOnStart:     true,
-		NotificationNotifyOnComplete:  true,
-		NotificationNotifyOnFailure:   true,
-		ContentFilterAllowedCountries: []string{"US", "CA"},
-		ContentFilterExcludedTypes:    []string{"type1", "type2", "type3"},
-		ContentFilterMinimumRating:    4.5,
-		ContentFilterMinimumReviews:   10,
-		QosMaxConcurrentRequests:      10,
-		QosMaxRetries:                 3,
-		QosRequestTimeout:             &durationpb.Duration{Seconds: int64(GenerateRandomInt(1, 3600))},
-		QosEnableJavascript:           true,
-		RespectRobotsTxt:              true,
-		AcceptTermsOfService:          true,
-		UserAgent:                     fmt.Sprintf("TestBot/%s", GenerateRandomString(8, false, false)),
+		CronExpression:           "0 0 * * *", // Daily at midnight
+		Status:                   proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE,
+		MaxRetries:               3,
+		AlertEmails:              GenerateRandomEmail(10),
+		GeoFencingRadius:         float32(GenerateRandomInt(1000, 5000)),
+		GeoFencingLat:           GenerateRandomFloat(-90, 90),  // Valid latitude range
+		GeoFencingLon:           GenerateRandomFloat(-180, 180), // Valid longitude range
+		GeoFencingZoomMin:       int32(GenerateRandomInt(1, 20)), // Valid zoom range
+		GeoFencingZoomMax:       int32(GenerateRandomInt(1, 20)), // Valid zoom range
+		IncludeReviews:          true,
+		IncludePhotos:           true,
+		IncludeBusinessHours:    true,
+		MaxReviewsPerBusiness:   int32(GenerateRandomInt(50, 200)),
+		OutputFormat:            proto.ScrapingWorkflow_OUTPUT_FORMAT_JSON,
+		OutputDestination:       "s3://bucket/path",
+		AnonymizePii:            true,
+		NotificationSlackChannel: "#alerts",
+		NotificationEmailGroup:   "team@example.com",
+		QosMaxConcurrentRequests: int32(GenerateRandomInt(1, 10)),
+		QosMaxRetries:            int32(GenerateRandomInt(1, 5)),
+		RespectRobotsTxt:         true,
+		AcceptTermsOfService:     true,
 	}
 }
 
@@ -852,4 +825,33 @@ func GenerateRandomAPIKeysForWorkspace(workspace *proto.Workspace, count int) []
 		keys[i] = key
 	}
 	return keys
+}
+
+func GenerateRandomizedOrganization() *proto.Organization {
+	return &proto.Organization{
+		Id:             uint64(GenerateRandomInt(1, 1000000)),
+		Name:           GenerateRandomString(10, false, false),
+		Description:    GenerateRandomString(20, false, false),
+		Website:        GenerateRandomizeUrl(), // Must be absolute URL
+		BillingEmail:   GenerateRandomEmail(10),  // Must be valid email
+		TechnicalEmail: GenerateRandomEmail(10),  // Must be valid email
+		MaxTenants:     int32(GenerateRandomInt(1, 10)),
+		MaxApiKeys:     int32(GenerateRandomInt(1, 10)),
+		MaxUsers:       int32(GenerateRandomInt(1, 100)),
+		CreatedAt:      timestamppb.Now(),
+		UpdatedAt:      timestamppb.Now(),
+		DeletedAt:      nil,
+	}
+}
+
+func GenerateRandomizedTenant() *proto.Tenant {
+	return &proto.Tenant{
+		Id:          uint64(GenerateRandomInt(1, 1000000)),
+		Name:        GenerateRandomString(10, false, false),
+		Description: GenerateRandomString(20, false, false),
+		CreatedAt:   timestamppb.Now(),
+		UpdatedAt:   timestamppb.Now(),
+		DeletedAt:   nil,
+		ApiBaseUrl:     GenerateRandomizeUrl(),
+	}
 }

@@ -14,7 +14,42 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type accountTestContext struct {
+	Organization *lead_scraper_servicev1.Organization
+	Tenant       *lead_scraper_servicev1.Tenant
+	Cleanup      func()
+}
+
+func setupAccountTestContext(t *testing.T) (*accountTestContext) {
+	ctx := context.Background()
+
+	// Create test organization
+	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
+		Organization: testutils.GenerateRandomizedOrganization(),
+	})
+
+	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
+		Tenant: testutils.GenerateRandomizedTenant(),
+		OrganizationID: org.Id,
+	})
+	require.NoError(t, err)
+	
+	cleanup := func() {	
+		conn.DeleteOrganization(ctx, &DeleteOrganizationInput{ID: org.Id})
+		conn.DeleteTenant(ctx, &DeleteTenantInput{ID: tenant.Id})
+	}
+
+	return &accountTestContext{
+		Organization: org,
+		Tenant:       tenant,
+		Cleanup:      cleanup,
+	}
+}
+
 func TestCreateAccountInput_validate(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	tests := []struct {
 		name    string
 		d       *CreateAccountInput
@@ -25,8 +60,8 @@ func TestCreateAccountInput_validate(t *testing.T) {
 			name: "success - valid input",
 			d: &CreateAccountInput{
 				Account:  testutils.GenerateRandomizedAccount(),
-				OrgID:    "test-org",
-				TenantID: "test-tenant",
+				OrgID:    tc.Organization.Id,
+				TenantID: tc.Tenant.Id,
 			},
 			wantErr: false,
 		},
@@ -46,6 +81,9 @@ func TestCreateAccountInput_validate(t *testing.T) {
 }
 
 func TestDb_CreateAccount(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create test accounts
 	validAccount := testutils.GenerateRandomizedAccount()
 	validAccount.AccountStatus = lead_scraper_servicev1.Account_ACCOUNT_STATUS_ACTIVE
@@ -70,8 +108,8 @@ func TestDb_CreateAccount(t *testing.T) {
 				ctx: context.Background(),
 				input: &CreateAccountInput{
 					Account:  validAccount,
-					OrgID:    "test-org",
-					TenantID: "test-tenant",
+					OrgID:    tc.Organization.Id,
+					TenantID: tc.Tenant.Id,
 				},
 				clean: func(t *testing.T, account *lead_scraper_servicev1.Account) {
 					if account == nil {
@@ -109,8 +147,8 @@ func TestDb_CreateAccount(t *testing.T) {
 				ctx: context.Background(),
 				input: &CreateAccountInput{
 					Account:  nil,
-					OrgID:    "test-org",
-					TenantID: "test-tenant",
+					OrgID:    tc.Organization.Id,
+					TenantID: tc.Tenant.Id,
 				},
 			},
 		},
@@ -124,8 +162,8 @@ func TestDb_CreateAccount(t *testing.T) {
 					Account: &lead_scraper_servicev1.Account{
 						Email: "",
 					},
-					OrgID:    "test-org",
-					TenantID: "test-tenant",
+					OrgID:    tc.Organization.Id,
+					TenantID: tc.Tenant.Id,
 				},
 			},
 		},
@@ -137,8 +175,8 @@ func TestDb_CreateAccount(t *testing.T) {
 				ctx: context.Background(),
 				input: &CreateAccountInput{
 					Account:  validAccount,
-					OrgID:    "",
-					TenantID: "test-tenant",
+					OrgID:    0,
+					TenantID: tc.Tenant.Id,
 				},
 			},
 		},
@@ -150,8 +188,8 @@ func TestDb_CreateAccount(t *testing.T) {
 				ctx: context.Background(),
 				input: &CreateAccountInput{
 					Account:  validAccount,
-					OrgID:    "test-org",
-					TenantID: "",
+					OrgID:    tc.Organization.Id,
+					TenantID: 0,
 				},
 			},
 		},
@@ -162,8 +200,8 @@ func TestDb_CreateAccount(t *testing.T) {
 				ctx: context.Background(),
 				input: &CreateAccountInput{
 					Account:  validAccount,
-					OrgID:    "test-org",
-					TenantID: "test-tenant",
+					OrgID:    tc.Organization.Id,
+					TenantID: tc.Tenant.Id,
 				},
 			},
 			validate: func(t *testing.T, account *lead_scraper_servicev1.Account) {
@@ -174,8 +212,8 @@ func TestDb_CreateAccount(t *testing.T) {
 				// Try to create account with cancelled context
 				_, err := conn.CreateAccount(ctx, &CreateAccountInput{
 					Account:  validAccount,
-					OrgID:    "test-org",
-					TenantID: "test-tenant",
+					OrgID:    tc.Organization.Id,
+					TenantID: tc.Tenant.Id,
 				})
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "context canceled")
@@ -210,6 +248,9 @@ func TestDb_CreateAccount(t *testing.T) {
 }
 
 func TestDb_GetAccountByEmail(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	type args struct {
 		ctx          context.Context
 		accountEmail string
@@ -238,14 +279,17 @@ func TestDb_GetAccountByEmail(t *testing.T) {
 }
 
 func TestDb_CreateAccount_DuplicateEmail(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create initial account
 	validAccount := testutils.GenerateRandomizedAccount()
 	validAccount.AccountStatus = lead_scraper_servicev1.Account_ACCOUNT_STATUS_ACTIVE
 
 	createdAccount, err := conn.CreateAccount(context.Background(), &CreateAccountInput{
 		Account:  validAccount,
-		OrgID:    "test-org",
-		TenantID: "test-tenant",
+		OrgID:    tc.Organization.Id,
+		TenantID: tc.Tenant.Id,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createdAccount)
@@ -270,8 +314,8 @@ func TestDb_CreateAccount_DuplicateEmail(t *testing.T) {
 
 	_, err = conn.CreateAccount(context.Background(), &CreateAccountInput{
 		Account:  duplicateAccount,
-		OrgID:    "test-org",
-		TenantID: "test-tenant",
+		OrgID:    tc.Organization.Id,
+		TenantID: tc.Tenant.Id,
 	})
 
 	require.Error(t, err)
@@ -279,6 +323,9 @@ func TestDb_CreateAccount_DuplicateEmail(t *testing.T) {
 }
 
 func TestDb_CreateAccount_ConcurrentCreation(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	numAccounts := 5
 	var wg sync.WaitGroup
 	errors := make(chan error, numAccounts)
@@ -294,8 +341,8 @@ func TestDb_CreateAccount_ConcurrentCreation(t *testing.T) {
 
 			account, err := conn.CreateAccount(context.Background(), &CreateAccountInput{
 				Account:  mockAccount,
-				OrgID:    "test-org",
-				TenantID: "test-tenant",
+				OrgID:    tc.Organization.Id,
+				TenantID: tc.Tenant.Id,
 			})
 			if err != nil {
 				errors <- err
@@ -347,6 +394,9 @@ func TestDb_CreateAccount_ConcurrentCreation(t *testing.T) {
 }
 
 func TestCreateAccountInput_Validate(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	validAccount := testutils.GenerateRandomizedAccount()
 
 	tests := []struct {
@@ -358,8 +408,8 @@ func TestCreateAccountInput_Validate(t *testing.T) {
 			name: "success - valid input",
 			input: &CreateAccountInput{
 				Account:  validAccount,
-				OrgID:    "test-org",
-				TenantID: "test-tenant",
+				OrgID:    tc.Organization.Id,
+				TenantID: tc.Tenant.Id,
 			},
 			wantErr: false,
 		},
@@ -372,8 +422,8 @@ func TestCreateAccountInput_Validate(t *testing.T) {
 			name: "failure - nil account",
 			input: &CreateAccountInput{
 				Account:  nil,
-				OrgID:    "test-org",
-				TenantID: "test-tenant",
+				OrgID:    tc.Organization.Id,
+				TenantID: tc.Tenant.Id,
 			},
 			wantErr: true,
 		},
@@ -383,8 +433,8 @@ func TestCreateAccountInput_Validate(t *testing.T) {
 				Account: &lead_scraper_servicev1.Account{
 					Email: "",
 				},
-				OrgID:    "test-org",
-				TenantID: "test-tenant",
+				OrgID:    tc.Organization.Id,
+				TenantID: tc.Tenant.Id,
 			},
 			wantErr: true,
 		},
@@ -392,8 +442,8 @@ func TestCreateAccountInput_Validate(t *testing.T) {
 			name: "failure - empty org ID",
 			input: &CreateAccountInput{
 				Account:  validAccount,
-				OrgID:    "",
-				TenantID: "test-tenant",
+				OrgID:    0,
+				TenantID: tc.Tenant.Id,
 			},
 			wantErr: true,
 		},
@@ -401,8 +451,8 @@ func TestCreateAccountInput_Validate(t *testing.T) {
 			name: "failure - empty tenant ID",
 			input: &CreateAccountInput{
 				Account:  validAccount,
-				OrgID:    "test-org",
-				TenantID: "",
+				OrgID:    tc.Organization.Id,
+				TenantID: 0,
 			},
 			wantErr: true,
 		},

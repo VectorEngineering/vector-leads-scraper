@@ -3,9 +3,11 @@ package grpc
 import (
 	"context"
 
-	"github.com/Vector/vector-leads-scraper/internal/testutils"
+	"github.com/Vector/vector-leads-scraper/internal/database"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // CreateAccount creates a new user account in the workspace service.
@@ -35,10 +37,43 @@ func (s *Server) CreateAccount(ctx context.Context, req *proto.CreateAccountRequ
 	ctx, logger, cleanup := s.setupRequest(ctx, "create-account")
 	defer cleanup()
 
-	logger.Info("creating account", zap.String("email", req.InitialWorkspaceName))
-	// TODO: Implement account creation logic
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Extract account details
+	account := req.GetAccount()
+	if account == nil {
+		logger.Error("account is nil")
+		return nil, status.Error(codes.InvalidArgument, "account is required")
+	}
+
+	logger.Info("creating account", zap.String("email", account.GetEmail()))
+
+	// Create the account using the database client
+	result, err := s.db.CreateAccount(ctx, &database.CreateAccountInput{
+		OrgID:    req.GetOrganizationId(),
+		TenantID: req.GetTenantId(),
+		Account:  account,
+	})
+	if err != nil {
+		logger.Error("failed to create account", zap.Error(err))
+		if err == database.ErrAccountAlreadyExists {
+			return nil, status.Error(codes.AlreadyExists, "account already exists")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to create account: %s", err.Error())
+	}
+
 	return &proto.CreateAccountResponse{
-		Account: testutils.GenerateRandomizedAccount(),
+		Account: result,
 	}, nil
 }
 
@@ -66,10 +101,39 @@ func (s *Server) GetAccount(ctx context.Context, req *proto.GetAccountRequest) (
 	ctx, logger, cleanup := s.setupRequest(ctx, "get-account")
 	defer cleanup()
 
-	logger.Info("getting account", zap.Any("account_id", req.GetId()))
-	// TODO: Implement account retrieval logic
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Check if ID is empty
+	if req.GetId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "account ID is required")
+	}
+
+	logger.Info("getting account", zap.Uint64("account_id", req.GetId()))
+
+	// Get the account using the database client
+	account, err := s.db.GetAccount(ctx, &database.GetAccountInput{
+		ID: req.GetId(),
+	})
+	if err != nil {
+		logger.Error("failed to get account", zap.Error(err))
+		if err == database.ErrAccountDoesNotExist {
+			return nil, status.Error(codes.NotFound, "account not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to get account")
+	}
+
 	return &proto.GetAccountResponse{
-		Account: testutils.GenerateRandomizedAccount(),
+		Account: account,
 	}, nil
 }
 
@@ -101,10 +165,37 @@ func (s *Server) UpdateAccount(ctx context.Context, req *proto.UpdateAccountRequ
 	ctx, logger, cleanup := s.setupRequest(ctx, "update-account")
 	defer cleanup()
 
-	logger.Info("updating account", zap.Any("account_id", req.GetAccount()))
-	// TODO: Implement account update logic
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	account := req.GetAccount()
+	if account == nil {
+		return nil, status.Error(codes.InvalidArgument, "account is required")
+	}
+
+	logger.Info("updating account", zap.Uint64("account_id", account.GetId()))
+
+	// Update the account using the database client
+	result, err := s.db.UpdateAccount(ctx, account)
+	if err != nil {
+		logger.Error("failed to update account", zap.Error(err))
+		if err == database.ErrAccountDoesNotExist {
+			return nil, status.Error(codes.NotFound, "account not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to update account")
+	}
+
 	return &proto.UpdateAccountResponse{
-		Account: testutils.GenerateRandomizedAccount(),
+		Account: result,
 	}, nil
 }
 
@@ -132,8 +223,38 @@ func (s *Server) DeleteAccount(ctx context.Context, req *proto.DeleteAccountRequ
 	ctx, logger, cleanup := s.setupRequest(ctx, "delete-account")
 	defer cleanup()
 
-	logger.Info("deleting account", zap.Any("account_id", req.GetId()))
-	// TODO: Implement account deletion logic
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Check if ID is empty
+	if req.GetId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "account ID is required")
+	}
+
+	logger.Info("deleting account", zap.Uint64("account_id", req.GetId()))
+
+	// Delete the account using the database client
+	err := s.db.DeleteAccount(ctx, &database.DeleteAccountParams{
+		ID:           req.GetId(),
+		DeletionType: database.DeletionTypeSoft,
+	})
+	if err != nil {
+		logger.Error("failed to delete account", zap.Error(err))
+		if err == database.ErrAccountDoesNotExist {
+			return nil, status.Error(codes.NotFound, "account not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to delete account")
+	}
+
 	return &proto.DeleteAccountResponse{
 		Success: true,
 	}, nil
@@ -165,12 +286,50 @@ func (s *Server) ListAccounts(ctx context.Context, req *proto.ListAccountsReques
 	ctx, logger, cleanup := s.setupRequest(ctx, "list-accounts")
 	defer cleanup()
 
-	logger.Info("listing accounts")
-	// TODO: Implement account listing logic
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	logger.Info("listing accounts",
+		zap.Int32("page_size", req.GetPageSize()),
+		zap.Int32("page_number", req.GetPageNumber()))
+
+	// Use default page size if not specified
+	pageSize := req.GetPageSize()
+	if pageSize <= 0 {
+		pageSize = 50 // Default page size
+	}
+
+	// Calculate offset based on page number
+	offset := int(pageSize) * int(req.GetPageNumber())
+
+	// List accounts using the database client
+	accounts, err := s.db.ListAccounts(ctx, &database.ListAccountsInput{
+		Limit:  int(pageSize),
+		Offset: offset,
+	})
+	if err != nil {
+		logger.Error("failed to list accounts", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to list accounts")
+	}
+
+	// Calculate next page number
+	var nextPageNumber int32
+	if len(accounts) == int(pageSize) {
+		nextPageNumber = req.GetPageNumber() + 1
+	}
+
 	return &proto.ListAccountsResponse{
-		Accounts: []*proto.Account{
-			testutils.GenerateRandomizedAccount(),
-		},
+		Accounts:       accounts,
+		NextPageNumber: nextPageNumber,
 	}, nil
 }
 
@@ -196,7 +355,25 @@ func (s *Server) GetAccountUsage(ctx context.Context, req *proto.GetAccountUsage
 	ctx, logger, cleanup := s.setupRequest(ctx, "get-account-usage")
 	defer cleanup()
 
-	logger.Info("getting account usage", zap.Any("account_id", req.GetId()))
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Check if ID is empty
+	if req.GetId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "account ID is required")
+	}
+
+	logger.Info("getting account usage", zap.Uint64("account_id", req.GetId()))
+
 	// TODO: Implement usage retrieval logic
 	return &proto.GetAccountUsageResponse{}, nil
 }
@@ -226,7 +403,18 @@ func (s *Server) UpdateAccountSettings(ctx context.Context, req *proto.UpdateAcc
 	ctx, logger, cleanup := s.setupRequest(ctx, "update-account-settings")
 	defer cleanup()
 
-	logger.Info("updating account settings")
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
 	// TODO: Implement settings update logic
 	return &proto.UpdateAccountSettingsResponse{}, nil
 }

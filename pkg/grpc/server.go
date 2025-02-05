@@ -41,10 +41,10 @@ import (
 //	grpcServer := server.ListenAndServe()
 type Server struct {
 	proto.UnimplementedLeadScraperServiceServer
-	logger *zap.Logger
-	config *Config
-	db     database.DatabaseOperations // Database client for persistence operations
-	telemetry *instrumentation.Client
+	logger      *zap.Logger
+	config      *Config
+	db          database.DatabaseOperations // Database client for persistence operations
+	telemetry   *instrumentation.Client
 	taskHandler *taskhandler.Handler
 }
 

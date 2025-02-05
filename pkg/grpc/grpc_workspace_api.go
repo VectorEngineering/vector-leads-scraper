@@ -139,7 +139,7 @@ func (s *Server) DeleteWorkspace(ctx context.Context, req *proto.DeleteWorkspace
 //	    Metrics: []string{"JOB_COUNT", "SUCCESS_RATE"},
 //	})
 func (s *Server) GetWorkspaceAnalytics(ctx context.Context, req *proto.GetWorkspaceAnalyticsRequest) (*proto.GetWorkspaceAnalyticsResponse, error) {
-	s.logger.Info("getting workspace analytics", zap.String("workspace_id", req.WorkspaceId))
+	s.logger.Info("getting workspace analytics", zap.Uint64("workspace_id", req.WorkspaceId))
 	// TODO: Implement analytics retrieval logic
 	return &proto.GetWorkspaceAnalyticsResponse{}, nil
 }
