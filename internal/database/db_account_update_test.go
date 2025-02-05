@@ -88,7 +88,7 @@ func TestDb_UpdateAccount(t *testing.T) {
 					time.Sleep(2 * time.Millisecond)
 				}
 
-				updatedAccount, err := db.UpdateAccount(ctx, tt.account)
+				updatedAccount, err := db.UpdateAccount(ctx, tc.Organization.Id, tc.Tenant.Id, tt.account)
 				if tt.wantErr {
 					require.Error(t, err)
 					if tt.errType != nil {

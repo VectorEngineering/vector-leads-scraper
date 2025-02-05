@@ -177,15 +177,31 @@ func (s *Server) UpdateAccount(ctx context.Context, req *proto.UpdateAccountRequ
 		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
 	}
 
-	account := req.GetAccount()
+	// get the payload
+	payload := req.GetPayload()
+	if payload == nil {
+		return nil, status.Error(codes.InvalidArgument, "payload is required")
+	}
+
+	account := payload.GetAccount()
 	if account == nil {
 		return nil, status.Error(codes.InvalidArgument, "account is required")
 	}
 
+	orgId := payload.GetOrganizationId()
+	if orgId == 0 {
+		return nil, status.Error(codes.InvalidArgument, "organization ID is required")
+	}
+
+	tenantId := payload.GetTenantId()
+	
+
 	logger.Info("updating account", zap.Uint64("account_id", account.GetId()))
 
+	// get the account from the databa
+
 	// Update the account using the database client
-	result, err := s.db.UpdateAccount(ctx, account)
+	result, err := s.db.UpdateAccount(ctx, orgId, tenantId, account)
 	if err != nil {
 		logger.Error("failed to update account", zap.Error(err))
 		if err == database.ErrAccountDoesNotExist {

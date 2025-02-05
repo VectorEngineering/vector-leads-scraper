@@ -233,7 +233,11 @@ func TestServer_UpdateAccount(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.UpdateAccountRequest{
-				Account: account,
+				Payload: &proto.UpdateAccountRequestPayload{
+					OrganizationId: tc.Organization.Id,
+					TenantId:       tc.TenantId,
+					Account:        account,
+				},
 			},
 			wantErr: false,
 		},
@@ -262,7 +266,18 @@ func TestServer_DeleteAccount(t *testing.T) {
 
 	// Create a test account first
 	account := testutils.GenerateRandomizedAccount()
+	createResp, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
+		Account:              account,
+		OrganizationId:      tc.Organization.Id,
+		TenantId:            tc.TenantId,
+		InitialWorkspaceName: "Test Workspace",
+	})
+	require.NoError(t, err)	
+	require.NotNil(t, createResp)
+	require.NotNil(t, createResp.Account)
 
+	account = createResp.Account
+	
 	tests := []struct {
 		name    string
 		req     *proto.DeleteAccountRequest

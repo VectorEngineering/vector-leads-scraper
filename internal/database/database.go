@@ -102,7 +102,7 @@ type DatabaseOperations interface {
 	// Account operations
 	CreateAccount(ctx context.Context, input *CreateAccountInput) (*lead_scraper_servicev1.Account, error)
 	GetAccount(context.Context, *GetAccountInput) (*lead_scraper_servicev1.Account, error)
-	UpdateAccount(ctx context.Context, account *lead_scraper_servicev1.Account) (*lead_scraper_servicev1.Account, error)
+	UpdateAccount(ctx context.Context, orgId, tenantId uint64, account *lead_scraper_servicev1.Account) (*lead_scraper_servicev1.Account, error)
 	DeleteAccount(context.Context, *DeleteAccountParams) error
 	ListAccounts(ctx context.Context, input *ListAccountsInput) ([]*lead_scraper_servicev1.Account, error)
 
