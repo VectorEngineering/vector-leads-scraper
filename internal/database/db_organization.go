@@ -186,11 +186,50 @@ func (db *Db) DeleteOrganization(ctx context.Context, input *DeleteOrganizationI
 		return err
 	}
 
-	if err := db.Client.Engine.WithContext(ctx).Delete(&lead_scraper_servicev1.OrganizationORM{}, input.ID).Error; err != nil {
+	// Begin a transaction to ensure consistency
+	tx := db.Client.Engine.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("failed to begin transaction: %w", tx.Error)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// First check if the organization exists
+	_, err := db.QueryOperator.OrganizationORM.WithContext(ctx).Where(db.QueryOperator.OrganizationORM.Id.Eq(input.ID)).First()
+	if err != nil {
+		tx.Rollback()
+		if err.Error() == "record not found" {
+			return ErrOrganizationDoesNotExist
+		}
+		db.Logger.Error("failed to get organization",
+			zap.Error(err),
+			zap.Uint64("organization_id", input.ID))
+		return fmt.Errorf("failed to get organization: %w", err)
+	}
+
+	// Delete all associated tenants first
+	if err := tx.Where("organization_id = ?", input.ID).Delete(&lead_scraper_servicev1.TenantORM{}).Error; err != nil {
+		tx.Rollback()
+		db.Logger.Error("failed to delete organization's tenants",
+			zap.Error(err),
+			zap.Uint64("organization_id", input.ID))
+		return fmt.Errorf("failed to delete organization's tenants: %w", err)
+	}
+
+	// Delete the organization
+	if err := tx.Delete(&lead_scraper_servicev1.OrganizationORM{}, input.ID).Error; err != nil {
+		tx.Rollback()
 		db.Logger.Error("failed to delete organization",
 			zap.Error(err),
 			zap.Uint64("organization_id", input.ID))
 		return fmt.Errorf("failed to delete organization: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

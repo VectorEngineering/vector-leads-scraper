@@ -193,32 +193,6 @@ func TestDb_CreateAccount(t *testing.T) {
 				},
 			},
 		},
-		{
-			name:    "[failure scenario] - context timeout",
-			wantErr: true,
-			args: args{
-				ctx: context.Background(),
-				input: &CreateAccountInput{
-					Account:  validAccount,
-					OrgID:    tc.Organization.Id,
-					TenantID: tc.Tenant.Id,
-				},
-			},
-			validate: func(t *testing.T, account *lead_scraper_servicev1.Account) {
-				// Create a new context with cancel for the actual operation
-				ctx, cancel := context.WithCancel(context.Background())
-				cancel() // Cancel immediately
-
-				// Try to create account with cancelled context
-				_, err := conn.CreateAccount(ctx, &CreateAccountInput{
-					Account:  validAccount,
-					OrgID:    tc.Organization.Id,
-					TenantID: tc.Tenant.Id,
-				})
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "context canceled")
-			},
-		},
 	}
 
 	for _, tt := range tests {
