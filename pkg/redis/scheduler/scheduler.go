@@ -136,6 +136,14 @@ func (s *Scheduler) Register(spec string, task *asynq.Task, opts ...asynq.Option
 		return "", fmt.Errorf("cannot register new tasks while scheduler is running")
 	}
 
+	if spec == "" {
+		return "", fmt.Errorf("spec cannot be empty")
+	}
+
+	if task == nil {
+		return "", fmt.Errorf("task cannot be nil")
+	}
+
 	entryID, err := s.scheduler.Register(spec, task, opts...)
 	if err != nil {
 		return "", fmt.Errorf("failed to register task: %w", err)
