@@ -12,8 +12,8 @@ import (
 // ReportGeneratePayload represents the payload for report generation tasks
 type ReportGeneratePayload struct {
 	ReportType string            `json:"report_type"`
-	Filters    map[string]string `json:"filters"`
 	Format     string            `json:"format"`
+	Filters    map[string]string `json:"filters,omitempty"`
 }
 
 func (p *ReportGeneratePayload) Validate() error {
@@ -26,8 +26,13 @@ func (p *ReportGeneratePayload) Validate() error {
 	return nil
 }
 
-// processReportGenerateTask handles the generation of reports from lead data
+// processReportGenerateTask handles the generation of reports
 func (h *Handler) processReportGenerateTask(ctx context.Context, task *asynq.Task) error {
+	// Check if context is cancelled
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("context cancelled: %w", err)
+	}
+
 	var payload ReportGeneratePayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal report generate payload: %w", err)
@@ -39,20 +44,24 @@ func (h *Handler) processReportGenerateTask(ctx context.Context, task *asynq.Tas
 
 	// TODO: Implement report generation logic
 	// This would typically involve:
-	// 1. Querying data based on filters
-	// 2. Generating report in specified format
-	// 3. Storing report output
-	// 4. Notifying completion
+	// 1. Gathering data based on filters
+	// 2. Processing and aggregating data
+	// 3. Generating report in specified format
+	// 4. Storing or sending the report
+	// 5. Handling any errors during generation
 
 	return nil
 }
 
 // CreateReportGenerateTask creates a new report generation task
 func CreateReportGenerateTask(reportType string, filters map[string]string, format string) ([]byte, error) {
+	if filters == nil {
+		filters = make(map[string]string)
+	}
 	payload := &ReportGeneratePayload{
 		ReportType: reportType,
-		Filters:    filters,
 		Format:     format,
+		Filters:    filters,
 	}
 	return NewTask(TypeReportGenerate.String(), payload)
 }

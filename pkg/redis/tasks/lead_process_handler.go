@@ -13,8 +13,8 @@ import (
 type LeadProcessPayload struct {
 	LeadID    string            `json:"lead_id"`
 	Source    string            `json:"source"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
 	BatchSize int               `json:"batch_size"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
 }
 
 func (p *LeadProcessPayload) Validate() error {
@@ -25,7 +25,7 @@ func (p *LeadProcessPayload) Validate() error {
 		return ErrInvalidPayload{Field: "source", Message: "source is required"}
 	}
 	if p.BatchSize <= 0 {
-		return ErrInvalidPayload{Field: "batch_size", Message: "batch size must be positive"}
+		p.BatchSize = 1000 // Set default batch size
 	}
 	return nil
 }
@@ -33,27 +33,33 @@ func (p *LeadProcessPayload) Validate() error {
 // processLeadProcessTask handles the processing of lead data
 // It processes leads in batches as specified in the payload
 func (h *Handler) processLeadProcessTask(ctx context.Context, task *asynq.Task) error {
+	// Check if context is cancelled
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("context cancelled: %w", err)
+	}
+
 	var payload LeadProcessPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal LeadProcessPayload: %w", err)
+		return fmt.Errorf("failed to unmarshal lead process payload: %w", err)
 	}
 
 	if err := payload.Validate(); err != nil {
 		return fmt.Errorf("invalid lead process payload: %w", err)
 	}
 
-	// TODO: Implement actual lead processing logic
+	// TODO: Implement lead processing logic
 	// This would typically involve:
-	// 1. Fetching lead data from the database
+	// 1. Retrieving the lead data from the source
 	// 2. Processing the data in batches
-	// 3. Updating the processed status
-	// 4. Handling any errors during processing
+	// 3. Applying transformations and validations
+	// 4. Storing the processed data
+	// 5. Handling any errors during processing
 
 	return nil
 }
 
 // CreateLeadProcessTask creates a new lead processing task
-func CreateLeadProcessTask(leadID, source string, batchSize int, metadata map[string]string) ([]byte, error) {
+func CreateLeadProcessTask(leadID string, source string, batchSize int, metadata map[string]string) ([]byte, error) {
 	payload := &LeadProcessPayload{
 		LeadID:    leadID,
 		Source:    source,

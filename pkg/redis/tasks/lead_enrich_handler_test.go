@@ -3,10 +3,11 @@ package tasks
 
 import (
 	"context"
-	"reflect"
+	"encoding/json"
 	"testing"
 
 	"github.com/hibiken/asynq"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLeadEnrichPayload_Validate(t *testing.T) {
@@ -15,61 +16,176 @@ func TestLeadEnrichPayload_Validate(t *testing.T) {
 		p       *LeadEnrichPayload
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "valid payload",
+			p: &LeadEnrichPayload{
+				LeadID: "lead123",
+				EnrichTypes: []string{
+					"company_info",
+					"social_profiles",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "missing lead ID",
+			p: &LeadEnrichPayload{
+				EnrichTypes: []string{"company_info"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty enrich types",
+			p: &LeadEnrichPayload{
+				LeadID:      "lead123",
+				EnrichTypes: []string{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil enrich types",
+			p: &LeadEnrichPayload{
+				LeadID: "lead123",
+			},
+			wantErr: true,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.p.Validate(); (err != nil) != tt.wantErr {
-				t.Errorf("LeadEnrichPayload.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			err := tt.p.Validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				if err != nil {
+					assert.IsType(t, ErrInvalidPayload{}, err)
+				}
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
 }
 
 func TestHandler_processLeadEnrichTask(t *testing.T) {
-	type args struct {
-		ctx  context.Context
-		task *asynq.Task
-	}
 	tests := []struct {
 		name    string
 		h       *Handler
-		args    args
+		task    *asynq.Task
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "valid task",
+			h:    NewHandler(),
+			task: asynq.NewTask(TypeLeadEnrich.String(), mustMarshal(t, &LeadEnrichPayload{
+				LeadID: "lead123",
+				EnrichTypes: []string{
+					"company_info",
+					"social_profiles",
+				},
+			})),
+			wantErr: false,
+		},
+		{
+			name: "invalid payload",
+			h:    NewHandler(),
+			task: asynq.NewTask(TypeLeadEnrich.String(), []byte(`{
+				"lead_id": "",
+				"enrich_types": []
+			}`)),
+			wantErr: true,
+		},
+		{
+			name: "malformed payload",
+			h:    NewHandler(),
+			task: asynq.NewTask(TypeLeadEnrich.String(), []byte(`invalid json`)),
+			wantErr: true,
+		},
+		{
+			name: "cancelled context",
+			h:    NewHandler(),
+			task: asynq.NewTask(TypeLeadEnrich.String(), mustMarshal(t, &LeadEnrichPayload{
+				LeadID: "lead123",
+				EnrichTypes: []string{"company_info"},
+			})),
+			wantErr: true,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.h.processLeadEnrichTask(tt.args.ctx, tt.args.task); (err != nil) != tt.wantErr {
-				t.Errorf("Handler.processLeadEnrichTask() error = %v, wantErr %v", err, tt.wantErr)
+			ctx := context.Background()
+			if tt.name == "cancelled context" {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithCancel(ctx)
+				cancel()
+			}
+			
+			err := tt.h.processLeadEnrichTask(ctx, tt.task)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
 }
 
 func TestCreateLeadEnrichTask(t *testing.T) {
-	type args struct {
-		leadID      string
-		enrichTypes []string
-	}
 	tests := []struct {
-		name    string
-		args    args
-		want    []byte
-		wantErr bool
+		name       string
+		leadID     string
+		enrichTypes []string
+		wantErr    bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:   "valid task",
+			leadID: "lead123",
+			enrichTypes: []string{
+				"company_info",
+				"social_profiles",
+			},
+			wantErr: false,
+		},
+		{
+			name:       "missing lead ID",
+			leadID:     "",
+			enrichTypes: []string{"company_info"},
+			wantErr:    true,
+		},
+		{
+			name:       "empty enrich types",
+			leadID:     "lead123",
+			enrichTypes: []string{},
+			wantErr:    true,
+		},
+		{
+			name:       "nil enrich types",
+			leadID:     "lead123",
+			enrichTypes: nil,
+			wantErr:    true,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CreateLeadEnrichTask(tt.args.leadID, tt.args.enrichTypes)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CreateLeadEnrichTask() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CreateLeadEnrichTask() = %v, want %v", got, tt.want)
+			got, err := CreateLeadEnrichTask(tt.leadID, tt.enrichTypes)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, got)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, got)
+
+				// Verify the task payload
+				var payload struct {
+					Type    string           `json:"type"`
+					Payload LeadEnrichPayload `json:"payload"`
+				}
+				err = json.Unmarshal(got, &payload)
+				assert.NoError(t, err)
+				assert.Equal(t, TypeLeadEnrich.String(), payload.Type)
+				assert.Equal(t, tt.leadID, payload.Payload.LeadID)
+				assert.Equal(t, tt.enrichTypes, payload.Payload.EnrichTypes)
 			}
 		})
 	}
