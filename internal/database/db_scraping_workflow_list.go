@@ -25,10 +25,17 @@ func (db *Db) ListScrapingWorkflows(ctx context.Context, limit, offset int) ([]*
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
-	var workflowsORM []lead_scraper_servicev1.ScrapingWorkflowORM
-	result := db.Client.Engine.WithContext(ctx).Order("id asc").Limit(limit).Offset(offset).Find(&workflowsORM)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to list scraping workflows: %w", result.Error)
+	// Get the query operator
+	workflowQop := db.QueryOperator.ScrapingWorkflowORM
+
+	// Get the workflows
+	workflowsORM, err := workflowQop.WithContext(ctx).
+		Order(workflowQop.Id.Asc()).
+		Limit(limit).
+		Offset(offset).
+		Find()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list scraping workflows: %w", err)
 	}
 
 	workflows := make([]*lead_scraper_servicev1.ScrapingWorkflow, 0, len(workflowsORM))

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Vector/vector-leads-scraper/internal/testutils"
+	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -222,17 +223,46 @@ func TestDeleteTenant(t *testing.T) {
 func TestListTenants(t *testing.T) {
 	ctx := context.Background()
 
+	// Cleanup function to remove all test data
+	cleanup := func() {
+		result := conn.Client.Engine.Unscoped().Exec("DELETE FROM tenants")
+		require.NoError(t, result.Error)
+		result = conn.Client.Engine.Unscoped().Exec("DELETE FROM organizations")
+		require.NoError(t, result.Error)
+	}
+
+	// Clean up before and after tests
+	cleanup()
+	defer cleanup()
+
 	// Create test organization
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
 		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 
-	// Create test tenants
+	// Create another organization to test filtering
+	org2, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
+		Organization: testutils.GenerateRandomizedOrganization(),
+	})
+	require.NoError(t, err)
+
+	// Create test tenants for first organization
+	createdTenants := make([]*lead_scraper_servicev1.Tenant, 0, 5)
 	for i := 0; i < 5; i++ {
-		_, err := conn.CreateTenant(ctx, &CreateTenantInput{
-			Tenant: testutils.GenerateRandomizedTenant(),
+		tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
+			Tenant:         testutils.GenerateRandomizedTenant(),
 			OrganizationID: org.Id,
+		})
+		require.NoError(t, err)
+		createdTenants = append(createdTenants, tenant)
+	}
+
+	// Create test tenants for second organization
+	for i := 0; i < 3; i++ {
+		_, err := conn.CreateTenant(ctx, &CreateTenantInput{
+			Tenant:         testutils.GenerateRandomizedTenant(),
+			OrganizationID: org2.Id,
 		})
 		require.NoError(t, err)
 	}
@@ -242,9 +272,26 @@ func TestListTenants(t *testing.T) {
 		input   *ListTenantsInput
 		want    int
 		wantErr bool
+		validate func(t *testing.T, got []*lead_scraper_servicev1.Tenant)
 	}{
 		{
-			name: "success",
+			name: "success - list all tenants",
+			input: &ListTenantsInput{
+				Limit:  10,
+				Offset: 0,
+			},
+			want:    8, // Total tenants across both organizations
+			wantErr: false,
+			validate: func(t *testing.T, got []*lead_scraper_servicev1.Tenant) {
+				assert.Len(t, got, 8)
+				// Verify ordering (descending by ID)
+				for i := 1; i < len(got); i++ {
+					assert.Greater(t, got[i-1].Id, got[i].Id)
+				}
+			},
+		},
+		{
+			name: "success - filter by organization",
 			input: &ListTenantsInput{
 				Limit:          10,
 				Offset:         0,
@@ -252,9 +299,15 @@ func TestListTenants(t *testing.T) {
 			},
 			want:    5,
 			wantErr: false,
+			validate: func(t *testing.T, got []*lead_scraper_servicev1.Tenant) {
+				assert.Len(t, got, 5)
+				for _, tenant := range got {
+					assert.Equal(t, org.Id, tenant.Organization.Id)
+				}
+			},
 		},
 		{
-			name: "with limit",
+			name: "success - with limit",
 			input: &ListTenantsInput{
 				Limit:          2,
 				Offset:         0,
@@ -262,9 +315,15 @@ func TestListTenants(t *testing.T) {
 			},
 			want:    2,
 			wantErr: false,
+			validate: func(t *testing.T, got []*lead_scraper_servicev1.Tenant) {
+				assert.Len(t, got, 2)
+				for _, tenant := range got {
+					assert.Equal(t, org.Id, tenant.Organization.Id)
+				}
+			},
 		},
 		{
-			name: "with offset",
+			name: "success - with offset",
 			input: &ListTenantsInput{
 				Limit:          10,
 				Offset:         3,
@@ -272,10 +331,34 @@ func TestListTenants(t *testing.T) {
 			},
 			want:    2,
 			wantErr: false,
+			validate: func(t *testing.T, got []*lead_scraper_servicev1.Tenant) {
+				assert.Len(t, got, 2)
+				for _, tenant := range got {
+					assert.Equal(t, org.Id, tenant.Organization.Id)
+				}
+			},
 		},
 		{
-			name:    "nil input",
+			name:    "error - nil input",
 			input:   nil,
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name: "error - negative limit",
+			input: &ListTenantsInput{
+				Limit:  -1,
+				Offset: 0,
+			},
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name: "error - negative offset",
+			input: &ListTenantsInput{
+				Limit:  10,
+				Offset: -1,
+			},
 			want:    0,
 			wantErr: true,
 		},
@@ -290,6 +373,9 @@ func TestListTenants(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Len(t, got, tt.want)
+			if tt.validate != nil {
+				tt.validate(t, got)
+			}
 		})
 	}
 }

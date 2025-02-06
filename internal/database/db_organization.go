@@ -60,7 +60,6 @@ func (db *Db) CreateOrganization(ctx context.Context, input *CreateOrganizationI
 		return nil, fmt.Errorf("failed to create organization: %w", err)
 	}
 
-
 	return org, nil
 }
 
@@ -89,11 +88,12 @@ func (db *Db) GetOrganization(ctx context.Context, input *GetOrganizationInput) 
 		return nil, err
 	}
 
-	var org *lead_scraper_servicev1.OrganizationORM
-	var orgOrm = db.QueryOperator.OrganizationORM
-	if err := db.Client.Engine.WithContext(ctx).Where(
-		orgOrm.Id.Eq(input.ID),
-	).First(&org).Error; err != nil {
+	// Get the query operator
+	orgQop := db.QueryOperator.OrganizationORM
+
+	// Get the organization
+	org, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).First()
+	if err != nil {
 		if err.Error() == "record not found" {
 			return nil, ErrOrganizationDoesNotExist
 		}
@@ -139,21 +139,32 @@ func (db *Db) UpdateOrganization(ctx context.Context, input *UpdateOrganizationI
 		return nil, err
 	}
 
+	// Get the query operator
+	orgQop := db.QueryOperator.OrganizationORM
+
+	// Create the update model
 	org := &lead_scraper_servicev1.OrganizationORM{
 		Id:          input.ID,
 		Name:        input.Name,
 		Description: input.Description,
 	}
 
-	if err := db.Client.Engine.WithContext(ctx).Save(org).Error; err != nil {
+	// Update the organization
+	if _, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).Updates(org); err != nil {
 		db.Logger.Error("failed to update organization",
 			zap.Error(err),
 			zap.Uint64("organization_id", input.ID))
 		return nil, fmt.Errorf("failed to update organization: %w", err)
 	}
 
+	// Get the updated organization
+	updatedOrg, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).First()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated organization: %w", err)
+	}
+
 	// Convert to protobuf
-	orgPb, err := org.ToPB(ctx)
+	orgPb, err := updatedOrg.ToPB(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert organization to protobuf: %w", err)
 	}
@@ -197,8 +208,11 @@ func (db *Db) DeleteOrganization(ctx context.Context, input *DeleteOrganizationI
 		}
 	}()
 
+	// Get the query operator
+	orgQop := db.QueryOperator.OrganizationORM
+
 	// First check if the organization exists
-	_, err := db.QueryOperator.OrganizationORM.WithContext(ctx).Where(db.QueryOperator.OrganizationORM.Id.Eq(input.ID)).First()
+	_, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).First()
 	if err != nil {
 		tx.Rollback()
 		if err.Error() == "record not found" {
@@ -211,7 +225,8 @@ func (db *Db) DeleteOrganization(ctx context.Context, input *DeleteOrganizationI
 	}
 
 	// Delete all associated tenants first
-	if err := tx.Where("organization_id = ?", input.ID).Delete(&lead_scraper_servicev1.TenantORM{}).Error; err != nil {
+	tenantQop := db.QueryOperator.TenantORM
+	if _, err := tenantQop.WithContext(ctx).Where(tenantQop.OrganizationId.Eq(input.ID)).Delete(); err != nil {
 		tx.Rollback()
 		db.Logger.Error("failed to delete organization's tenants",
 			zap.Error(err),
@@ -220,7 +235,7 @@ func (db *Db) DeleteOrganization(ctx context.Context, input *DeleteOrganizationI
 	}
 
 	// Delete the organization
-	if err := tx.Delete(&lead_scraper_servicev1.OrganizationORM{}, input.ID).Error; err != nil {
+	if _, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).Delete(); err != nil {
 		tx.Rollback()
 		db.Logger.Error("failed to delete organization",
 			zap.Error(err),
@@ -261,12 +276,16 @@ func (db *Db) ListOrganizations(ctx context.Context, input *ListOrganizationsInp
 		return nil, err
 	}
 
-	var orgs []*lead_scraper_servicev1.OrganizationORM
-	if err := db.Client.Engine.WithContext(ctx).
-		Order("id desc").
+	// Get the query operator
+	orgQop := db.QueryOperator.OrganizationORM
+
+	// Get the organizations
+	orgs, err := orgQop.WithContext(ctx).
+		Order(orgQop.Id.Desc()).
 		Limit(input.Limit).
 		Offset(input.Offset).
-		Find(&orgs).Error; err != nil {
+		Find()
+	if err != nil {
 		db.Logger.Error("failed to list organizations", zap.Error(err))
 		return nil, fmt.Errorf("failed to list organizations: %w", err)
 	}

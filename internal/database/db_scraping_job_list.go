@@ -20,14 +20,17 @@ func (db *Db) ListScrapingJobs(ctx context.Context, limit, offset uint64) ([]*le
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
-	var jobsORM []lead_scraper_servicev1.ScrapingJobORM
-	result := db.Client.Engine.WithContext(ctx).
-		Order("created_at desc").
+	// Get the query operator
+	jobQop := db.QueryOperator.ScrapingJobORM
+
+	// Get the jobs
+	jobsORM, err := jobQop.WithContext(ctx).
+		Order(jobQop.CreatedAt.Desc()).
 		Limit(int(limit)).
 		Offset(int(offset)).
-		Find(&jobsORM)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to list scraping jobs: %w", result.Error)
+		Find()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list scraping jobs: %w", err)
 	}
 
 	pbResults := make([]*lead_scraper_servicev1.ScrapingJob, len(jobsORM))

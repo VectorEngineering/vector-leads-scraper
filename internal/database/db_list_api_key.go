@@ -20,14 +20,17 @@ func (db *Db) ListAPIKeys(ctx context.Context, limit, offset int) ([]*lead_scrap
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
-	var apiKeysORM []lead_scraper_servicev1.APIKeyORM
-	result := db.Client.Engine.WithContext(ctx).
-		Order("id asc").
+	// Get the query operator
+	apiKeyQop := db.QueryOperator.APIKeyORM
+
+	// Get the API keys
+	apiKeysORM, err := apiKeyQop.WithContext(ctx).
+		Order(apiKeyQop.Id.Asc()).
 		Limit(limit).
 		Offset(offset).
-		Find(&apiKeysORM)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to list API keys: %w", result.Error)
+		Find()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list API keys: %w", err)
 	}
 
 	apiKeys := make([]*lead_scraper_servicev1.APIKey, 0, len(apiKeysORM))

@@ -16,13 +16,16 @@ func (db *Db) GetScrapingWorkflow(ctx context.Context, id uint64) (*lead_scraper
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
-	var workflowORM lead_scraper_servicev1.ScrapingWorkflowORM
-	result := db.Client.Engine.WithContext(ctx).Where("id = ?", id).First(&workflowORM)
-	if result.Error != nil {
-		if result.Error.Error() == "record not found" {
-			return nil, fmt.Errorf("%w: %v", ErrWorkflowDoesNotExist, result.Error)
+	// Get the query operator
+	workflowQop := db.QueryOperator.ScrapingWorkflowORM
+
+	// Get the workflow
+	workflowORM, err := workflowQop.WithContext(ctx).Where(workflowQop.Id.Eq(id)).First()
+	if err != nil {
+		if err.Error() == "record not found" {
+			return nil, fmt.Errorf("%w: %v", ErrWorkflowDoesNotExist, err)
 		}
-		return nil, fmt.Errorf("failed to get scraping workflow: %w", result.Error)
+		return nil, fmt.Errorf("failed to get scraping workflow: %w", err)
 	}
 
 	pbResult, err := workflowORM.ToPB(ctx)

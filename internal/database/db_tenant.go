@@ -43,33 +43,69 @@ func (db *Db) CreateTenant(ctx context.Context, input *CreateTenantInput) (*lead
 		return nil, fmt.Errorf("failed to convert tenant to orm: %w", err)
 	}
 
-	orgOp := db.QueryOperator.OrganizationORM
+	// Get the query operators
+	orgQop := db.QueryOperator.OrganizationORM
+	tenantQop := db.QueryOperator.TenantORM
+
+	// Begin a transaction
+	tx := db.Client.Engine.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
 
 	// query for the organization and check if it exists
-	org, err := orgOp.WithContext(ctx).Where(orgOp.Id.Eq(input.OrganizationID)).First()
+	org, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.OrganizationID)).First()
 	if err != nil {
+		tx.Rollback()
+		if err.Error() == "record not found" {
+			return nil, ErrOrganizationDoesNotExist
+		}
 		return nil, fmt.Errorf("failed to get organization: %w", err)
 	}
 
-	if org == nil {
-		return nil, ErrOrganizationDoesNotExist
+	// Set the organization ID on the tenant
+	tenantORM.OrganizationId = &input.OrganizationID
+
+	// Create the tenant
+	if err := tenantQop.WithContext(ctx).Create(&tenantORM); err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to create tenant: %w", err)
 	}
 
-	if err := orgOp.Tenants.WithContext(ctx).Model(org).Append(&tenantORM); err != nil {
+	// Append tenant to organization's tenants
+	if err := orgQop.Tenants.WithContext(ctx).Model(org).Append(&tenantORM); err != nil {
+		tx.Rollback()
 		return nil, fmt.Errorf("failed to append tenant to organization: %w", err)
 	}
 
-	res, err := orgOp.WithContext(ctx).Updates(org)
-	if err != nil {
+	// Update the organization
+	if _, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.OrganizationID)).Updates(org); err != nil {
+		tx.Rollback()
 		return nil, fmt.Errorf("failed to update organization: %w", err)
 	}
 
-	if res.RowsAffected == 0 {
-		return nil, fmt.Errorf("failed to update organization")
+	// Get the created tenant with organization preloaded
+	createdTenant, err := tenantQop.WithContext(ctx).
+		Preload(tenantQop.Organization).
+		Where(tenantQop.Id.Eq(tenantORM.Id)).
+		First()
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to get created tenant: %w", err)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// Convert to protobuf
-	tenantPb, err := tenantORM.ToPB(ctx)
+	tenantPb, err := createdTenant.ToPB(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert tenant to protobuf: %w", err)
 	}
@@ -102,8 +138,15 @@ func (db *Db) GetTenant(ctx context.Context, input *GetTenantInput) (*lead_scrap
 		return nil, err
 	}
 
-	var tenant *lead_scraper_servicev1.TenantORM
-	if err := db.Client.Engine.WithContext(ctx).First(&tenant, input.ID).Error; err != nil {
+	// Get the query operator
+	tenantQop := db.QueryOperator.TenantORM
+
+	// Get the tenant with organization preloaded
+	tenant, err := tenantQop.WithContext(ctx).
+		Preload(tenantQop.Organization).
+		Where(tenantQop.Id.Eq(input.ID)).
+		First()
+	if err != nil {
 		if err.Error() == "record not found" {
 			return nil, ErrTenantDoesNotExist
 		}
@@ -157,7 +200,8 @@ func (db *Db) UpdateTenant(ctx context.Context, input *UpdateTenantInput) (*lead
 		return nil, err
 	}
 
-	tenantOp := db.QueryOperator.TenantORM
+	// Get the query operator
+	tenantQop := db.QueryOperator.TenantORM
 
 	// Begin a transaction
 	tx := db.Client.Engine.WithContext(ctx).Begin()
@@ -171,13 +215,13 @@ func (db *Db) UpdateTenant(ctx context.Context, input *UpdateTenantInput) (*lead
 	}()
 
 	// Get the existing tenant
-	tenant, err := tenantOp.WithContext(ctx).Where(tenantOp.Id.Eq(input.ID)).First()
+	existingTenant, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.ID)).First()
 	if err != nil {
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
 
-	if tenant == nil {
+	if existingTenant == nil {
 		tx.Rollback()
 		return nil, ErrTenantDoesNotExist
 	}
@@ -190,12 +234,19 @@ func (db *Db) UpdateTenant(ctx context.Context, input *UpdateTenantInput) (*lead
 	}
 
 	// Preserve the organization ID
-	updatedTenant.OrganizationId = tenant.OrganizationId
+	updatedTenant.OrganizationId = existingTenant.OrganizationId
 
 	// Update the tenant
-	if err := tx.Model(&lead_scraper_servicev1.TenantORM{}).Where("id = ?", input.ID).Updates(&updatedTenant).Error; err != nil {
+	if _, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.ID)).Updates(&updatedTenant); err != nil {
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to update tenant: %w", err)
+	}
+
+	// Get the updated tenant
+	updatedTenantRecord, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.ID)).First()
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to get updated tenant: %w", err)
 	}
 
 	// Commit the transaction
@@ -204,7 +255,7 @@ func (db *Db) UpdateTenant(ctx context.Context, input *UpdateTenantInput) (*lead
 	}
 
 	// Convert updated tenant to protobuf
-	result, err := updatedTenant.ToPB(ctx)
+	result, err := updatedTenantRecord.ToPB(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert tenant to protobuf: %w", err)
 	}
@@ -237,9 +288,12 @@ func (db *Db) DeleteTenant(ctx context.Context, input *DeleteTenantInput) error 
 		return err
 	}
 
+	// Get the query operator
+	tenantQop := db.QueryOperator.TenantORM
+
 	// First check if the tenant exists
-	var tenant lead_scraper_servicev1.TenantORM
-	if err := db.Client.Engine.WithContext(ctx).First(&tenant, input.ID).Error; err != nil {
+	_, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.ID)).First()
+	if err != nil {
 		if err.Error() == "record not found" {
 			return ErrTenantDoesNotExist
 		}
@@ -261,7 +315,7 @@ func (db *Db) DeleteTenant(ctx context.Context, input *DeleteTenantInput) error 
 	}()
 
 	// Delete the tenant
-	if err := tx.Delete(&lead_scraper_servicev1.TenantORM{}, input.ID).Error; err != nil {
+	if _, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.ID)).Delete(); err != nil {
 		tx.Rollback()
 		db.Logger.Error("failed to delete tenant",
 			zap.Error(err),
@@ -303,18 +357,26 @@ func (db *Db) ListTenants(ctx context.Context, input *ListTenantsInput) ([]*lead
 		return nil, err
 	}
 
-	query := db.Client.Engine.WithContext(ctx)
+	// Get the query operator
+	tenantQop := db.QueryOperator.TenantORM
 
+	// Build the query with preloading
+	query := tenantQop.WithContext(ctx).
+		Select(tenantQop.ALL).
+		Preload(tenantQop.Organization)
+
+	// Add organization filter if specified
 	if input.OrganizationID > 0 {
-		query = query.Where("organization_id = ?", input.OrganizationID)
+		query = query.Where(tenantQop.OrganizationId.Eq(input.OrganizationID))
 	}
 
-	var tenants []*lead_scraper_servicev1.TenantORM
-	if err := query.
-		Order("id desc").
+	// Execute the query with ordering, limit and offset
+	tenants, err := query.
+		Order(tenantQop.Id.Desc()).
 		Limit(input.Limit).
 		Offset(input.Offset).
-		Find(&tenants).Error; err != nil {
+		Find()
+	if err != nil {
 		db.Logger.Error("failed to list tenants", zap.Error(err))
 		return nil, fmt.Errorf("failed to list tenants: %w", err)
 	}
@@ -325,7 +387,8 @@ func (db *Db) ListTenants(ctx context.Context, input *ListTenantsInput) ([]*lead
 		pb, err := tenant.ToPB(ctx)
 		if err != nil {
 			db.Logger.Error("failed to convert tenant to protobuf",
-				zap.Error(err))
+				zap.Error(err),
+				zap.Any("tenant", tenant))
 			return nil, fmt.Errorf("failed to convert tenant to protobuf: %w", err)
 		}
 		result[i] = &pb
