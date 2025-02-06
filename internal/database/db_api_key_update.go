@@ -22,16 +22,19 @@ func (db *Db) UpdateAPIKey(ctx context.Context, apiKey *lead_scraper_servicev1.A
 		return nil, fmt.Errorf("failed to convert to ORM model: %w", err)
 	}
 
+	// Get the query operator
+	apiKeyQop := db.QueryOperator.APIKeyORM
+
 	// update the API key
-	result := db.Client.Engine.WithContext(ctx).Where("id = ?", apiKey.Id).Updates(&apiKeyORM)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to update API key: %w", result.Error)
+	res, err := apiKeyQop.WithContext(ctx).Where(apiKeyQop.Id.Eq(apiKey.Id)).Updates(&apiKeyORM)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update API key: %w", err)
 	}
 
-	// get the updated record
-	if result := db.Client.Engine.WithContext(ctx).Where("id = ?", apiKey.Id).First(&apiKeyORM); result.Error != nil {
-		return nil, fmt.Errorf("failed to get updated API key: %w", result.Error)
+	if res.RowsAffected == 0 {
+		return nil, fmt.Errorf("API key not found")
 	}
+
 
 	pbResult, err := apiKeyORM.ToPB(ctx)
 	if err != nil {
