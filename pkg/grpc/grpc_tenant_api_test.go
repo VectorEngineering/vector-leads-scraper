@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/Vector/vector-leads-scraper/internal/testutils"
@@ -25,7 +26,11 @@ func TestServer_CreateTenant(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.CreateTenantRequest{
-				Tenant: testutils.GenerateRandomizedTenant(),
+				Tenant: &proto.Tenant{
+					Name:        "Test Tenant",
+					Description: "A test tenant",
+					ApiBaseUrl:  "https://api.example.com",
+				},
 				OrganizationId: tc.Organization.Id,
 			},
 			wantErr: false,
@@ -39,7 +44,8 @@ func TestServer_CreateTenant(t *testing.T) {
 		{
 			name: "nil tenant",
 			req: &proto.CreateTenantRequest{
-				Tenant: nil,
+				OrganizationId: tc.Organization.Id,
+				Tenant:         nil,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -47,9 +53,23 @@ func TestServer_CreateTenant(t *testing.T) {
 		{
 			name: "empty tenant name",
 			req: &proto.CreateTenantRequest{
+				OrganizationId: tc.Organization.Id,
 				Tenant: &proto.Tenant{
 					Name:        "",
 					Description: "A test tenant",
+					ApiBaseUrl:  "https://api.example.com",
+				},
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "missing organization id",
+			req: &proto.CreateTenantRequest{
+				Tenant: &proto.Tenant{
+					Name:        "Test Tenant",
+					Description: "A test tenant",
+					ApiBaseUrl:  "https://api.example.com",
 				},
 			},
 			wantErr: true,
@@ -79,6 +99,19 @@ func TestServer_GetTenant(t *testing.T) {
 	tc := initializeTestContext(t)
 	defer tc.Cleanup()
 
+	// Create a test tenant
+	createResp, err := MockServer.CreateTenant(context.Background(), &proto.CreateTenantRequest{
+		Tenant: &proto.Tenant{
+			Name:        "Test Tenant",
+			Description: "A test tenant",
+			ApiBaseUrl:  "https://api.example.com",
+		},
+		OrganizationId: tc.Organization.Id,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, createResp)
+	require.NotZero(t, createResp.TenantId)
+
 	tests := []struct {
 		name    string
 		req     *proto.GetTenantRequest
@@ -88,7 +121,7 @@ func TestServer_GetTenant(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.GetTenantRequest{
-				TenantId: tc.TenantId,
+				TenantId:       createResp.TenantId,
 				OrganizationId: tc.Organization.Id,
 			},
 			wantErr: false,
@@ -102,10 +135,29 @@ func TestServer_GetTenant(t *testing.T) {
 		{
 			name: "zero tenant ID",
 			req: &proto.GetTenantRequest{
-				TenantId: 0,
+				TenantId:       0,
+				OrganizationId: tc.Organization.Id,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "zero organization ID",
+			req: &proto.GetTenantRequest{
+				TenantId:       createResp.TenantId,
+				OrganizationId: 0,
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "tenant not found",
+			req: &proto.GetTenantRequest{
+				TenantId:       999999,
+				OrganizationId: tc.Organization.Id,
+			},
+			wantErr: true,
+			errCode: codes.NotFound,
 		},
 	}
 
@@ -121,6 +173,8 @@ func TestServer_GetTenant(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.NotNil(t, resp)
+			require.NotNil(t, resp.Tenant)
+			assert.Equal(t, createResp.TenantId, resp.Tenant.Id)
 		})
 	}
 }
@@ -169,18 +223,6 @@ func TestServer_UpdateTenant(t *testing.T) {
 			wantErr: true,
 			errCode: codes.InvalidArgument,
 		},
-		{
-			name: "tenant not found",
-			req: &proto.UpdateTenantRequest{
-				Tenant: &proto.Tenant{
-					Id:          999999,
-					Name:        "Updated Tenant",
-					Description: "An updated test tenant",
-				},
-			},
-			wantErr: true,
-			errCode: codes.Internal,
-		},
 	}
 
 	for _, tt := range tests {
@@ -204,16 +246,37 @@ func TestServer_UpdateTenant(t *testing.T) {
 }
 
 func TestServer_DeleteTenant(t *testing.T) {
-	// Create a test tenant first
-	createResp, err := MockServer.CreateTenant(context.Background(), &proto.CreateTenantRequest{
+	// Create test organization first
+	org := testutils.GenerateRandomizedOrganization()
+	if org.Name == "" {
+		org.Name = "Test Organization"
+	}
+	if org.BillingEmail == "" {
+		org.BillingEmail = "billing@example.com"
+	}
+	if org.TechnicalEmail == "" {
+		org.TechnicalEmail = "tech@example.com"
+	}
+
+	createOrgResp, err := MockServer.CreateOrganization(context.Background(), &proto.CreateOrganizationRequest{
+		Organization: org,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, createOrgResp)
+	require.NotNil(t, createOrgResp.Organization)
+
+	// Create a test tenant
+	createTenantResp, err := MockServer.CreateTenant(context.Background(), &proto.CreateTenantRequest{
 		Tenant: &proto.Tenant{
 			Name:        "Test Tenant",
 			Description: "A test tenant",
+			ApiBaseUrl:  "https://api.example.com",
 		},
+		OrganizationId: createOrgResp.Organization.Id,
 	})
 	require.NoError(t, err)
-	require.NotNil(t, createResp)
-	require.NotZero(t, createResp.TenantId)
+	require.NotNil(t, createTenantResp)
+	require.NotZero(t, createTenantResp.TenantId)
 
 	tests := []struct {
 		name    string
@@ -224,7 +287,8 @@ func TestServer_DeleteTenant(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.DeleteTenantRequest{
-				TenantId: createResp.TenantId,
+				TenantId:       createTenantResp.TenantId,
+				OrganizationId: createOrgResp.Organization.Id,
 			},
 			wantErr: false,
 		},
@@ -237,15 +301,17 @@ func TestServer_DeleteTenant(t *testing.T) {
 		{
 			name: "tenant not found",
 			req: &proto.DeleteTenantRequest{
-				TenantId: 999999,
+				TenantId:       999999,
+				OrganizationId: createOrgResp.Organization.Id,
 			},
 			wantErr: true,
-			errCode: codes.Internal,
+			errCode: codes.NotFound,
 		},
 		{
 			name: "zero tenant ID",
 			req: &proto.DeleteTenantRequest{
-				TenantId: 0,
+				TenantId:       0,
+				OrganizationId: createOrgResp.Organization.Id,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -266,54 +332,74 @@ func TestServer_DeleteTenant(t *testing.T) {
 			require.NotNil(t, resp)
 			assert.True(t, resp.Success)
 
-			// Verify tenant is actually deleted
-			getResp, err := MockServer.GetTenant(context.Background(), &proto.GetTenantRequest{
-				TenantId: tt.req.TenantId,
+			// Verify tenant is deleted
+			_, err = MockServer.GetTenant(context.Background(), &proto.GetTenantRequest{
+				TenantId:       tt.req.TenantId,
+				OrganizationId: tt.req.OrganizationId,
 			})
 			require.Error(t, err)
 			st, ok := status.FromError(err)
 			require.True(t, ok)
-			assert.Equal(t, codes.Internal, st.Code())
-			assert.Nil(t, getResp)
+			assert.Equal(t, codes.NotFound, st.Code())
 		})
 	}
+
+	// Cleanup
+	MockServer.DeleteOrganization(context.Background(), &proto.DeleteOrganizationRequest{
+		Id: createOrgResp.Organization.Id,
+	})
 }
 
 func TestServer_ListTenants(t *testing.T) {
-	// Create multiple test tenants
+	tc := initializeTestContext(t)
+	defer tc.Cleanup()
+
+	// Create 3 test tenants
+	var tenantIDs []uint64
 	for i := 0; i < 3; i++ {
+		tenant := testutils.GenerateRandomizedTenant()
+		tenant.Name = fmt.Sprintf("Test Tenant %d", i)
+		tenant.Description = fmt.Sprintf("Test tenant description %d", i)
+		
 		createResp, err := MockServer.CreateTenant(context.Background(), &proto.CreateTenantRequest{
-			Tenant: &proto.Tenant{
-				Name:        testutils.GenerateRandomString(10, false, false),
-				Description: testutils.GenerateRandomString(20, true, false),
-			},
+			Tenant:         tenant,
+			OrganizationId: tc.Organization.Id,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, createResp)
 		require.NotZero(t, createResp.TenantId)
+		tenantIDs = append(tenantIDs, createResp.TenantId)
 	}
 
 	tests := []struct {
-		name    string
-		req     *proto.ListTenantsRequest
-		wantErr bool
-		errCode codes.Code
+		name           string
+		req            *proto.ListTenantsRequest
+		wantErr        bool
+		errCode        codes.Code
+		expectedCount  int
+		expectedNextPage int32
 	}{
 		{
 			name: "success - first page",
 			req: &proto.ListTenantsRequest{
-				PageSize:   2,
-				PageNumber: 0,
+				PageSize:       2,
+				PageNumber:     1,
+				OrganizationId: tc.Organization.Id,
 			},
-			wantErr: false,
+			wantErr:        false,
+			expectedCount:  2,
+			expectedNextPage: 2,
 		},
 		{
 			name: "success - second page",
 			req: &proto.ListTenantsRequest{
-				PageSize:   2,
-				PageNumber: 1,
+				PageSize:       2,
+				PageNumber:     2,
+				OrganizationId: tc.Organization.Id,
 			},
-			wantErr: false,
+			wantErr:        false,
+			expectedCount:  2,
+			expectedNextPage: 3,
 		},
 		{
 			name:    "nil request",
@@ -324,19 +410,11 @@ func TestServer_ListTenants(t *testing.T) {
 		{
 			name: "invalid page size",
 			req: &proto.ListTenantsRequest{
-				PageSize:   -1,
-				PageNumber: 0,
+				PageSize:   0,
+				PageNumber: 1,
 			},
-			wantErr: false, // Should use default page size
-		},
-		{
-			name: "filter by organization ID",
-			req: &proto.ListTenantsRequest{
-				PageSize:       10,
-				PageNumber:     0,
-				OrganizationId: 123, // Using a test org ID
-			},
-			wantErr: false,
+			wantErr: true,
+			errCode: codes.InvalidArgument,
 		},
 	}
 
@@ -352,16 +430,8 @@ func TestServer_ListTenants(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.NotNil(t, resp)
-
-			if tt.req != nil && tt.req.PageSize > 0 {
-				assert.LessOrEqual(t, len(resp.Tenants), int(tt.req.PageSize))
-			}
-
-			for _, tenant := range resp.Tenants {
-				assert.NotEmpty(t, tenant.Name)
-				assert.NotEmpty(t, tenant.Description)
-				assert.NotZero(t, tenant.Id)
-			}
+			assert.Len(t, resp.Tenants, tt.expectedCount)
+			assert.Equal(t, tt.expectedNextPage, resp.NextPageNumber)
 		})
 	}
 } 

@@ -142,6 +142,9 @@ func (s *Server) GetTenant(ctx context.Context, req *proto.GetTenantRequest) (*p
 	})
 	if err != nil {
 		s.logger.Error("failed to get tenant", zap.Error(err))
+		if err == database.ErrTenantDoesNotExist {
+			return nil, status.Error(codes.NotFound, "tenant does not exist")
+		}
 		return nil, status.Error(codes.Internal, "failed to get tenant")
 	}
 
@@ -213,6 +216,9 @@ func (s *Server) UpdateTenant(ctx context.Context, req *proto.UpdateTenantReques
 	})
 	if err != nil {
 		s.logger.Error("failed to update tenant", zap.Error(err))
+		if err == database.ErrTenantDoesNotExist {
+			return nil, status.Error(codes.NotFound, "tenant does not exist")
+		}
 		return nil, status.Error(codes.Internal, "failed to update tenant")
 	}
 
@@ -277,7 +283,10 @@ func (s *Server) DeleteTenant(ctx context.Context, req *proto.DeleteTenantReques
 	})
 	if err != nil {
 		s.logger.Error("failed to delete tenant", zap.Error(err))
-		return nil, status.Error(codes.Internal, "failed to delete tenant")
+		if err == database.ErrTenantDoesNotExist {
+			return nil, status.Error(codes.NotFound, "tenant does not exist")
+		}
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to delete tenant: %v", err))
 	}
 
 	// TODO: create a task and send to the task queue to delete all records associated with the tenant
@@ -343,7 +352,11 @@ func (s *Server) ListTenants(ctx context.Context, req *proto.ListTenantsRequest)
 	}
 
 	// Calculate offset based on page number
-	offset := int(pageSize) * int(req.GetPageNumber())
+	pageNumber := req.GetPageNumber()
+	if pageNumber < 1 {
+		pageNumber = 1
+	}
+	offset := int(pageSize) * (int(pageNumber) - 1)  // Subtract 1 since page numbers start at 1
 
 	// List tenants using the database client
 	results, err := s.db.ListTenants(ctx, &database.ListTenantsInput{
