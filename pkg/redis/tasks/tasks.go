@@ -7,23 +7,35 @@ import (
 	"github.com/Vector/vector-leads-scraper/pkg/redis/priorityqueue"
 )
 
+// TaskType represents the type of task to be processed
 type TaskType string
 
-// Additional task types extending the existing ones in types.go
 const (
-	TypeLeadProcess    TaskType = "lead:process"
-	TypeLeadValidate   TaskType = "lead:validate"
-	TypeLeadEnrich     TaskType = "lead:enrich"
+	// TypeEmailExtract represents an email extraction task
+	TypeEmailExtract TaskType = "extract:email"
+	// TypeScrapeGMaps represents a Google Maps scraping task
+	TypeScrapeGMaps TaskType = "scrape:gmaps"
+	// TypeLeadProcess represents a lead processing task
+	TypeLeadProcess TaskType = "lead:process"
+	// TypeLeadEnrich represents a lead enrichment task
+	TypeLeadEnrich TaskType = "lead:enrich"
+	// TypeLeadValidate represents a lead validation task
+	TypeLeadValidate TaskType = "lead:validate"
+	// TypeReportGenerate represents a report generation task
 	TypeReportGenerate TaskType = "report:generate"
-	TypeDataExport     TaskType = "data:export"
-	TypeDataImport     TaskType = "data:import"
-	TypeDataCleanup    TaskType = "data:cleanup"
-	TypeScrapeGMaps    TaskType = "scrape:gmaps"  // done
-	TypeEmailExtract   TaskType = "extract:email" // done
-	TypeHealthCheck    TaskType = "health:check"
+	// TypeDataCleanup represents a data cleanup task
+	TypeDataCleanup TaskType = "data:cleanup"
+	// TypeDataExport represents a data export task
+	TypeDataExport TaskType = "data:export"
+	// TypeDataImport represents a data import task
+	TypeDataImport TaskType = "data:import"
+	// TypeHealthCheck represents a health check task
+	TypeHealthCheck TaskType = "health:check"
+	// TypeConnectionTest represents a connection test task
 	TypeConnectionTest TaskType = "connection:test"
 )
 
+// String returns the string representation of the task type
 func (t TaskType) String() string {
 	return string(t)
 }
@@ -173,16 +185,23 @@ func (e ErrInvalidPayload) Error() string {
 
 // NewTask creates a new task with the given type and payload
 func NewTask(taskType string, payload TaskPayload) ([]byte, error) {
+	if payload == nil {
+		return nil, ErrInvalidPayload{Field: "payload", Message: "payload cannot be nil"}
+	}
+
 	if err := payload.Validate(); err != nil {
 		return nil, err
 	}
 
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
+	task := struct {
+		Type    string      `json:"type"`
+		Payload interface{} `json:"payload"`
+	}{
+		Type:    taskType,
+		Payload: payload,
 	}
 
-	return payloadBytes, nil
+	return json.Marshal(task)
 }
 
 // ParsePayload parses the payload bytes into the appropriate struct based on task type

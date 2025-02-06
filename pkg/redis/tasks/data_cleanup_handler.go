@@ -41,6 +41,11 @@ func CreateDataCleanupTask(cleanupType string, olderThan time.Time, batchSize in
 
 // processDataCleanupTask handles the cleanup of old or invalid data
 func (h *Handler) processDataCleanupTask(ctx context.Context, task *asynq.Task) error {
+	// Check if context is cancelled
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("context cancelled: %w", err)
+	}
+
 	var payload DataCleanupPayload
 	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal data cleanup payload: %w", err)
