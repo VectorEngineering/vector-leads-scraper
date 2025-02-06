@@ -172,32 +172,27 @@ func New(cfg *runner.Config, opts *Options) (*Handler, error) {
 		return nil, fmt.Errorf("failed to initialize Redis components: %w", err)
 	}
 
-	// Initialize task handlers
-	handlers := make(map[string]tasks.TaskHandler)
+	// Create the handler instance with empty handlers map
+	h := &Handler{
+		mux:        asynq.NewServeMux(),
+		handlers:   make(map[string]tasks.TaskHandler),
+		components: components,
+		done:       make(chan struct{}),
+		logger:     logger,
+	}
+
+	// Register handlers for each task type
 	for _, taskType := range opts.TaskTypes {
 		handler := tasks.NewHandler(
 			tasks.WithMaxRetries(opts.MaxRetries),
 			tasks.WithRetryInterval(opts.RetryInterval),
 		)
-		handlers[taskType] = handler
+		if err := h.RegisterHandler(taskType, handler); err != nil {
+			return nil, fmt.Errorf("failed to register handler for task type %s: %w", taskType, err)
+		}
 	}
 
-	// Initialize task mux
-	mux := asynq.NewServeMux()
-	for taskType, handler := range handlers {
-		h := handler // Create a new variable to avoid closure issues
-		mux.HandleFunc(taskType, func(ctx context.Context, task *asynq.Task) error {
-			return h.ProcessTask(ctx, task)
-		})
-	}
-
-	return &Handler{
-		mux:        mux,
-		handlers:   handlers,
-		components: components,
-		done:       make(chan struct{}),
-		logger:     logger,
-	}, nil
+	return h, nil
 }
 
 // Run starts the task handler and begins processing tasks.
