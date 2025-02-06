@@ -181,13 +181,14 @@ func New(cfg *runner.Config, opts *Options) (*Handler, error) {
 		logger:     logger,
 	}
 
-	// Register handlers for each task type
+	// Register task handlers
 	for _, taskType := range opts.TaskTypes {
-		handler := tasks.NewHandler(
+		if err := h.RegisterHandler(taskType, tasks.NewHandler(
 			tasks.WithMaxRetries(opts.MaxRetries),
 			tasks.WithRetryInterval(opts.RetryInterval),
-		)
-		if err := h.RegisterHandler(taskType, handler); err != nil {
+		)); err != nil {
+			// Clean up on error
+			h.Close(context.Background())
 			return nil, fmt.Errorf("failed to register handler for task type %s: %w", taskType, err)
 		}
 	}
@@ -365,8 +366,12 @@ func (h *Handler) MonitorHealth(ctx context.Context) error {
 func (h *Handler) Close(ctx context.Context) error {
 	h.logger.Println("Shutting down task handler...")
 
-	// Signal all goroutines to stop
-	close(h.done)
+	// Use sync.Once to ensure the channel is closed only once
+	var once sync.Once
+	once.Do(func() {
+		// Signal all goroutines to stop
+		close(h.done)
+	})
 
 	// Wait for all goroutines to finish
 	h.wg.Wait()
@@ -374,6 +379,7 @@ func (h *Handler) Close(ctx context.Context) error {
 	// Close Redis components
 	if err := h.components.Close(ctx); err != nil {
 		h.logger.Printf("Error closing Redis components: %v", err)
+		return fmt.Errorf("error closing Redis components: %w", err)
 	}
 
 	h.logger.Println("Task handler shutdown complete")

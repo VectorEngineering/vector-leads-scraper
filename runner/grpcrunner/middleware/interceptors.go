@@ -22,52 +22,97 @@ func CreateInterceptors(logger *zap.Logger, zapOpts []grpc_zap.Option) ([]grpc.U
 	// Define middleware filters
 	authFilter := &MiddlewareFilter{
 		ExcludedMethods: []ServiceMethod{
-			// Public endpoints that don't require authentication
-			{FullMethod: lead_scraper_servicev1.LeadScraperService_GetWorkspaceAnalytics_FullMethodName},
-			{FullMethod: lead_scraper_servicev1.LeadScraperService_GetWorkspace_FullMethodName},
-			// Account creation doesn't require auth (initial signup)
-			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateAccount_FullMethodName},
+			// Organization and tenant management endpoints don't require standard auth headers
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateOrganization_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateOrganization_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_DeleteOrganization_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_ListOrganizations_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateTenant_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateTenant_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_DeleteTenant_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_ListTenants_FullMethodName},
 		},
 	}
 
-	// API endpoints that require API key validation
+	// API endpoints that require API key (workspace) validation
 	apiKeyFilter := &MiddlewareFilter{
 		IncludedMethods: []ServiceMethod{
+			// Job management operations
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateScrapingJob_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_ListScrapingJobs_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_GetScrapingJob_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_DeleteScrapingJob_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_DownloadScrapingResults_FullMethodName},
+			// Workflow operations
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateWorkflow_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_GetWorkflow_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateWorkflow_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_ListWorkflows_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_TriggerWorkflow_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_PauseWorkflow_FullMethodName},
+			// Workspace operations
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateWorkspace_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_GetWorkspace_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateWorkspace_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_DeleteWorkspace_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_ListWorkspaces_FullMethodName},
 		},
 	}
 
 	// Rate limited operations
 	rateLimitFilter := &MiddlewareFilter{
 		IncludedMethods: []ServiceMethod{
+			// Resource-intensive operations
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateScrapingJob_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_DownloadScrapingResults_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateWorkflow_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_TriggerWorkflow_FullMethodName},
+			// Account management operations
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateAccount_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateAccount_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_DeleteAccount_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateAccountSettings_FullMethodName},
+			// Workspace operations
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateWorkspace_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateWorkspace_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_DeleteWorkspace_FullMethodName},
 		},
 	}
 
 	// Quota managed operations
 	quotaFilter := &MiddlewareFilter{
 		IncludedMethods: []ServiceMethod{
+			// Resource consumption operations
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateScrapingJob_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_DownloadScrapingResults_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateWorkflow_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_TriggerWorkflow_FullMethodName},
+			// Storage operations
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateWorkspace_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateWorkspace_FullMethodName},
+			// Account operations with quota implications
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateAccountSettings_FullMethodName},
 		},
 	}
 
 	loggingFilter := &MiddlewareFilter{
 		ExcludedMethods: []ServiceMethod{
-			// High-volume operations that we don't need to log every time
+			// High-volume monitoring operations
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_GetAccountUsage_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_GetWorkspaceAnalytics_FullMethodName},
+			// High-frequency status checks
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_GetScrapingJob_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_GetWorkflow_FullMethodName},
+			// List operations that might be called frequently
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_ListScrapingJobs_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_ListWorkflows_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_ListWorkspaces_FullMethodName},
 		},
 	}
 
 	validationFilter := &MiddlewareFilter{
 		IncludedMethods: []ServiceMethod{
-			// Only validate methods that create or update resources
+			// Create/Update operations that need input validation
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateScrapingJob_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateAccount_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateAccount_FullMethodName},
@@ -76,6 +121,15 @@ func CreateInterceptors(logger *zap.Logger, zapOpts []grpc_zap.Option) ([]grpc.U
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateWorkflow_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateWorkflow_FullMethodName},
 			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateAccountSettings_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_CreateOrganization_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_UpdateOrganization_FullMethodName},
+			// Delete operations that need validation
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_DeleteAccount_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_DeleteWorkspace_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_DeleteScrapingJob_FullMethodName},
+			// Settings and configuration updates
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_TriggerWorkflow_FullMethodName},
+			{FullMethod: lead_scraper_servicev1.LeadScraperService_PauseWorkflow_FullMethodName},
 		},
 	}
 

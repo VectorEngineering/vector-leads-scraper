@@ -210,6 +210,31 @@ build: ## builds the executable
 run: build ## builds and runs the application
 	./bin/$(APP_NAME)
 
+run-grpc: build ## builds and runs the application in GRPC mode
+	SERVICE_NAME=vector-leads-scraper \
+	VERSION=$(VERSION) \
+	GIT_COMMIT=$(GIT_COMMIT) \
+	BUILD_TIME=$(BUILD_TIME) \
+	GO_VERSION=$(GO_VERSION) \
+	PLATFORM=$(PLATFORM) \
+	GRPC_PORT=50051 \
+	RK_BOOT_CONFIG_PATH=./boot.yaml \
+	./bin/$(APP_NAME) --grpc \
+		--grpc-port=50051 \
+		--addr=:50051 \
+		--service-name=vector-leads-scraper \
+		--environment=development \
+		--redis-enabled=true \
+		--redis-host=localhost \
+		--redis-port=6379 \
+		--redis-password=redispass \
+		--redis-workers=10 \
+		--redis-retry-interval=5s \
+		--redis-max-retries=3 \
+		--redis-retention-days=7 \
+		--newrelic-key=2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL \
+		--db-url="postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+
 docker-run: docker-build ## builds and runs the docker container
 	docker run -p 8080:8080 gosom/google-maps-scraper:$(VERSION)
 
@@ -233,3 +258,77 @@ port-forward: ## Port forward the service to localhost (only if needed)
 .PHONY: helm-docs
 helm-docs: check-helm-docs ## Generate Helm chart documentation
 	$(HELM_DOCS) -t ./charts/$(CHART_NAME)/.helm-docs.gotmpl -o ./charts/$(CHART_NAME)/README.md
+
+# gRPC testing targets
+.PHONY: install-grpcurl
+install-grpcurl: ## Install grpcurl
+	@which grpcurl >/dev/null || (echo "Installing grpcurl..." && \
+		go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest)
+
+.PHONY: cleanup-grpc
+cleanup-grpc: ## Kill any existing gRPC server instances and cleanup ports
+	@echo "Cleaning up existing gRPC processes..."
+	@-pkill -f "google_maps_scraper.*--grpc" || true
+	@-lsof -ti:50051 | xargs kill -9 || true
+	@sleep 2
+
+.PHONY: start-grpc-dev
+start-grpc-dev: cleanup-grpc ## Start gRPC service in development mode with required dependencies
+	@echo "Starting development environment..."
+	@$(MAKE) docker-dev
+	@echo "Starting gRPC service..."
+	@$(MAKE) run-grpc
+
+.PHONY: test-grpc-api
+test-grpc-api: install-grpcurl ## Test gRPC API endpoints using grpcurl
+	@echo "Testing gRPC API endpoints..."
+	@./test-grpc.sh
+
+.PHONY: grpc-dev
+grpc-dev: start-grpc-dev test-grpc-api ## Start gRPC service and run all tests
+
+.PHONY: stop-grpc-dev
+stop-grpc-dev: ## Stop gRPC service and cleanup
+	@echo "Stopping development environment..."
+	@$(MAKE) docker-dev-down
+	@echo "Cleaning up..."
+	@pkill -f "$(APP_NAME)" || true
+
+# Add this to the help target's dependencies
+help: install-grpcurl
+
+.PHONY: start-all
+start-all: ## Start all components (database, redis, migrations, and gRPC service)
+	@echo "Starting all components..."
+	@echo "1. Starting infrastructure (database and redis)..."
+	@docker-compose -f docker-compose.dev.yaml up -d
+	@echo "Waiting for database to be ready..."
+	@sleep 5
+	@echo "2. Starting gRPC service..."
+	@SERVICE_NAME=vector-leads-scraper \
+		VERSION=$(VERSION) \
+		GIT_COMMIT=$(GIT_COMMIT) \
+		BUILD_TIME=$(BUILD_TIME) \
+		GO_VERSION=$(GO_VERSION) \
+		PLATFORM=$(PLATFORM) \
+		GRPC_PORT=50051 \
+		RK_BOOT_CONFIG_PATH=./boot.yaml \
+		./bin/$(APP_NAME) --grpc \
+			--grpc-port=50051 \
+			--addr=:50051 \
+			--service-name=vector-leads-scraper \
+			--environment=development \
+			--redis-enabled=true \
+			--redis-host=localhost \
+			--redis-port=6379 \
+			--redis-password=redispass \
+			--redis-workers=10 \
+			--redis-retry-interval=5s \
+			--redis-max-retries=3 \
+			--redis-retention-days=7 \
+			--newrelic-key=3db525a8b39e0ebe981b87d98bd8792cFFFFNRAL \
+			--db-url="postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" &
+	@echo "Waiting for gRPC service to be ready..."
+	@sleep 5
+	@echo "All components started successfully!"
+	@echo "You can now run: make test-grpc-api"
