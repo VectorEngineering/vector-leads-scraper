@@ -18,9 +18,10 @@ func TestCreateWebhookConfig(t *testing.T) {
 	// Create a test workspace
 	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
 		Workspace: &lead_scraper_servicev1.Workspace{
-			Name:     "Test Workspace",
-			Industry: "Technology",
-			Domain:   "test.com",
+			Name:              "Test Workspace",
+			Industry:          "Technology",
+			Domain:            "test@example.com",
+			WorkspaceJobLimit: 100,
 		},
 		AccountID:      tc.Account.Id,
 		TenantID:       tc.Tenant.Id,
@@ -104,9 +105,10 @@ func TestGetWebhookConfig(t *testing.T) {
 	// Create a test workspace
 	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
 		Workspace: &lead_scraper_servicev1.Workspace{
-			Name:     "Test Workspace",
-			Industry: "Technology",
-			Domain:   "test.com",
+			Name:              "Test Workspace",
+			Industry:          "Technology",
+			Domain:            "test@example.com",
+			WorkspaceJobLimit: 100,
 		},
 		AccountID:      tc.Account.Id,
 		TenantID:       tc.Tenant.Id,
@@ -205,9 +207,10 @@ func TestUpdateWebhookConfig(t *testing.T) {
 	// Create a test workspace
 	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
 		Workspace: &lead_scraper_servicev1.Workspace{
-			Name:     "Test Workspace",
-			Industry: "Technology",
-			Domain:   "test.com",
+			Name:              "Test Workspace",
+			Industry:          "Technology",
+			Domain:            "test@example.com",
+			WorkspaceJobLimit: 100,
 		},
 		AccountID:      tc.Account.Id,
 		TenantID:       tc.Tenant.Id,
@@ -312,9 +315,10 @@ func TestDeleteWebhookConfig(t *testing.T) {
 	// Create a test workspace
 	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
 		Workspace: &lead_scraper_servicev1.Workspace{
-			Name:     "Test Workspace",
-			Industry: "Technology",
-			Domain:   "test.com",
+			Name:              "Test Workspace",
+			Industry:          "Technology",
+			Domain:            "test@example.com",
+			WorkspaceJobLimit: 100,
 		},
 		AccountID:      tc.Account.Id,
 		TenantID:       tc.Tenant.Id,
@@ -422,9 +426,10 @@ func TestListWebhookConfigs(t *testing.T) {
 	// Create a test workspace
 	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
 		Workspace: &lead_scraper_servicev1.Workspace{
-			Name:     "Test Workspace",
-			Industry: "Technology",
-			Domain:   "test.com",
+			Name:              "Test Workspace",
+			Industry:          "Technology",
+			Domain:            "test@example.com",
+			WorkspaceJobLimit: 100,
 		},
 		AccountID:      tc.Account.Id,
 		TenantID:       tc.Tenant.Id,
