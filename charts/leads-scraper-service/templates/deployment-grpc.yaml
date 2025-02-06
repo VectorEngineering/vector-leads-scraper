@@ -1,9 +1,11 @@
+{{- if .Values.config.grpc.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "leads-scraper-service.fullname" . }}
+  name: {{ include "leads-scraper-service.fullname" . }}-grpc
   labels:
     {{- include "leads-scraper-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grpc
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -11,6 +13,7 @@ spec:
   selector:
     matchLabels:
       {{- include "leads-scraper-service.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: grpc
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -19,6 +22,7 @@ spec:
       {{- end }}
       labels:
         {{- include "leads-scraper-service.labels" . | nindent 8 }}
+        app.kubernetes.io/component: grpc
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -31,7 +35,7 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ .Chart.Name }}-grpc
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -41,11 +45,9 @@ spec:
             - "--grpc"
             # gRPC configuration
             - "--grpc-port={{ .Values.config.grpc.port }}"
-            - "--grpc-deadline={{ .Values.config.grpc.deadline }}"
-            - "--grpc-retries={{ .Values.config.grpc.retries }}"
-            - "--grpc-retry-delay={{ .Values.config.grpc.retryDelay }}"
             - "--service-name={{ .Values.config.grpc.serviceName }}"
             - "--environment={{ .Values.config.grpc.environment }}"
+            - "--addr=:{{ .Values.config.grpc.port }}"
             # Database configuration
             - "--db-url={{ include "leads-scraper-service.postgresql.dsn" . }}"
             - "--db-max-idle-connections={{ .Values.config.database.maxIdleConnections }}"
@@ -58,7 +60,9 @@ spec:
             # Redis configuration
             {{- if .Values.config.redis.enabled }}
             - "--redis-enabled=true"
-            - "--redis-url={{ .Values.config.redis.dsn }}"
+            - "--redis-host={{ .Values.config.redis.host }}"
+            - "--redis-port={{ .Values.config.redis.port }}"
+            - "--redis-password={{ .Values.config.redis.password }}"
             - "--redis-workers={{ .Values.config.redis.workers }}"
             - "--redis-retry-interval={{ .Values.config.redis.retryInterval }}"
             - "--redis-max-retries={{ .Values.config.redis.maxRetries }}"
@@ -69,59 +73,14 @@ spec:
             - "--newrelic-key={{ .Values.config.newrelic.key }}"
             {{- end }}
             - "--log-level={{ .Values.config.logging.level }}"
-            # Core scraper settings
-            - "-c={{ .Values.config.scraper.concurrency }}"
-            - "-depth={{ .Values.config.scraper.depth }}"
-            - "-lang={{ .Values.config.scraper.language }}"
-            - "-radius={{ .Values.config.scraper.searchRadius }}"
-            - "-zoom={{ .Values.config.scraper.zoomLevel }}"
-            - "-redis-enabled={{ .Values.config.redis.enabled }}"
-            - "-redis-url={{ .Values.config.redis.dsn }}"
-            - "-redis-workers={{ .Values.config.redis.workers }}"
-            # Optional features
-            {{- if .Values.config.scraper.emailExtraction }}
-            - "-email"
-            {{- end }}
-            {{- if .Values.config.scraper.fastMode }}
-            - "-fast-mode"
-            {{- end }}
-            {{- if .Values.config.scraper.exitOnInactivity }}
-            - "-exit-on-inactivity={{ .Values.config.scraper.exitOnInactivity }}"
-            {{- end }}
-            {{- if .Values.config.scraper.proxies }}
-            - "-proxies={{ .Values.config.scraper.proxies }}"
-            {{- end }}
-            # AWS Configuration (if provided)
-            {{- if .Values.config.aws.accessKey }}
-            - "-aws-access-key={{ .Values.config.aws.accessKey }}"
-            {{- end }}
-            {{- if .Values.config.aws.secretKey }}
-            - "-aws-secret-key={{ .Values.config.aws.secretKey }}"
-            {{- end }}
-            {{- if .Values.config.aws.region }}
-            - "-aws-region={{ .Values.config.aws.region }}"
-            {{- end }}
-            {{- if .Values.config.aws.lambda.enabled }}
-            - "-aws-lambda"
-            {{- end }}
-            {{- if .Values.config.aws.lambda.invoker }}
-            - "-aws-lambda-invoker"
-            {{- end }}
-            - "-aws-lambda-chunk-size={{ .Values.config.aws.lambda.chunkSize }}"
-            {{- if .Values.config.aws.lambda.functionName }}
-            - "-function-name={{ .Values.config.aws.lambda.functionName }}"
-            {{- end }}
-            {{- if .Values.config.aws.s3.bucket }}
-            - "-s3-bucket={{ .Values.config.aws.s3.bucket }}"
-            {{- end }}
           ports:
             - name: grpc
               containerPort: {{ .Values.config.grpc.port }}
               protocol: TCP
           livenessProbe:
-            {{- toYaml .Values.livenessProbe.http | nindent 12 }}
+            {{- toYaml .Values.livenessProbe.grpc | nindent 12 }}
           readinessProbe:
-            {{- toYaml .Values.readinessProbe.http | nindent 12 }}
+            {{- toYaml .Values.readinessProbe.grpc | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}
@@ -144,3 +103,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }} 

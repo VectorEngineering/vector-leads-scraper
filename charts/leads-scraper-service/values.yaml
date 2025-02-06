@@ -86,17 +86,28 @@ resources:
 
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 livenessProbe:
-  httpGet:
+  http:
     path: /health
     port: http
-  initialDelaySeconds: 5
-  periodSeconds: 10
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  grpc:
+    tcpSocket:
+      port: grpc
+    initialDelaySeconds: 10
+    periodSeconds: 15
+
 readinessProbe:
-  httpGet:
+  http:
     path: /health
     port: http
-  initialDelaySeconds: 5
-  periodSeconds: 10
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  grpc:
+    tcpSocket:
+      port: grpc
+    initialDelaySeconds: 5
+    periodSeconds: 10
 
 # This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
@@ -144,19 +155,67 @@ tests:
 
 # Application specific configuration
 config:
-  # -- Enable Redis task handler
-  redis:
-    enabled: true
-    # -- Redis connection string
-    dsn: ""
-    # -- Redis workers
-    workers: 10
-  # Database Configuration (Required)
+  # gRPC Configuration
+  grpc:
+    # -- Enable gRPC server mode
+    enabled: false
+    # -- gRPC server port
+    port: 50051
+    # -- Service name for gRPC server
+    serviceName: "vector-leads-scraper"
+    # -- Environment (development, staging, production)
+    environment: "development"
+
+  # Database Configuration
   database:
     # -- Database connection string (Required)
-    # @default -- ""
     # Format: postgres://username:password@host:port/dbname
     dsn: ""
+    # -- Maximum number of idle connections
+    maxIdleConnections: 10
+    # -- Maximum number of open connections
+    maxOpenConnections: 100
+    # -- Maximum connection lifetime
+    maxConnectionLifetime: "10m"
+    # -- Maximum connection retry timeout
+    maxConnectionRetryTimeout: "10s"
+    # -- Sleep duration between retries
+    retrySleep: "1s"
+    # -- Query timeout
+    queryTimeout: "10s"
+    # -- Maximum number of connection retries
+    maxConnectionRetries: 3
+
+  # Redis Configuration
+  redis:
+    # -- Enable Redis task handler
+    enabled: true
+    # -- Redis host
+    host: "localhost"
+    # -- Redis port
+    port: 6379
+    # -- Redis password
+    password: "redispass"
+    # -- Redis workers
+    workers: 10
+    # -- Retry interval for failed tasks
+    retryInterval: "5s"
+    # -- Maximum number of retries
+    maxRetries: 3
+    # -- Number of days to retain task history
+    retentionDays: 7
+
+  # New Relic Configuration
+  newrelic:
+    # -- Enable New Relic monitoring
+    enabled: false
+    # -- New Relic license key
+    key: ""
+
+  # Logging Configuration
+  logging:
+    # -- Log level (debug, info, warn, error)
+    level: "info"
 
   # AWS Configuration (Optional)
   aws:
