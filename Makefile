@@ -165,7 +165,7 @@ test: ## runs the unit tests
 	go clean -testcache  && go test -v -race -timeout 5m ./...
 
 test-cover: ## outputs the coverage statistics
-	go test -v -race -timeout 5m ./... -coverprofile coverage.out
+	go clean -testcache  && go test -v -race -timeout 5m ./... -coverprofile coverage.out
 	go tool cover -func coverage.out
 	rm coverage.out
 
@@ -233,6 +233,3 @@ port-forward: ## Port forward the service to localhost (only if needed)
 .PHONY: helm-docs
 helm-docs: check-helm-docs ## Generate Helm chart documentation
 	$(HELM_DOCS) -t ./charts/$(CHART_NAME)/.helm-docs.gotmpl -o ./charts/$(CHART_NAME)/README.md
-
-test-cover:
-	go clean -testcache  && go test -v -race -cover -timeout 5m ./...
