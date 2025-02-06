@@ -233,3 +233,6 @@ port-forward: ## Port forward the service to localhost (only if needed)
 .PHONY: helm-docs
 helm-docs: check-helm-docs ## Generate Helm chart documentation
 	$(HELM_DOCS) -t ./charts/$(CHART_NAME)/.helm-docs.gotmpl -o ./charts/$(CHART_NAME)/README.md
+
+test-cover:
+	go test -cover ./...
