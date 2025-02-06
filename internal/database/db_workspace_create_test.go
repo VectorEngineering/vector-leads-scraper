@@ -12,6 +12,9 @@ import (
 )
 
 func TestDb_CreateWorkspace(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create test workspace
 	validWorkspace := testutils.GenerateRandomWorkspace()
 
@@ -57,7 +60,12 @@ func TestDb_CreateWorkspace(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			workspace, err := conn.CreateWorkspace(tt.args.ctx, tt.args.workspace)
+			workspace, err := conn.CreateWorkspace(tt.args.ctx, &CreateWorkspaceInput{
+				Workspace: tt.args.workspace,
+				AccountID:      tc.Account.Id,
+				TenantID:       tc.Tenant.Id,
+				OrganizationID: tc.Organization.Id,
+			})
 			if tt.wantErr {
 				require.Error(t, err)
 				if tt.errType != nil {
@@ -87,13 +95,21 @@ func TestDb_CreateWorkspace_ConcurrentCreation(t *testing.T) {
 	errors := make(chan error, numWorkspaces)
 	workspaces := make(chan *lead_scraper_servicev1.Workspace, numWorkspaces)
 
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create workspaces concurrently
 	for i := 0; i < numWorkspaces; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			mockWorkspace := testutils.GenerateRandomWorkspace()
-			workspace, err := conn.CreateWorkspace(context.Background(), mockWorkspace)
+			workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+				Workspace: mockWorkspace,
+				AccountID:      tc.Account.Id,
+				TenantID:       tc.Tenant.Id,
+				OrganizationID: tc.Organization.Id,
+			})
 			if err != nil {
 				errors <- err
 				return

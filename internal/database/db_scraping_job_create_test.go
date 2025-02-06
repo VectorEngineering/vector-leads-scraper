@@ -189,9 +189,16 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 }
 
 func TestBatchCreateScrapingJobs(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workspace first
-	testWorkspace := testutils.GenerateRandomWorkspace()
-	createdWorkspace, err := conn.CreateWorkspace(context.Background(), testWorkspace)
+	createdWorkspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+		Workspace: testutils.GenerateRandomWorkspace(),
+		AccountID: tc.Account.Id,
+		TenantID:  tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, createdWorkspace)
 
@@ -302,9 +309,16 @@ func TestBatchCreateScrapingJobs(t *testing.T) {
 }
 
 func TestBatchCreateScrapingJobs_LargeBatch(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workspace
-	testWorkspace := testutils.GenerateRandomWorkspace()
-	createdWorkspace, err := conn.CreateWorkspace(context.Background(), testWorkspace)
+	createdWorkspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+		Workspace: testutils.GenerateRandomWorkspace(),
+		AccountID: tc.Account.Id,
+		TenantID:  tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, createdWorkspace)
 

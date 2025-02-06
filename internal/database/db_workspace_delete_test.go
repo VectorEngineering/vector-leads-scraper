@@ -12,6 +12,9 @@ import (
 )
 
 func TestDb_DeleteWorkspace(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	type args struct {
 		ctx context.Context
 		id  uint64
@@ -30,7 +33,12 @@ func TestDb_DeleteWorkspace(t *testing.T) {
 				ctx: context.Background(),
 			},
 			setup: func(t *testing.T) *lead_scraper_servicev1.Workspace {
-				workspace, err := conn.CreateWorkspace(context.Background(), testContext.Workspace)
+				workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+					Workspace: testContext.Workspace,
+					AccountID:      tc.Account.Id,
+					TenantID:       tc.Tenant.Id,
+					OrganizationID: tc.Organization.Id,
+				})
 				require.NoError(t, err)
 				require.NotNil(t, workspace)
 				return workspace
@@ -81,12 +89,20 @@ func TestDb_DeleteWorkspace(t *testing.T) {
 }
 
 func TestDb_DeleteWorkspace_ConcurrentDeletions(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create multiple workspaces
 	numWorkspaces := 5
 	workspaces := make([]*lead_scraper_servicev1.Workspace, 0, numWorkspaces)
 
 	for i := 0; i < numWorkspaces; i++ {
-		workspace, err := conn.CreateWorkspace(context.Background(), testContext.Workspace)
+		workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+			Workspace: testContext.Workspace,
+			AccountID:      tc.Account.Id,
+			TenantID:       tc.Tenant.Id,
+			OrganizationID: tc.Organization.Id,
+		})
 		require.NoError(t, err)
 		workspaces = append(workspaces, workspace)
 	}

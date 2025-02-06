@@ -17,6 +17,7 @@ import (
 type accountTestContext struct {
 	Organization *lead_scraper_servicev1.Organization
 	Tenant       *lead_scraper_servicev1.Tenant
+	Account      *lead_scraper_servicev1.Account
 	Cleanup      func()
 }
 
@@ -39,9 +40,17 @@ func setupAccountTestContext(t *testing.T) (*accountTestContext) {
 		conn.DeleteTenant(ctx, &DeleteTenantInput{ID: tenant.Id})
 	}
 
+	account, err := conn.CreateAccount(ctx, &CreateAccountInput{
+		Account: testutils.GenerateRandomizedAccount(),
+		OrgID:   org.Id,
+		TenantID: tenant.Id,
+	})
+	require.NoError(t, err)
+
 	return &accountTestContext{
 		Organization: org,
 		Tenant:       tenant,
+		Account:      account,
 		Cleanup:      cleanup,
 	}
 }

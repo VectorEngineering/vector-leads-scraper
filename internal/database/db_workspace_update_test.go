@@ -12,9 +12,17 @@ import (
 )
 
 func TestDb_UpdateWorkspace(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workspace first
 	mockWorkspace := testContext.Workspace
-	workspace, err := conn.CreateWorkspace(context.Background(), mockWorkspace)
+	workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+		Workspace: mockWorkspace,
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, workspace)
 
@@ -121,9 +129,17 @@ func TestDb_UpdateWorkspace(t *testing.T) {
 }
 
 func TestDb_UpdateWorkspace_ConcurrentUpdates(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+	
 	// Create initial workspace
 	mockWorkspace := testContext.Workspace
-	workspace, err := conn.CreateWorkspace(context.Background(), mockWorkspace)
+	workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+		Workspace: mockWorkspace,
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, workspace)
 

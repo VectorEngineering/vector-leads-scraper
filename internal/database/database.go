@@ -107,7 +107,7 @@ type DatabaseOperations interface {
 	ListAccounts(ctx context.Context, input *ListAccountsInput) ([]*lead_scraper_servicev1.Account, error)
 
 	// Workspace operations
-	CreateWorkspace(ctx context.Context, workspace *lead_scraper_servicev1.Workspace) (*lead_scraper_servicev1.Workspace, error)
+	CreateWorkspace(ctx context.Context, input *CreateWorkspaceInput) (*lead_scraper_servicev1.Workspace, error)
 	GetWorkspace(ctx context.Context, id uint64) (*lead_scraper_servicev1.Workspace, error)
 	UpdateWorkspace(ctx context.Context, workspace *lead_scraper_servicev1.Workspace) (*lead_scraper_servicev1.Workspace, error)
 	DeleteWorkspace(ctx context.Context, id uint64) error
