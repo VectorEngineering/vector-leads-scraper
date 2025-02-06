@@ -22,7 +22,7 @@ func (db *Db) ListLeads(ctx context.Context, limit, offset int) ([]*lead_scraper
 
 	var leadsORM []lead_scraper_servicev1.LeadORM
 	result := db.Client.Engine.WithContext(ctx).
-		Order("id asc").
+		Order("id desc").
 		Limit(limit).
 		Offset(offset).
 		Find(&leadsORM)
