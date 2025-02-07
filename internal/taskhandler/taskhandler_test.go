@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Vector/vector-leads-scraper/pkg/redis/tasks"
+	"github.com/Vector/vector-leads-scraper/internal/taskhandler/tasks"
 	"github.com/Vector/vector-leads-scraper/runner"
 	"github.com/Vector/vector-leads-scraper/testcontainers"
 	"github.com/hibiken/asynq"
