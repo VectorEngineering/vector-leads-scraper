@@ -151,8 +151,8 @@ func (p *Provider) fetchJobs(ctx context.Context) {
 		default:
 		}
 
-		// Get jobs in NEW status
-		jobs, err := p.db.ListScrapingJobs(ctx, uint64(p.batchSize), 0)
+		// Get jobs in UNSPECIFIED status
+		jobs, err := p.db.ListScrapingJobsByStatus(ctx, lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_UNSPECIFIED, uint64(p.batchSize), 0)
 		if err != nil {
 			p.errc <- fmt.Errorf("failed to list scraping jobs: %w", err)
 			return
@@ -161,10 +161,6 @@ func (p *Provider) fetchJobs(ctx context.Context) {
 		if len(jobs) > 0 {
 			// Update jobs to QUEUED status
 			for _, job := range jobs {
-				if job.Status != lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_UNSPECIFIED {
-					continue
-				}
-
 				job.Status = lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED
 				if _, err := p.db.UpdateScrapingJob(ctx, job); err != nil {
 					p.errc <- fmt.Errorf("failed to update scraping job status: %w", err)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -584,9 +585,28 @@ func TestResultWriter_Run_WithWebhook(t *testing.T) {
 	}
 }
 
+// cleanupJobs deletes all jobs from the database
+func cleanupJobs(ctx context.Context, db *database.Db) error {
+	jobs, err := db.ListScrapingJobs(ctx, 1000, 0)
+	if err != nil {
+		return fmt.Errorf("failed to list jobs: %w", err)
+	}
+
+	for _, job := range jobs {
+		if err := db.DeleteScrapingJob(ctx, job.Id); err != nil {
+			return fmt.Errorf("failed to delete job %d: %w", job.Id, err)
+		}
+	}
+	return nil
+}
+
 func TestProvider(t *testing.T) {
 	setup := setupTest(t)
 	defer setup.cleanup()
+
+	// Clean up any existing jobs before each test
+	err := cleanupJobs(context.Background(), setup.db)
+	require.NoError(t, err)
 
 	t.Run("NewProvider", func(t *testing.T) {
 		// Test with default options
@@ -659,6 +679,78 @@ func TestProvider(t *testing.T) {
 			t.Fatalf("Unexpected error: %v", err)
 		case <-time.After(5 * time.Second):
 			t.Fatal("Timeout waiting for job")
+		}
+
+		// Test context cancellation
+		cancel()
+		_, ok := <-jobChan
+		assert.False(t, ok, "jobChan should be closed after context cancellation")
+	})
+
+	t.Run("Jobs_WithNonUnspecifiedStatus", func(t *testing.T) {
+		// Clean up any existing jobs before the test
+		err := cleanupJobs(context.Background(), setup.db)
+		require.NoError(t, err)
+
+		// Create a context with timeout
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		// Create a job with non-UNSPECIFIED status
+		scrapingJob := testutils.GenerateRandomizedScrapingJob()
+		scrapingJob.Status = lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_COMPLETED
+		scrapingJob.Url = "https://example.com"  // Set a valid URL
+		job, err := setup.db.CreateScrapingJob(ctx, setup.workspace.Id, scrapingJob)
+		require.NoError(t, err)
+		require.NotNil(t, job)
+
+		// Verify that there are no UNSPECIFIED jobs
+		jobs, err := setup.db.ListScrapingJobsByStatus(ctx, lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_UNSPECIFIED, 50, 0)
+		require.NoError(t, err)
+		require.Empty(t, jobs, "There should be no UNSPECIFIED jobs")
+
+		// Create provider and get jobs channel
+		provider := NewProvider(setup.db, setup.logger)
+		jobsChan, errChan := provider.Jobs(ctx)
+
+		// Try to receive a job with timeout
+		select {
+		case job, ok := <-jobsChan:
+			if ok {
+				t.Errorf("Received unexpected job: %v", job)
+			}
+		case err := <-errChan:
+			t.Errorf("Unexpected error: %v", err)
+		case <-time.After(1 * time.Second):
+			// Success - no job received
+		}
+	})
+
+	t.Run("Jobs_WithBackoff", func(t *testing.T) {
+		// Clean up any existing jobs before the test
+		err := cleanupJobs(context.Background(), setup.db)
+		require.NoError(t, err)
+
+		// Create a context with timeout
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		// Create provider and get jobs channel
+		provider := NewProvider(setup.db, setup.logger)
+		jobsChan, errChan := provider.Jobs(ctx)
+
+		// Try to receive a job with timeout
+		select {
+		case job, ok := <-jobsChan:
+			if ok {
+				t.Errorf("Received unexpected job: %v", job)
+			}
+		case err := <-errChan:
+			if err != nil && !strings.Contains(err.Error(), "context canceled") {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		case <-time.After(1 * time.Second):
+			// Success - no job received
 		}
 	})
 
