@@ -157,43 +157,160 @@ func TestUpdateOrganization(t *testing.T) {
 func TestDeleteOrganization(t *testing.T) {
 	ctx := context.Background()
 
-	// Create test organization
-	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Organization: testutils.GenerateRandomizedOrganization(),
-	})
-	require.NoError(t, err)
-
 	tests := []struct {
 		name    string
+		setup   func() (*DeleteOrganizationInput, func())
 		input   *DeleteOrganizationInput
 		wantErr bool
+		errType error
 	}{
 		{
-			name: "success",
-			input: &DeleteOrganizationInput{
-				ID: org.Id,
+			name: "success - delete organization with no tenants",
+			setup: func() (*DeleteOrganizationInput, func()) {
+				org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
+					Organization: testutils.GenerateRandomizedOrganization(),
+				})
+				require.NoError(t, err)
+
+				return &DeleteOrganizationInput{
+					ID: org.Id,
+				}, func() {}
 			},
 			wantErr: false,
 		},
 		{
-			name:    "nil input",
+			name: "success - delete organization with tenants",
+			setup: func() (*DeleteOrganizationInput, func()) {
+				// Create organization
+				org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
+					Organization: testutils.GenerateRandomizedOrganization(),
+				})
+				require.NoError(t, err)
+
+				// Create multiple tenants
+				for i := 0; i < 3; i++ {
+					_, err := conn.CreateTenant(ctx, &CreateTenantInput{
+						Tenant:         testutils.GenerateRandomizedTenant(),
+						OrganizationID: org.Id,
+					})
+					require.NoError(t, err)
+				}
+
+				return &DeleteOrganizationInput{
+					ID: org.Id,
+				}, func() {}
+			},
+			wantErr: false,
+		},
+		{
+			name:    "error - nil input",
 			input:   nil,
 			wantErr: true,
+			errType: ErrInvalidInput,
+		},
+		{
+			name: "error - invalid organization ID",
+			setup: func() (*DeleteOrganizationInput, func()) {
+				return &DeleteOrganizationInput{
+					ID: 0,
+				}, func() {}
+			},
+			wantErr: true,
+			errType: ErrInvalidInput,
+		},
+		{
+			name: "error - non-existent organization",
+			setup: func() (*DeleteOrganizationInput, func()) {
+				return &DeleteOrganizationInput{
+					ID: 999999,
+				}, func() {}
+			},
+			wantErr: true,
+			errType: ErrOrganizationDoesNotExist,
+		},
+		{
+			name: "success - delete organization with complex hierarchy",
+			setup: func() (*DeleteOrganizationInput, func()) {
+				// Create organization
+				org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
+					Organization: testutils.GenerateRandomizedOrganization(),
+				})
+				require.NoError(t, err)
+
+				// Create multiple tenants
+				for i := 0; i < 2; i++ {
+					tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
+						Tenant:         testutils.GenerateRandomizedTenant(),
+						OrganizationID: org.Id,
+					})
+					require.NoError(t, err)
+
+					// Create accounts for each tenant
+					for j := 0; j < 2; j++ {
+						account, err := conn.CreateAccount(ctx, &CreateAccountInput{
+							Account:   testutils.GenerateRandomizedAccount(),
+							TenantID: tenant.Id,
+							OrgID: org.Id,
+						})
+						require.NoError(t, err)
+
+						// Create workspaces for each account
+						for k := 0; k < 2; k++ {
+							_, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
+								Workspace:      testutils.GenerateRandomWorkspace(),
+								AccountID:      account.Id,
+								TenantID:       tenant.Id,
+								OrganizationID: org.Id,
+							})
+							require.NoError(t, err)
+						}
+					}
+				}
+
+				return &DeleteOrganizationInput{
+					ID: org.Id,
+				}, func() {}
+			},
+			wantErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := conn.DeleteOrganization(ctx, tt.input)
+			var input *DeleteOrganizationInput
+			var cleanup func()
+
+			if tt.setup != nil {
+				input, cleanup = tt.setup()
+				defer cleanup()
+			} else {
+				input = tt.input
+			}
+
+			err := conn.DeleteOrganization(ctx, input)
 			if tt.wantErr {
 				assert.Error(t, err)
+				if tt.errType != nil {
+					assert.ErrorIs(t, err, tt.errType)
+				}
 				return
 			}
+
 			require.NoError(t, err)
 
-			// Verify organization is deleted
-			_, err = conn.GetOrganization(ctx, &GetOrganizationInput{ID: tt.input.ID})
+			// Verify organization was deleted
+			_, err = conn.GetOrganization(ctx, &GetOrganizationInput{ID: input.ID})
 			assert.Error(t, err)
+			assert.ErrorIs(t, err, ErrOrganizationDoesNotExist)
+
+			// Verify all tenants were deleted
+			tenants, err := conn.ListTenants(ctx, &ListTenantsInput{
+				OrganizationID: input.ID,
+				Limit:         100,
+				Offset:        0,
+			})
+			require.NoError(t, err)
+			assert.Empty(t, tenants)
 		})
 	}
 }

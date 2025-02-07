@@ -15,8 +15,10 @@ import (
 func TestGetScrapingJob(t *testing.T) {
 	// Create a test job first
 	testJob := testutils.GenerateRandomizedScrapingJob()
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
 
-	created, err := conn.CreateScrapingJob(context.Background(), testJob)
+	created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -108,8 +110,10 @@ func TestGetScrapingJob(t *testing.T) {
 func TestGetScrapingJob_ConcurrentReads(t *testing.T) {
 	// Create a test job first
 	testJob := testutils.GenerateRandomizedScrapingJob()
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
 
-	created, err := conn.CreateScrapingJob(context.Background(), testJob)
+	created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 

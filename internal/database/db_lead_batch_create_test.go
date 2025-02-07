@@ -12,11 +12,14 @@ import (
 )
 
 func TestBatchCreateLeads(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test job first
 	// Create a test scraping job first
 	testJob := testutils.GenerateRandomizedScrapingJob()
 
-	createdJob, err := conn.CreateScrapingJob(context.Background(), testJob)
+	createdJob, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, createdJob)
 

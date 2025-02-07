@@ -13,10 +13,13 @@ import (
 )
 
 func TestCreateLead(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test scraping job first
 	testJob := testutils.GenerateRandomizedScrapingJob()
 
-	createdJob, err := conn.CreateScrapingJob(context.Background(), testJob)
+	createdJob, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, createdJob)
 
@@ -126,10 +129,13 @@ func TestCreateLead(t *testing.T) {
 }
 
 func TestCreateLead_ConcurrentCreation(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test scraping job first
 	testJob := testutils.GenerateRandomizedScrapingJob()
 
-	createdJob, err := conn.CreateScrapingJob(context.Background(), testJob)
+	createdJob, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, createdJob)
 

@@ -12,6 +12,9 @@ import (
 )
 
 func TestListScrapingJobs(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Clean up any existing jobs first
 	result := conn.Client.Engine.Exec("DELETE FROM gmaps_jobs")
 	require.NoError(t, result.Error)
@@ -22,7 +25,7 @@ func TestListScrapingJobs(t *testing.T) {
 
 	for i := 0; i < numJobs; i++ {
 		job := testutils.GenerateRandomizedScrapingJob()
-		created, err := conn.CreateScrapingJob(context.Background(), job)
+		created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, job)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		jobIDs[i] = created.Id

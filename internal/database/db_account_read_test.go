@@ -18,7 +18,6 @@ func TestGetAccountInput_validate(t *testing.T) {
 		d       *GetAccountInput
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "success - valid input",
 			d: &GetAccountInput{
@@ -146,7 +145,6 @@ func TestListAccountsInput_validate(t *testing.T) {
 		d       *ListAccountsInput
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "success - valid input",
 			d: &ListAccountsInput{

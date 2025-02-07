@@ -12,10 +12,13 @@ import (
 )
 
 func TestDeleteScrapingJob(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test job first
 	testJob := testutils.GenerateRandomizedScrapingJob()
 
-	created, err := conn.CreateScrapingJob(context.Background(), testJob)
+	created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -67,7 +70,7 @@ func TestDeleteScrapingJob(t *testing.T) {
 			setup: func(t *testing.T) uint64 {
 				// Create and delete a job
 				job := testutils.GenerateRandomizedScrapingJob()
-				created, err := conn.CreateScrapingJob(context.Background(), job)
+				created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, job)
 				require.NoError(t, err)
 				require.NotNil(t, created)
 
@@ -124,6 +127,9 @@ func TestDeleteScrapingJob(t *testing.T) {
 }
 
 func TestDeleteScrapingJob_ConcurrentDeletions(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	numJobs := 5
 	var wg sync.WaitGroup
 	errors := make(chan error, numJobs)
@@ -132,7 +138,7 @@ func TestDeleteScrapingJob_ConcurrentDeletions(t *testing.T) {
 	// Create test jobs
 	for i := 0; i < numJobs; i++ {
 		job := testutils.GenerateRandomizedScrapingJob()
-		created, err := conn.CreateScrapingJob(context.Background(), job)
+		created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, job)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		jobIDs[i] = created.Id
@@ -190,12 +196,15 @@ func TestDeleteScrapingJob_ConcurrentDeletions(t *testing.T) {
 }
 
 func TestBatchDeleteScrapingJobs(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create test jobs first
 	numJobs := 5
 	jobIDs := make([]uint64, numJobs)
 	for i := 0; i < numJobs; i++ {
 		testJob := testutils.GenerateRandomizedScrapingJob()
-		created, err := conn.CreateScrapingJob(context.Background(), testJob)
+		created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, testJob)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		jobIDs[i] = created.Id
@@ -243,7 +252,7 @@ func TestBatchDeleteScrapingJobs(t *testing.T) {
 			setup: func(t *testing.T) []uint64 {
 				// Create one job and combine with non-existent ID
 				job := testutils.GenerateRandomizedScrapingJob()
-				created, err := conn.CreateScrapingJob(context.Background(), job)
+				created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, job)
 				require.NoError(t, err)
 				require.NotNil(t, created)
 				return []uint64{created.Id, 999999}
@@ -292,13 +301,16 @@ func TestBatchDeleteScrapingJobs(t *testing.T) {
 	}
 }
 
-func TestBatchDeleteScrapingJobs_LargeBatch(t *testing.T) {
+func TestBatchDeleteScrapingJobs_LargeBatch(t *testing.T) {	
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a large batch of jobs
 	numJobs := 100
 	jobIDs := make([]uint64, numJobs)
 	for i := 0; i < numJobs; i++ {
 		job := testutils.GenerateRandomizedScrapingJob()
-		created, err := conn.CreateScrapingJob(context.Background(), job)
+		created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, job)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		jobIDs[i] = created.Id

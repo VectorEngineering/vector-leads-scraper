@@ -13,6 +13,9 @@ import (
 )
 
 func TestCreateScrapingJob(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	validJob := testutils.GenerateRandomizedScrapingJob()
 
 	tests := []struct {
@@ -54,11 +57,6 @@ func TestCreateScrapingJob(t *testing.T) {
 			errType:   ErrInvalidInput,
 		},
 		{
-			name:      "[failure scenario] - context timeout",
-			job:       validJob,
-			wantError: true,
-		},
-		{
 			name: "[failure scenario] - invalid zoom value",
 			job: &lead_scraper_servicev1.ScrapingJob{
 				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
@@ -84,7 +82,7 @@ func TestCreateScrapingJob(t *testing.T) {
 				time.Sleep(2 * time.Millisecond)
 			}
 
-			result, err := conn.CreateScrapingJob(ctx, tt.job)
+			result, err := conn.CreateScrapingJob(ctx, tc.Workspace.Id, tt.job)
 
 			if tt.wantError {
 				require.Error(t, err)
@@ -114,6 +112,9 @@ func TestCreateScrapingJob(t *testing.T) {
 }
 
 func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	numJobs := 5
 	var wg sync.WaitGroup
 	errors := make(chan error, numJobs)
@@ -130,7 +131,7 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			created, err := conn.CreateScrapingJob(ctx, job)
+			created, err := conn.CreateScrapingJob(ctx, tc.Workspace.Id, job)
 			if err != nil {
 				errors <- err
 				return

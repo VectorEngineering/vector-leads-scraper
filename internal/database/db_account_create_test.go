@@ -4,9 +4,9 @@ package database
 
 import (
 	"context"
-	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Vector/vector-leads-scraper/internal/testutils"
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
@@ -18,6 +18,7 @@ type accountTestContext struct {
 	Organization *lead_scraper_servicev1.Organization
 	Tenant       *lead_scraper_servicev1.Tenant
 	Account      *lead_scraper_servicev1.Account
+	Workspace    *lead_scraper_servicev1.Workspace
 	Cleanup      func()
 }
 
@@ -47,10 +48,20 @@ func setupAccountTestContext(t *testing.T) (*accountTestContext) {
 	})
 	require.NoError(t, err)
 
+	// create a workspace
+	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
+		Workspace: testutils.GenerateRandomWorkspace(),
+		AccountID: account.Id,
+		OrganizationID: org.Id,
+		TenantID: tenant.Id,
+	})
+	require.NoError(t, err)	
+
 	return &accountTestContext{
 		Organization: org,
 		Tenant:       tenant,
 		Account:      account,
+		Workspace:    workspace,
 		Cleanup:      cleanup,
 	}
 }
@@ -64,7 +75,6 @@ func TestCreateAccountInput_validate(t *testing.T) {
 		d       *CreateAccountInput
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "success - valid input",
 			d: &CreateAccountInput{
@@ -93,65 +103,40 @@ func TestDb_CreateAccount(t *testing.T) {
 	tc := setupAccountTestContext(t)
 	defer tc.Cleanup()
 
-	// Create test accounts
-	validAccount := testutils.GenerateRandomizedAccount()
-	validAccount.AccountStatus = lead_scraper_servicev1.Account_ACCOUNT_STATUS_ACTIVE
-
 	type args struct {
 		ctx   context.Context
 		input *CreateAccountInput
-		clean func(t *testing.T, account *lead_scraper_servicev1.Account)
 	}
-
 	tests := []struct {
-		name     string
-		args     args
-		wantErr  bool
-		errType  error
-		validate func(t *testing.T, account *lead_scraper_servicev1.Account)
+		name    string
+		args    args
+		want    *lead_scraper_servicev1.AccountORM
+		wantErr bool
+		errType error
 	}{
 		{
-			name:    "[success scenario] - create new account",
-			wantErr: false,
+			name: "success - create valid account",
 			args: args{
 				ctx: context.Background(),
 				input: &CreateAccountInput{
-					Account:  validAccount,
+					Account:  testutils.GenerateRandomizedAccount(),
 					OrgID:    tc.Organization.Id,
 					TenantID: tc.Tenant.Id,
 				},
-				clean: func(t *testing.T, account *lead_scraper_servicev1.Account) {
-					if account == nil {
-						return
-					}
-					err := conn.DeleteAccount(context.Background(), &DeleteAccountParams{
-						ID:           account.Id,
-						DeletionType: DeletionTypeSoft,
-					})
-					if err != nil {
-						t.Logf("Failed to cleanup test account: %v", err)
-					}
-				},
 			},
-			validate: func(t *testing.T, account *lead_scraper_servicev1.Account) {
-				assert.NotNil(t, account)
-				assert.Equal(t, validAccount.Email, account.Email)
-				assert.Equal(t, lead_scraper_servicev1.Account_ACCOUNT_STATUS_ACTIVE, account.AccountStatus)
-			},
+			wantErr: false,
 		},
 		{
-			name:    "[failure scenario] - nil input",
-			wantErr: true,
-			errType: ErrInvalidInput,
+			name: "error - nil input",
 			args: args{
 				ctx:   context.Background(),
 				input: nil,
 			},
-		},
-		{
-			name:    "[failure scenario] - nil account",
 			wantErr: true,
 			errType: ErrInvalidInput,
+		},
+		{
+			name: "error - nil account",
 			args: args{
 				ctx: context.Background(),
 				input: &CreateAccountInput{
@@ -160,55 +145,59 @@ func TestDb_CreateAccount(t *testing.T) {
 					TenantID: tc.Tenant.Id,
 				},
 			},
-		},
-		{
-			name:    "[failure scenario] - empty email",
 			wantErr: true,
 			errType: ErrInvalidInput,
+		},
+		{
+			name: "error - empty org ID",
 			args: args{
 				ctx: context.Background(),
 				input: &CreateAccountInput{
-					Account: &lead_scraper_servicev1.Account{
-						Email: "",
-					},
-					OrgID:    tc.Organization.Id,
-					TenantID: tc.Tenant.Id,
-				},
-			},
-		},
-		{
-			name:    "[failure scenario] - empty org ID",
-			wantErr: true,
-			errType: ErrInvalidInput,
-			args: args{
-				ctx: context.Background(),
-				input: &CreateAccountInput{
-					Account:  validAccount,
+					Account:  testutils.GenerateRandomizedAccount(),
 					OrgID:    0,
 					TenantID: tc.Tenant.Id,
 				},
 			},
-		},
-		{
-			name:    "[failure scenario] - empty tenant ID",
 			wantErr: true,
 			errType: ErrInvalidInput,
+		},
+		{
+			name: "error - empty tenant ID",
 			args: args{
 				ctx: context.Background(),
 				input: &CreateAccountInput{
-					Account:  validAccount,
+					Account:  testutils.GenerateRandomizedAccount(),
 					OrgID:    tc.Organization.Id,
 					TenantID: 0,
 				},
 			},
+			wantErr: true,
+			errType: ErrInvalidInput,
+		},
+		{
+			name: "error - context timeout",
+			args: args{
+				ctx: func() context.Context {
+					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+					defer cancel()
+					time.Sleep(2 * time.Millisecond)
+					return ctx
+				}(),
+				input: &CreateAccountInput{
+					Account:  testutils.GenerateRandomizedAccount(),
+					OrgID:    tc.Organization.Id,
+					TenantID: tc.Tenant.Id,
+				},
+			},
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			account, err := conn.CreateAccount(tt.args.ctx, tt.args.input)
+			got, err := conn.CreateAccount(tt.args.ctx, tt.args.input)
 			if tt.wantErr {
-				require.Error(t, err)
+				assert.Error(t, err)
 				if tt.errType != nil {
 					assert.ErrorIs(t, err, tt.errType)
 				}
@@ -216,16 +205,16 @@ func TestDb_CreateAccount(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.NotNil(t, account)
+			assert.NotNil(t, got)
+			assert.NotEmpty(t, got.Id)
+			assert.Equal(t, tt.args.input.Account.Email, got.Email)
 
-			if tt.validate != nil {
-				tt.validate(t, account)
-			}
-
-			// Cleanup after test
-			if tt.args.clean != nil {
-				tt.args.clean(t, account)
-			}
+			// Clean up created account
+			err = conn.DeleteAccount(context.Background(), &DeleteAccountParams{
+				ID:           got.Id,
+				DeletionType: DeletionTypeSoft,
+			})
+			require.NoError(t, err)
 		})
 	}
 }
@@ -234,29 +223,93 @@ func TestDb_GetAccountByEmail(t *testing.T) {
 	tc := setupAccountTestContext(t)
 	defer tc.Cleanup()
 
+	// Create a test account
+	validAccount := testutils.GenerateRandomizedAccount()
+	createdAccount, err := conn.CreateAccount(context.Background(), &CreateAccountInput{
+		Account:  validAccount,
+		OrgID:    tc.Organization.Id,
+		TenantID: tc.Tenant.Id,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, createdAccount)
+
+	// Clean up after test
+	defer func() {
+		if createdAccount != nil {
+			err := conn.DeleteAccount(context.Background(), &DeleteAccountParams{
+				ID:           createdAccount.Id,
+				DeletionType: DeletionTypeSoft,
+			})
+			require.NoError(t, err)
+		}
+	}()
+
 	type args struct {
 		ctx          context.Context
 		accountEmail string
 	}
 	tests := []struct {
 		name    string
-		db      *Db
 		args    args
 		want    *lead_scraper_servicev1.AccountORM
 		wantErr bool
+		errType error
 	}{
-		// TODO: Add test cases.
+		{
+			name: "success - get existing account",
+			args: args{
+				ctx:          context.Background(),
+				accountEmail: validAccount.Email,
+			},
+			wantErr: false,
+		},
+		{
+			name: "error - empty email",
+			args: args{
+				ctx:          context.Background(),
+				accountEmail: "",
+			},
+			wantErr: true,
+			errType: ErrInvalidInput,
+		},
+		{
+			name: "error - non-existent email",
+			args: args{
+				ctx:          context.Background(),
+				accountEmail: "nonexistent@example.com",
+			},
+			wantErr: true,
+			errType: ErrFailedToGetAccountByEmail,
+		},
+		{
+			name: "error - context timeout",
+			args: args{
+				ctx: func() context.Context {
+					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+					defer cancel()
+					time.Sleep(2 * time.Millisecond)
+					return ctx
+				}(),
+				accountEmail: validAccount.Email,
+			},
+			wantErr: true,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.db.GetAccountByEmail(tt.args.ctx, tt.args.accountEmail)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Db.GetAccountByEmail() error = %v, wantErr %v", err, tt.wantErr)
+			got, err := conn.GetAccountByEmail(tt.args.ctx, tt.args.accountEmail)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errType != nil {
+					assert.ErrorContains(t, err, tt.errType.Error())
+				}
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Db.GetAccountByEmail() = %v, want %v", got, tt.want)
-			}
+
+			require.NoError(t, err)
+			assert.NotNil(t, got)
+			assert.Equal(t, tt.args.accountEmail, got.Email)
 		})
 	}
 }

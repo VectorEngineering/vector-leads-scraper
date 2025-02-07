@@ -369,3 +369,263 @@ func TestListTenants(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateTenantInput_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *CreateTenantInput
+		wantErr bool
+	}{
+		{
+			name: "valid input",
+			input: &CreateTenantInput{
+				Tenant:         testutils.GenerateRandomizedTenant(),
+				OrganizationID: 1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "nil tenant",
+			input: &CreateTenantInput{
+				Tenant:         nil,
+				OrganizationID: 1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero organization ID",
+			input: &CreateTenantInput{
+				Tenant:         testutils.GenerateRandomizedTenant(),
+				OrganizationID: 0,
+			},
+			wantErr: true,
+		},
+		{
+			name:    "nil input",
+			input:   nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrInvalidInput)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGetTenantInput_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *GetTenantInput
+		wantErr bool
+	}{
+		{
+			name: "valid input",
+			input: &GetTenantInput{
+				ID: 1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "zero ID",
+			input: &GetTenantInput{
+				ID: 0,
+			},
+			wantErr: true,
+		},
+		{
+			name:    "nil input",
+			input:   nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrInvalidInput)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestUpdateTenantInput_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *UpdateTenantInput
+		wantErr bool
+	}{
+		{
+			name: "valid input",
+			input: &UpdateTenantInput{
+				ID:     1,
+				Tenant: testutils.GenerateRandomizedTenant(),
+			},
+			wantErr: false,
+		},
+		{
+			name: "zero ID",
+			input: &UpdateTenantInput{
+				ID:     0,
+				Tenant: testutils.GenerateRandomizedTenant(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil tenant",
+			input: &UpdateTenantInput{
+				ID:     1,
+				Tenant: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name:    "nil input",
+			input:   nil,
+			wantErr: true,
+		},
+		{
+			name: "invalid tenant",
+			input: &UpdateTenantInput{
+				ID: 1,
+				Tenant: &lead_scraper_servicev1.Tenant{
+					// Empty tenant without required fields
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrInvalidInput)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDeleteTenantInput_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *DeleteTenantInput
+		wantErr bool
+	}{
+		{
+			name: "valid input",
+			input: &DeleteTenantInput{
+				ID: 1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "zero ID",
+			input: &DeleteTenantInput{
+				ID: 0,
+			},
+			wantErr: true,
+		},
+		{
+			name:    "nil input",
+			input:   nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrInvalidInput)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestListTenantsInput_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *ListTenantsInput
+		wantErr bool
+	}{
+		{
+			name: "valid input",
+			input: &ListTenantsInput{
+				Limit:          10,
+				Offset:         0,
+				OrganizationID: 1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid input without organization ID",
+			input: &ListTenantsInput{
+				Limit:  10,
+				Offset: 0,
+			},
+			wantErr: false,
+		},
+		{
+			name: "zero limit",
+			input: &ListTenantsInput{
+				Limit:          0,
+				Offset:         0,
+				OrganizationID: 1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative limit",
+			input: &ListTenantsInput{
+				Limit:          -1,
+				Offset:         0,
+				OrganizationID: 1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative offset",
+			input: &ListTenantsInput{
+				Limit:          10,
+				Offset:         -1,
+				OrganizationID: 1,
+			},
+			wantErr: true,
+		},
+		{
+			name:    "nil input",
+			input:   nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrInvalidInput)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

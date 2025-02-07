@@ -160,7 +160,7 @@ func (db *Db) GetAccountByEmail(ctx context.Context, accountEmail string) (*lead
 	defer cancel()
 
 	if accountEmail == constants.EMPTY {
-		return nil, errors.New("invalid input arguments. account ID and email cannot be both nil")
+		return nil, errors.New("invalid input parameters. account email cannot be empty")
 	}
 
 	u := db.QueryOperator.AccountORM
@@ -170,7 +170,7 @@ func (db *Db) GetAccountByEmail(ctx context.Context, accountEmail string) (*lead
 
 	account, err := db.PreloadAccount(queryRef)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrFailedToGetAccountByEmail, err)
 	}
 
 	return account, nil

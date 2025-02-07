@@ -9,6 +9,9 @@ import (
 )
 
 func TestUpdateScrapingWorkflow(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workflow first
 	testWorkflow := &lead_scraper_servicev1.ScrapingWorkflow{
 		CronExpression:        "0 0 * * *",
@@ -28,7 +31,7 @@ func TestUpdateScrapingWorkflow(t *testing.T) {
 		AcceptTermsOfService:  true,
 		UserAgent:             "TestBot/1.0",
 	}
-	created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)
+	created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, testWorkflow)
 	assert.NoError(t, err)
 	assert.NotNil(t, created)
 

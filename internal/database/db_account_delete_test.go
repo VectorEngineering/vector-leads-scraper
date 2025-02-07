@@ -21,7 +21,6 @@ func TestDeleteAccountParams_validate(t *testing.T) {
 		d       *DeleteAccountParams
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "success - valid input",
 			d: &DeleteAccountParams{
@@ -594,12 +593,56 @@ func TestBatchDeleteAccountsParams_validate(t *testing.T) {
 		d       *BatchDeleteAccountsParams
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "success - valid params",
+			d: &BatchDeleteAccountsParams{
+				IDs:          []uint64{1, 2, 3},
+				DeletionType: DeletionTypeSoft,
+				BatchSize:    10,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "failure - nil params",
+			d:       nil,
+			wantErr: true,
+		},
+		{
+			name: "failure - empty IDs",
+			d: &BatchDeleteAccountsParams{
+				IDs:          []uint64{},
+				DeletionType: DeletionTypeSoft,
+				BatchSize:    10,
+			},
+			wantErr: true,
+		},
+		{
+			name: "failure - zero batch size",
+			d: &BatchDeleteAccountsParams{
+				IDs:          []uint64{1, 2, 3},
+				DeletionType: DeletionTypeSoft,
+				BatchSize:    0,
+			},
+			wantErr: true,
+		},
+		{
+			name: "failure - negative batch size",
+			d: &BatchDeleteAccountsParams{
+				IDs:          []uint64{1, 2, 3},
+				DeletionType: DeletionTypeSoft,
+				BatchSize:    -1,
+			},
+			wantErr: true,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.d.validate(); (err != nil) != tt.wantErr {
-				t.Errorf("BatchDeleteAccountsParams.validate() error = %v, wantErr %v", err, tt.wantErr)
+			err := tt.d.validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

@@ -114,15 +114,15 @@ type DatabaseOperations interface {
 	ListWorkspaces(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.Workspace, error)
 
 	// ScrapingJob operations
-	CreateScrapingJob(ctx context.Context, job *lead_scraper_servicev1.ScrapingJob) (*lead_scraper_servicev1.ScrapingJob, error)
+	CreateScrapingJob(context.Context, uint64, *lead_scraper_servicev1.ScrapingJob) (*lead_scraper_servicev1.ScrapingJob, error)
 	GetScrapingJob(ctx context.Context, id uint64) (*lead_scraper_servicev1.ScrapingJob, error)
 	UpdateScrapingJob(ctx context.Context, job *lead_scraper_servicev1.ScrapingJob) (*lead_scraper_servicev1.ScrapingJob, error)
-	BatchUpdateScrapingJobs(ctx context.Context, jobs []*lead_scraper_servicev1.ScrapingJob) ([]*lead_scraper_servicev1.ScrapingJob, error)
+	BatchUpdateScrapingJobs(context.Context, uint64, []*lead_scraper_servicev1.ScrapingJob) ([]*lead_scraper_servicev1.ScrapingJob, error)
 	DeleteScrapingJob(ctx context.Context, id uint64) error
 	ListScrapingJobs(ctx context.Context, limit, offset uint64) ([]*lead_scraper_servicev1.ScrapingJob, error)
 
 	// ScrapingWorkflow operations
-	CreateScrapingWorkflow(ctx context.Context, workflow *lead_scraper_servicev1.ScrapingWorkflow) (*lead_scraper_servicev1.ScrapingWorkflow, error)
+	CreateScrapingWorkflow(context.Context, uint64, *lead_scraper_servicev1.ScrapingWorkflow) (*lead_scraper_servicev1.ScrapingWorkflow, error)
 	GetScrapingWorkflow(ctx context.Context, id uint64) (*lead_scraper_servicev1.ScrapingWorkflow, error)
 	UpdateScrapingWorkflow(ctx context.Context, workflow *lead_scraper_servicev1.ScrapingWorkflow) (*lead_scraper_servicev1.ScrapingWorkflow, error)
 	DeleteScrapingWorkflow(ctx context.Context, id uint64) error

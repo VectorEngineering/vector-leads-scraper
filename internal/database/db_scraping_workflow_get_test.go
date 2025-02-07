@@ -12,6 +12,9 @@ import (
 )
 
 func TestGetScrapingWorkflow(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workflow first
 	testWorkflow := &lead_scraper_servicev1.ScrapingWorkflow{
 		CronExpression:        "0 0 * * *",
@@ -32,7 +35,7 @@ func TestGetScrapingWorkflow(t *testing.T) {
 		UserAgent:             "TestBot/1.0",
 	}
 
-	created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)
+	created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, testWorkflow)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -121,6 +124,9 @@ func TestGetScrapingWorkflow(t *testing.T) {
 }
 
 func TestGetScrapingWorkflow_ConcurrentReads(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workflow first
 	testWorkflow := &lead_scraper_servicev1.ScrapingWorkflow{
 		CronExpression:        "0 0 * * *",
@@ -141,7 +147,7 @@ func TestGetScrapingWorkflow_ConcurrentReads(t *testing.T) {
 		UserAgent:             "TestBot/1.0",
 	}
 
-	created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)
+	created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, testWorkflow)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
