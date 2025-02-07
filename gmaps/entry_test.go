@@ -216,3 +216,350 @@ func Test_EntryFromJsonC(t *testing.T) {
 		fmt.Printf("%+v\n", entry)
 	}
 }
+
+func Test_haversineDistance(t *testing.T) {
+	tests := []struct {
+		name     string
+		lat1     float64
+		lon1     float64
+		lat2     float64
+		lon2     float64
+		expected float64
+	}{
+		{
+			name:     "same point",
+			lat1:     0,
+			lon1:     0,
+			lat2:     0,
+			lon2:     0,
+			expected: 0,
+		},
+		{
+			name:     "known distance",
+			lat1:     34.0522,
+			lon1:     -118.2437,
+			lat2:     40.7128,
+			lon2:     -74.0060,
+			expected: 3935746.25, // in meters
+		},
+		{
+			name:     "antipodal points",
+			lat1:     90,
+			lon1:     0,
+			lat2:     -90,
+			lon2:     0,
+			expected: 20015086.79, // in meters
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dist := gmaps.HaversineDistance(tt.lat1, tt.lon1, tt.lat2, tt.lon2)
+			require.InDelta(t, tt.expected, dist, dist*0.0001) // 0.01% tolerance
+		})
+	}
+}
+
+func TestEntry_IsWebsiteValidForEmail(t *testing.T) {
+	tests := []struct {
+		name     string
+		website  string
+		expected bool
+	}{
+		{
+			name:     "valid website",
+			website:  "https://example.com",
+			expected: true,
+		},
+		{
+			name:     "empty website",
+			website:  "",
+			expected: false,
+		},
+		{
+			name:     "social media website",
+			website:  "https://facebook.com/business",
+			expected: false,
+		},
+		{
+			name:     "invalid url",
+			website:  "not-a-url",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &gmaps.Entry{WebSite: tt.website}
+			result := e.IsWebsiteValidForEmail()
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestEntry_Validate(t *testing.T) {
+	tests := []struct {
+		name        string
+		entry       *gmaps.Entry
+		expectError bool
+	}{
+		{
+			name: "valid entry",
+			entry: &gmaps.Entry{
+				Title:      "Test Place",
+				Category:   "Restaurant",
+				Address:    "123 Test St",
+				Latitude:   34.0522,
+				Longtitude: -118.2437,
+			},
+			expectError: false,
+		},
+		{
+			name: "missing title",
+			entry: &gmaps.Entry{
+				Category:   "Restaurant",
+				Address:    "123 Test St",
+				Latitude:   34.0522,
+				Longtitude: -118.2437,
+			},
+			expectError: true,
+		},
+		{
+			name: "missing category",
+			entry: &gmaps.Entry{
+				Title:      "Test Place",
+				Address:    "123 Test St",
+				Latitude:   34.0522,
+				Longtitude: -118.2437,
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.entry.Validate()
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEntry_CsvHeaders(t *testing.T) {
+	entry := &gmaps.Entry{}
+	headers := entry.CsvHeaders()
+	expectedHeaders := []string{
+		"input_id", "link", "title", "category", "address",
+		"open_hours", "popular_times", "website", "phone",
+		"plus_code", "review_count", "review_rating", "reviews_per_rating",
+		"latitude", "longitude", "cid", "status", "descriptions",
+		"reviews_link", "thumbnail", "timezone", "price_range",
+		"data_id", "images", "reservations", "order_online",
+		"menu", "owner", "complete_address", "about", "user_reviews",
+		"emails",
+	}
+
+	require.Equal(t, expectedHeaders, headers)
+}
+
+func TestEntry_CsvRow(t *testing.T) {
+	entry := &gmaps.Entry{
+		Title:        "Test Place",
+		Category:     "Restaurant",
+		Address:      "123 Test St",
+		Latitude:     34.0522,
+		Longtitude:   -118.2437,
+		Phone:        "123-456-7890",
+		WebSite:      "https://example.com",
+		ReviewRating: 4.5,
+		ReviewCount:  100,
+		OpenHours:    map[string][]string{"Monday": {"9-5"}, "Tuesday": {"9-5"}},
+		PopularTimes: map[string]map[int]int{
+			"Monday": {
+				0: 10,
+				1: 20,
+				2: 30,
+			},
+		},
+		PriceRange: "$$",
+		Status:     "Open",
+		Emails:     []string{"test@example.com"},
+	}
+
+	row := entry.CsvRow()
+	require.Len(t, row, len(entry.CsvHeaders()))
+	require.Contains(t, row, entry.Title)
+	require.Contains(t, row, entry.Category)
+	require.Contains(t, row, entry.Address)
+}
+
+func TestEntry_isWithinRadius(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    *gmaps.Entry
+		lat      float64
+		lon      float64
+		radius   float64
+		expected bool
+	}{
+		{
+			name: "within radius",
+			entry: &gmaps.Entry{
+				Latitude:   34.0522,
+				Longtitude: -118.2437,
+			},
+			lat:      34.0522,
+			lon:      -118.2437,
+			radius:   1000.0, // 1km
+			expected: true,
+		},
+		{
+			name: "outside radius",
+			entry: &gmaps.Entry{
+				Latitude:   34.0522,
+				Longtitude: -118.2437,
+			},
+			lat:      40.7128,
+			lon:      -74.0060,
+			radius:   1000.0,
+			expected: false,
+		},
+		{
+			name: "exactly on radius",
+			entry: &gmaps.Entry{
+				Latitude:   34.0522,
+				Longtitude: -118.2437,
+			},
+			lat:      34.0522,
+			lon:      -118.2437,
+			radius:   gmaps.HaversineDistance(34.0522, -118.2437, 34.0522, -118.2437),
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.entry.IsWithinRadius(tt.lat, tt.lon, tt.radius)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_filterAndSortEntriesWithinRadius(t *testing.T) {
+	entries := []*gmaps.Entry{
+		{
+			Title:      "Near Place",
+			Latitude:   34.0522,
+			Longtitude: -118.2437,
+		},
+		{
+			Title:      "Far Place",
+			Latitude:   40.7128,
+			Longtitude: -74.0060,
+		},
+		{
+			Title:      "Very Near Place",
+			Latitude:   34.0523,
+			Longtitude: -118.2436,
+		},
+		{
+			Title:      "Outside Radius",
+			Latitude:   34.1000,
+			Longtitude: -118.3000,
+		},
+	}
+
+	centerLat := 34.0523
+	centerLon := -118.2436
+
+	filtered := gmaps.FilterAndSortEntriesWithinRadius(entries, centerLat, centerLon, 1000.0)
+	
+	// Verify length
+	require.Len(t, filtered, 2, "Should only include places within radius")
+
+	// Verify distances and order
+	for i := 1; i < len(filtered); i++ {
+		prevDist := gmaps.HaversineDistance(filtered[i-1].Latitude, filtered[i-1].Longtitude, centerLat, centerLon)
+		currDist := gmaps.HaversineDistance(filtered[i].Latitude, filtered[i].Longtitude, centerLat, centerLon)
+		require.LessOrEqual(t, prevDist, currDist, "Entries should be sorted by distance")
+	}
+
+	// Verify specific entries
+	require.Equal(t, "Very Near Place", filtered[0].Title, "Closest entry should be first")
+	require.Equal(t, "Near Place", filtered[1].Title, "Second closest entry should be second")
+}
+
+func Test_stringSliceToString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name:     "multiple values",
+			input:    []string{"a", "b", "c"},
+			expected: "a, b, c",
+		},
+		{
+			name:     "single value",
+			input:    []string{"a"},
+			expected: "a",
+		},
+		{
+			name:     "empty slice",
+			input:    []string{},
+			expected: "",
+		},
+		{
+			name:     "nil slice",
+			input:    nil,
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := gmaps.StringSliceToString(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_stringify(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected string
+	}{
+		{
+			name:     "string input",
+			input:    "test",
+			expected: "test",
+		},
+		{
+			name:     "integer input",
+			input:    42,
+			expected: "42",
+		},
+		{
+			name:     "float input",
+			input:    3.14,
+			expected: "3.140000",
+		},
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := gmaps.Stringify(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
