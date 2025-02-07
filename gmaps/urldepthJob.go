@@ -1,3 +1,4 @@
+// Package gmaps provides functionality for scraping and processing Google Maps data.
 package gmaps
 
 import (
@@ -15,9 +16,22 @@ import (
 )
 
 // GenericCrawlJobOptions defines option setters for a GenericCrawlJob.
+// It follows the functional options pattern for flexible job configuration.
 type GenericCrawlJobOptions func(*GenericCrawlJob)
 
 // WithGenericDeduper sets the deduper for the job.
+// The deduper helps prevent processing the same URL multiple times during crawling.
+//
+// Example:
+//
+//	deduper := &MyDeduper{}
+//	job := NewGenericCrawlJob(
+//	    "job-123",
+//	    "https://example.com",
+//	    3, // maxDepth
+//	    0, // currentDepth
+//	    WithGenericDeduper(deduper),
+//	)
 func WithGenericDeduper(d deduper.Deduper) GenericCrawlJobOptions {
 	return func(j *GenericCrawlJob) {
 		j.Deduper = d
@@ -25,6 +39,18 @@ func WithGenericDeduper(d deduper.Deduper) GenericCrawlJobOptions {
 }
 
 // WithGenericExitMonitor sets the exit monitor for the job.
+// The exit monitor is used to track job completion and manage crawler lifecycle.
+//
+// Example:
+//
+//	monitor := &MyExitMonitor{}
+//	job := NewGenericCrawlJob(
+//	    "job-123",
+//	    "https://example.com",
+//	    3, // maxDepth
+//	    0, // currentDepth
+//	    WithGenericExitMonitor(monitor),
+//	)
 func WithGenericExitMonitor(e exiter.Exiter) GenericCrawlJobOptions {
 	return func(j *GenericCrawlJob) {
 		j.ExitMonitor = e
@@ -32,23 +58,76 @@ func WithGenericExitMonitor(e exiter.Exiter) GenericCrawlJobOptions {
 }
 
 // GenericCrawlJob represents a generic crawl job that accepts any URL and extracts links
-// recursively up to MaxDepth. It embeds scrapemate.Job.
+// recursively up to MaxDepth. It implements the scrapemate.IJob interface and is designed
+// to work with the scrapemate crawler.
+//
+// The job crawls web pages in a breadth-first manner, collecting links and creating new jobs
+// for each discovered URL until the maximum depth is reached.
+//
+// Example usage:
+//
+//	// Create a new job with default settings
+//	job := NewGenericCrawlJob(
+//	    "job-123",
+//	    "https://example.com",
+//	    3, // maxDepth
+//	    0, // currentDepth
+//	)
+//	
+//	// Or with deduplication and monitoring
+//	deduper := &MyDeduper{}
+//	monitor := &MyExitMonitor{}
+//	job := NewGenericCrawlJob(
+//	    "job-123",
+//	    "https://example.com",
+//	    3, // maxDepth
+//	    0, // currentDepth
+//	    WithGenericDeduper(deduper),
+//	    WithGenericExitMonitor(monitor),
+//	)
 type GenericCrawlJob struct {
 	scrapemate.Job
 
-	// MaxDepth is the maximum recursion depth.
+	// MaxDepth is the maximum recursion depth for link extraction
 	MaxDepth int
-	// Depth is the current recursion level.
+	// Depth is the current recursion level
 	Depth int
 
-	// Deduper helps prevent processing the same URL multiple times.
+	// Deduper helps prevent processing the same URL multiple times
 	Deduper deduper.Deduper
-	// ExitMonitor allows external tracking of progress.
+	// ExitMonitor allows external tracking of progress
 	ExitMonitor exiter.Exiter
 }
 
-// NewGenericCrawlJob creates a new GenericCrawlJob.
+// NewGenericCrawlJob creates a new GenericCrawlJob for crawling web pages.
 // The provided urlStr is used directly (it can be any URL), and depth should start at 0.
+//
+// Parameters:
+// - id: Unique identifier for the job (if empty, a UUID will be generated)
+// - urlStr: The starting URL to crawl
+// - maxDepth: Maximum recursion depth for link extraction
+// - depth: Current recursion level (usually 0 for new jobs)
+// - opts: Optional functional options for customizing the job
+//
+// Example:
+//
+//	// Basic usage
+//	job := NewGenericCrawlJob(
+//	    "job-123",
+//	    "https://example.com",
+//	    3, // maxDepth
+//	    0, // currentDepth
+//	)
+//	
+//	// With all options
+//	job := NewGenericCrawlJob(
+//	    "job-123",
+//	    "https://example.com",
+//	    3, // maxDepth
+//	    0, // currentDepth
+//	    WithGenericDeduper(deduper),
+//	    WithGenericExitMonitor(monitor),
+//	)
 func NewGenericCrawlJob(id, urlStr string, maxDepth, depth int, opts ...GenericCrawlJobOptions) *GenericCrawlJob {
 	if id == "" {
 		id = uuid.New().String()
@@ -73,8 +152,26 @@ func NewGenericCrawlJob(id, urlStr string, maxDepth, depth int, opts ...GenericC
 	return &job
 }
 
-// Process is called after the page is fetched and parsed (into a goquery.Document).
-// It extracts all links (<a href="...">) and schedules new GenericCrawlJobs if the max depth has not been reached.
+// Process is called after the page is fetched and parsed.
+// It implements the scrapemate.IJob interface's Process method.
+//
+// The method will:
+// 1. Clean up resources after processing
+// 2. Extract all links (<a href="...">) from the page
+// 3. Create new jobs for discovered URLs if not at max depth
+// 4. Update the exit monitor if configured
+//
+// Example usage through the scrapemate crawler:
+//
+//	crawler := scrapemate.NewCrawler(scrapemate.CrawlerConfig{
+//	    Fetcher: &myFetcher{},
+//	})
+//	
+//	job := NewGenericCrawlJob("job-123", "https://example.com", 3, 0)
+//	result, err := crawler.Process(context.Background(), job)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
 func (j *GenericCrawlJob) Process(ctx context.Context, resp *scrapemate.Response) (any, []scrapemate.IJob, error) {
 	// Clean up resources.
 	defer func() {
@@ -122,6 +219,15 @@ func (j *GenericCrawlJob) Process(ctx context.Context, resp *scrapemate.Response
 	return nil, nextJobs, nil
 }
 
+// BrowserActions defines how the job interacts with a browser-based fetcher.
+// It implements the scrapemate.IJob interface's BrowserActions method.
+//
+// The method will:
+// 1. Navigate to the URL
+// 2. Wait for the page to load
+// 3. Collect response data
+//
+// This method is called when using a browser-based fetcher like Playwright.
 func (j *GenericCrawlJob) BrowserActions(ctx context.Context, page playwright.Page) scrapemate.Response {
 	var resp scrapemate.Response
 
@@ -163,7 +269,15 @@ func (j *GenericCrawlJob) BrowserActions(ctx context.Context, page playwright.Pa
 }
 
 // resolveURL takes a base URL and a reference (which may be relative)
-// and returns the absolute URL as a string.
+// and returns the absolute URL as a string. It handles both absolute and
+// relative URLs correctly.
+//
+// Example:
+//
+//	base := "https://example.com/path/"
+//	ref := "../other"
+//	absolute := resolveURL(base, ref)
+//	fmt.Println(absolute) // prints: https://example.com/other
 func resolveURL(baseStr, ref string) string {
 	base, err := url.Parse(baseStr)
 	if err != nil {

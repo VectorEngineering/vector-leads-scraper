@@ -1,3 +1,4 @@
+// Package gmaps provides functionality for scraping and processing Google Maps data.
 package gmaps
 
 import (
@@ -11,18 +12,55 @@ import (
 )
 
 // MarkdownExtractJobOptions defines options for configuring a MarkdownExtractJob.
+// It follows the functional options pattern for flexible job configuration.
 type MarkdownExtractJobOptions func(*MarkdownExtractJob)
 
-// MarkdownExtractJob represents a job that extracts a page’s content as Markdown.
+// MarkdownExtractJob represents a job that extracts a page's content and converts it to Markdown format.
+// It implements the scrapemate.IJob interface and is designed to work with the scrapemate crawler.
+//
+// The job fetches the HTML content from the specified URL, converts it to Markdown,
+// and stores the result in the Entry.Markdown field.
+//
+// Example usage:
+//
+//	entry := &Entry{
+//	    WebSite: "https://example.com",
+//	}
+//	
+//	// Create a new job with default settings
+//	job := NewMarkdownJob("parent-123", entry)
+//	
+//	// Or with an exit monitor
+//	monitor := &MyExitMonitor{}
+//	job := NewMarkdownJob("parent-123", entry, WithMarkdownJobExitMonitor(monitor))
 type MarkdownExtractJob struct {
 	scrapemate.Job
 
-	// Entry should have a field (e.g., Markdown string) to hold the converted Markdown content.
+	// Entry holds the data structure where the extracted Markdown will be stored
 	Entry       *Entry
 	ExitMonitor exiter.Exiter
 }
 
 // NewMarkdownJob creates a new job for extracting Markdown from a webpage.
+// It takes a parent ID for tracking job relationships, an Entry containing the target URL,
+// and optional functional options for customizing the job's behavior.
+//
+// Example:
+//
+//	entry := &Entry{
+//	    WebSite: "https://example.com",
+//	}
+//	
+//	// Basic usage
+//	job := NewMarkdownJob("parent-123", entry)
+//	
+//	// With exit monitoring
+//	monitor := &MyExitMonitor{}
+//	job := NewMarkdownJob(
+//	    "parent-123",
+//	    entry,
+//	    WithMarkdownJobExitMonitor(monitor),
+//	)
 func NewMarkdownJob(parentID string, entry *Entry, opts ...MarkdownExtractJobOptions) *MarkdownExtractJob {
 	const (
 		defaultPrio       = scrapemate.PriorityHigh
@@ -49,6 +87,16 @@ func NewMarkdownJob(parentID string, entry *Entry, opts ...MarkdownExtractJobOpt
 }
 
 // WithMarkdownJobExitMonitor sets an exit monitor on the job.
+// The exit monitor is used to track job completion and manage crawler lifecycle.
+//
+// Example:
+//
+//	monitor := &MyExitMonitor{}
+//	job := NewMarkdownJob(
+//	    "parent-123",
+//	    entry,
+//	    WithMarkdownJobExitMonitor(monitor),
+//	)
 func WithMarkdownJobExitMonitor(exitMonitor exiter.Exiter) MarkdownExtractJobOptions {
 	return func(j *MarkdownExtractJob) {
 		j.ExitMonitor = exitMonitor
@@ -56,6 +104,29 @@ func WithMarkdownJobExitMonitor(exitMonitor exiter.Exiter) MarkdownExtractJobOpt
 }
 
 // Process retrieves the HTML content and converts it to Markdown.
+// It implements the scrapemate.IJob interface's Process method.
+//
+// The method will:
+// 1. Clean up resources after processing
+// 2. Update the exit monitor if configured
+// 3. Convert the HTML content to Markdown using html-to-markdown
+// 4. Store the result in Entry.Markdown
+//
+// Example usage through the scrapemate crawler:
+//
+//	crawler := scrapemate.NewCrawler(scrapemate.CrawlerConfig{
+//	    Fetcher: &myFetcher{},
+//	})
+//	
+//	job := NewMarkdownJob("parent-123", entry)
+//	result, err := crawler.Process(context.Background(), job)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	
+//	// Access the markdown
+//	entry := result.(*Entry)
+//	fmt.Println(entry.Markdown)
 func (j *MarkdownExtractJob) Process(ctx context.Context, resp *scrapemate.Response) (any, []scrapemate.IJob, error) {
 	// Clean up the document and body after processing.
 	defer func() {
