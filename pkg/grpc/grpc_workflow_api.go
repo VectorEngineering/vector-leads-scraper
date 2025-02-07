@@ -84,7 +84,7 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRe
 	logger.Info("creating workflow", zap.String("workflow_name", workflow.GetName()))
 
 	// Create workflow in database
-	createdWorkflow, err := s.db.CreateScrapingWorkflow(ctx, workflow)
+	createdWorkflow, err := s.db.CreateScrapingWorkflow(ctx, req.WorkspaceId, workflow)
 	if err != nil {
 		logger.Error("failed to create workflow", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create workflow")
