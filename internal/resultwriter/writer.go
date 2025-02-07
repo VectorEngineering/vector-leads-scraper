@@ -80,6 +80,9 @@ func (r *ResultWriter) Run(ctx context.Context, in <-chan scrapemate.Result) err
 	buffers := make(map[uint64][]*lead_scraper_servicev1.Lead)
 	lastSave := time.Now().UTC()
 
+	// Collect all leads for webhook
+	var allLeads []*lead_scraper_servicev1.Lead
+
 	for result := range in {
 		entry, ok := result.Data.(*gmaps.Entry)
 		if !ok {
@@ -91,8 +94,10 @@ func (r *ResultWriter) Run(ctx context.Context, in <-chan scrapemate.Result) err
 			return errors.New("invalid job type")
 		}
 
+		lead := convertEntryToLead(entry)
 		jobID := runnableJob.ScrapingJobID
-		buffers[jobID] = append(buffers[jobID], convertEntryToLead(entry))
+		buffers[jobID] = append(buffers[jobID], lead)
+		allLeads = append(allLeads, lead)
 
 		// Check if any buffer needs to be flushed
 		if len(buffers[jobID]) >= maxBatchSize || time.Now().UTC().Sub(lastSave) >= time.Minute {
@@ -127,12 +132,7 @@ func (r *ResultWriter) Run(ctx context.Context, in <-chan scrapemate.Result) err
 	}
 
 	// Send to webhook if enabled
-	if r.cfg.WebhookEnabled && r.webhookClient != nil {
-		// Combine all leads for webhook notification
-		var allLeads []*lead_scraper_servicev1.Lead
-		for _, buff := range buffers {
-			allLeads = append(allLeads, buff...)
-		}
+	if r.cfg.WebhookEnabled && r.webhookClient != nil && len(allLeads) > 0 {
 		if err := r.webhookClient.Send(ctx, webhook.Record{Data: allLeads}); err != nil {
 			r.logger.Error("failed to send webhook notification",
 				zap.Error(err))
@@ -202,15 +202,18 @@ func convertEntryToLead(entry *gmaps.Entry) *lead_scraper_servicev1.Lead {
 	// Add business hours if available
 	if len(entry.OpenHours) > 0 {
 		regularHours := make([]*lead_scraper_servicev1.BusinessHours, 0, len(entry.OpenHours))
-		for day, schedules := range entry.OpenHours {
-			if len(schedules) > 0 {
-				regularHours = append(regularHours, &lead_scraper_servicev1.BusinessHours{
-					Day:       convertDayOfWeek(day),
-					OpenTime:  schedules[0],
-					CloseTime: schedules[len(schedules)-1],
-					Closed:    len(schedules) == 0,
-				})
+		days := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+		for _, day := range days {
+			schedules, exists := entry.OpenHours[day]
+			hours := &lead_scraper_servicev1.BusinessHours{
+				Day:    convertDayOfWeek(day),
+				Closed: !exists || len(schedules) == 0,
 			}
+			if !hours.Closed {
+				hours.OpenTime = schedules[0]
+				hours.CloseTime = schedules[len(schedules)-1]
+			}
+			regularHours = append(regularHours, hours)
 		}
 		lead.RegularHours = regularHours
 	}

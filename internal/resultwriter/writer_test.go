@@ -2,8 +2,10 @@ package resultwriter
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"testing"
+	"time"
 
 	postgresdb "github.com/SolomonAIEngineering/backend-core-library/database/postgres"
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
@@ -15,8 +17,27 @@ import (
 	"github.com/Vector/vector-leads-scraper/gmaps"
 	"github.com/Vector/vector-leads-scraper/internal/database"
 	"github.com/Vector/vector-leads-scraper/internal/testutils"
+	"github.com/Vector/vector-leads-scraper/pkg/webhook"
 	"github.com/Vector/vector-leads-scraper/testcontainers"
 )
+
+// mockWebhookClient implements webhook.Client interface for testing
+type mockWebhookClient struct {
+	records []webhook.Record
+}
+
+func (m *mockWebhookClient) Send(ctx context.Context, record webhook.Record) error {
+	m.records = append(m.records, record)
+	return nil
+}
+
+func (m *mockWebhookClient) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+func (m *mockWebhookClient) Flush(ctx context.Context) error {
+	return nil
+}
 
 // testSetup encapsulates common test setup logic and returns cleanup function
 type testSetup struct {
@@ -291,4 +312,403 @@ func TestResultWriter_Run(t *testing.T) {
 		assert.Equal(t, float32(entries[i].ReviewRating), lead.GoogleRating)
 		assert.Equal(t, int32(entries[i].ReviewCount), lead.ReviewCount)
 	}
+}
+
+func TestConvertDayOfWeek(t *testing.T) {
+	tests := []struct {
+		name string
+		day  string
+		want lead_scraper_servicev1.BusinessHours_DayOfWeek
+	}{
+		{
+			name: "Monday",
+			day:  "Monday",
+			want: lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_MONDAY,
+		},
+		{
+			name: "Tuesday",
+			day:  "Tuesday",
+			want: lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_TUESDAY,
+		},
+		{
+			name: "Wednesday",
+			day:  "Wednesday",
+			want: lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_WEDNESDAY,
+		},
+		{
+			name: "Thursday",
+			day:  "Thursday",
+			want: lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_THURSDAY,
+		},
+		{
+			name: "Friday",
+			day:  "Friday",
+			want: lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_FRIDAY,
+		},
+		{
+			name: "Saturday",
+			day:  "Saturday",
+			want: lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_SATURDAY,
+		},
+		{
+			name: "Sunday",
+			day:  "Sunday",
+			want: lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_SUNDAY,
+		},
+		{
+			name: "Invalid day",
+			day:  "InvalidDay",
+			want: lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_UNSPECIFIED,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := convertDayOfWeek(tt.day)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetMainPhotoURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		photos []string
+		want   string
+	}{
+		{
+			name:   "empty photos",
+			photos: []string{},
+			want:   "",
+		},
+		{
+			name:   "single photo",
+			photos: []string{"https://example.com/photo1.jpg"},
+			want:   "https://example.com/photo1.jpg",
+		},
+		{
+			name:   "multiple photos",
+			photos: []string{"https://example.com/photo1.jpg", "https://example.com/photo2.jpg"},
+			want:   "https://example.com/photo1.jpg",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getMainPhotoURL(tt.photos)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestResultWriter_Close(t *testing.T) {
+	setup := setupTest(t)
+	defer setup.cleanup()
+
+	tests := []struct {
+		name      string
+		cfg       *Config
+		wantError bool
+	}{
+		{
+			name: "success - with webhook",
+			cfg: &Config{
+				WebhookEnabled:         true,
+				WebhookEndpoints:       []string{"http://example.com"},
+				WebhookBatchSize:       100,
+				BatchSize:              50,
+				WebhookFlushInterval:   time.Second,
+				FlushInterval:          time.Second,
+				WebhookRetryInterval:   time.Second,
+			},
+			wantError: false,
+		},
+		{
+			name: "success - without webhook",
+			cfg:  DefaultConfig(),
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			writer, err := New(setup.db, setup.logger, tt.cfg)
+			require.NoError(t, err)
+
+			err = writer.Close()
+			if tt.wantError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestConvertEntryToLead_WithBusinessHours(t *testing.T) {
+	entry := &gmaps.Entry{
+		ID:           "test-id",
+		Title:        "Test Business",
+		Category:     "Test Category",
+		OpenHours: map[string][]string{
+			"Monday":    {"09:00", "17:00"},
+			"Tuesday":   {"09:00", "17:00"},
+			"Wednesday": {"09:00", "17:00"},
+			"Thursday":  {"09:00", "17:00"},
+			"Friday":    {"09:00", "17:00"},
+			"Saturday":  {"10:00", "15:00"},
+			"Sunday":    {},  // Closed
+		},
+		CompleteAddress: gmaps.Address{
+			City:    "Test City",
+			State:   "Test State",
+			Country: "Test Country",
+		},
+	}
+
+	lead := convertEntryToLead(entry)
+	require.NotNil(t, lead)
+	require.NotNil(t, lead.RegularHours)
+
+	// Create a map to track which days we've seen
+	seenDays := make(map[string]bool)
+	for _, hours := range lead.RegularHours {
+		dayStr := ""
+		switch hours.Day {
+		case lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_MONDAY:
+			dayStr = "Monday"
+		case lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_TUESDAY:
+			dayStr = "Tuesday"
+		case lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_WEDNESDAY:
+			dayStr = "Wednesday"
+		case lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_THURSDAY:
+			dayStr = "Thursday"
+		case lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_FRIDAY:
+			dayStr = "Friday"
+		case lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_SATURDAY:
+			dayStr = "Saturday"
+		case lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_SUNDAY:
+			dayStr = "Sunday"
+		}
+		seenDays[dayStr] = true
+
+		switch hours.Day {
+		case lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_SUNDAY:
+			assert.True(t, hours.Closed)
+			assert.Empty(t, hours.OpenTime)
+			assert.Empty(t, hours.CloseTime)
+		case lead_scraper_servicev1.BusinessHours_DAY_OF_WEEK_SATURDAY:
+			assert.Equal(t, "10:00", hours.OpenTime)
+			assert.Equal(t, "15:00", hours.CloseTime)
+			assert.False(t, hours.Closed)
+		default:
+			assert.Equal(t, "09:00", hours.OpenTime)
+			assert.Equal(t, "17:00", hours.CloseTime)
+			assert.False(t, hours.Closed)
+		}
+	}
+
+	// Verify we've seen all days
+	days := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+	for _, day := range days {
+		assert.True(t, seenDays[day], "Missing day: %v", day)
+	}
+}
+
+func TestResultWriter_Run_WithWebhook(t *testing.T) {
+	setup := setupTest(t)
+	defer setup.cleanup()
+
+	// Create mock webhook client
+	mockClient := &mockWebhookClient{}
+
+	// Create writer with webhook enabled
+	cfg := &Config{
+		WebhookEnabled:         true,
+		WebhookEndpoints:       []string{"http://example.com"},
+		WebhookBatchSize:       100,
+		BatchSize:              50,
+		WebhookFlushInterval:   time.Second,
+		FlushInterval:          time.Second,
+		WebhookRetryInterval:   time.Second,
+	}
+
+	writer, err := New(setup.db, setup.logger, cfg)
+	require.NoError(t, err)
+	writer.webhookClient = mockClient
+
+	// Get test entries
+	entries := generateTestEntries()
+
+	// Create test job
+	testJob := &gmaps.GmapJob{
+		ScrapingJobID: setup.job.Id,
+		Job: scrapemate.Job{
+			ID:       setup.job.Name,
+			Priority: int(setup.job.Priority),
+		},
+	}
+
+	// Create input channel and context
+	in := make(chan scrapemate.Result)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Run writer in goroutine
+	errCh := make(chan error)
+	go func() {
+		errCh <- writer.Run(ctx, in)
+	}()
+
+	// Send test entries
+	for _, entry := range entries {
+		in <- scrapemate.Result{
+			Data: entry,
+			Job:  testJob,
+		}
+	}
+
+	// Close input channel and wait for writer to finish
+	close(in)
+	err = <-errCh
+	require.NoError(t, err)
+
+	// Close writer
+	err = writer.Close()
+	require.NoError(t, err)
+
+	// Verify webhook records
+	require.NotEmpty(t, mockClient.records)
+	for _, record := range mockClient.records {
+		require.NotNil(t, record.Data)
+	}
+}
+
+func TestProvider(t *testing.T) {
+	setup := setupTest(t)
+	defer setup.cleanup()
+
+	t.Run("NewProvider", func(t *testing.T) {
+		// Test with default options
+		p := NewProvider(setup.db, setup.logger)
+		require.NotNil(t, p)
+		assert.Equal(t, defaultBatchSize, p.batchSize)
+		assert.NotNil(t, p.jobc)
+		assert.NotNil(t, p.errc)
+		assert.NotNil(t, p.mu)
+		assert.False(t, p.started)
+
+		// Test with custom batch size
+		customBatchSize := 100
+		p = NewProvider(setup.db, setup.logger, WithBatchSize(customBatchSize))
+		require.NotNil(t, p)
+		assert.Equal(t, customBatchSize, p.batchSize)
+	})
+
+	t.Run("WithBatchSize", func(t *testing.T) {
+		// Test with valid batch size
+		p := NewProvider(setup.db, setup.logger, WithBatchSize(100))
+		assert.Equal(t, 100, p.batchSize)
+
+		// Test with invalid batch size (should use default)
+		p = NewProvider(setup.db, setup.logger, WithBatchSize(-1))
+		assert.Equal(t, defaultBatchSize, p.batchSize)
+	})
+
+	t.Run("Jobs", func(t *testing.T) {
+		p := NewProvider(setup.db, setup.logger)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// Get job channels
+		jobChan, errChan := p.Jobs(ctx)
+		require.NotNil(t, jobChan)
+		require.NotNil(t, errChan)
+
+		// Create a valid GmapJob
+		scrapingJob := testutils.GenerateRandomizedScrapingJob()
+		// Ensure zoom is within valid range (1-20)
+		if scrapingJob.Zoom < 1 || scrapingJob.Zoom > 20 {
+			scrapingJob.Zoom = 15
+		}
+
+		job := gmaps.NewGmapJob(
+			fmt.Sprintf("%d", scrapingJob.Id),
+			scrapingJob.Lang.String(),
+			string(scrapingJob.Keywords[0]),
+			1,
+			true,
+			fmt.Sprintf("%s,%s", scrapingJob.Lat, scrapingJob.Lon),
+			int(scrapingJob.Zoom),
+			gmaps.WithWorkspaceID(setup.workspace.Id),
+		)
+
+		// Push the job
+		err := p.Push(ctx, job)
+		require.NoError(t, err)
+
+		// Wait for job or error
+		select {
+		case receivedJob := <-jobChan:
+			require.NotNil(t, receivedJob)
+			gmapJob, ok := receivedJob.(*gmaps.GmapJob)
+			require.True(t, ok)
+			assert.Equal(t, job.ID, gmapJob.GetID())
+			assert.Equal(t, job.Priority, gmapJob.GetPriority())
+		case err := <-errChan:
+			t.Fatalf("Unexpected error: %v", err)
+		case <-time.After(5 * time.Second):
+			t.Fatal("Timeout waiting for job")
+		}
+	})
+
+	t.Run("Push", func(t *testing.T) {
+		p := NewProvider(setup.db, setup.logger)
+		ctx := context.Background()
+
+		// Test pushing valid job
+		scrapingJob := testutils.GenerateRandomizedScrapingJob()
+		// Ensure zoom is within valid range (1-20)
+		if scrapingJob.Zoom < 1 || scrapingJob.Zoom > 20 {
+			scrapingJob.Zoom = 15
+		}
+
+		job := gmaps.NewGmapJob(
+			fmt.Sprintf("%d", scrapingJob.Id),
+			scrapingJob.Lang.String(),
+			string(scrapingJob.Keywords[0]),
+			1,
+			true,
+			fmt.Sprintf("%s,%s", scrapingJob.Lat, scrapingJob.Lon),
+			int(scrapingJob.Zoom),
+			gmaps.WithWorkspaceID(setup.workspace.Id),
+		)
+		err := p.Push(ctx, job)
+		require.NoError(t, err)
+
+		// Test pushing invalid job type
+		invalidJob := &scrapemate.Job{
+			ID:       "invalid-job",
+			Priority: 1,
+		}
+		err = p.Push(ctx, invalidJob)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid job type")
+
+		// Test pushing job with invalid zoom
+		scrapingJob = testutils.GenerateRandomizedScrapingJob()
+		invalidZoomJob := gmaps.NewGmapJob(
+			fmt.Sprintf("%d", scrapingJob.Id),
+			scrapingJob.Lang.String(),
+			string(scrapingJob.Keywords[0]),
+			1,
+			true,
+			fmt.Sprintf("%s,%s", scrapingJob.Lat, scrapingJob.Lon),
+			0, // Invalid zoom level
+			gmaps.WithWorkspaceID(setup.workspace.Id),
+		)
+		err = p.Push(ctx, invalidZoomJob)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid ScrapingJob.Zoom")
+	})
 } 

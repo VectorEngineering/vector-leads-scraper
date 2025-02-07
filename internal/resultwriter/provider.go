@@ -123,6 +123,8 @@ func (p *Provider) Push(ctx context.Context, job scrapemate.IJob) error {
 		PayloadType: "scraping_job",
 		CreatedAt:   timestamppb.Now(),
 		Url:         gmapJob.GetURL(),
+		Zoom:        int32(gmapJob.Zoom),
+		Depth:       int32(gmapJob.MaxDepth),
 	}
 
 	_, err := p.db.CreateScrapingJob(ctx, gmapJob.WorkspaceID, scrapingJob)
@@ -169,14 +171,20 @@ func (p *Provider) fetchJobs(ctx context.Context) {
 					return
 				}
 
-				// Convert to scrapemate.IJob and send to channel
-				scrapemateJob := &scrapemate.Job{
-					ID:       job.Name,
-					Priority: int(job.Priority),
-				}
+				// Convert to gmaps.GmapJob and send to channel
+				gmapJob := gmaps.NewGmapJob(
+					job.Name,
+					job.Lang.String(),
+					"", // Query will be extracted from URL
+					int(job.Depth),
+					true, // Always extract email
+					"",  // GeoCoordinates will be extracted from URL
+					int(job.Zoom),
+					gmaps.WithWorkspaceID(defaultWorkspaceID),
+				)
 
 				select {
-				case p.jobc <- scrapemateJob:
+				case p.jobc <- gmapJob:
 				case <-ctx.Done():
 					return
 				}
