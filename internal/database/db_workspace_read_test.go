@@ -175,7 +175,7 @@ func TestDb_ListWorkspaces(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := conn.ListWorkspaces(ctx, tt.limit, tt.offset)
+			got, err := conn.ListWorkspaces(ctx, tc.Account.Id, tt.limit, tt.offset)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errType != nil {
@@ -292,7 +292,7 @@ func TestListWorkspaces(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			workspaces, err := conn.ListWorkspaces(ctx, tt.limit, tt.offset)
+			workspaces, err := conn.ListWorkspaces(ctx, tc.Account.Id, tt.limit, tt.offset)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

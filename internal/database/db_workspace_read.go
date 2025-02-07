@@ -34,7 +34,7 @@ func (db *Db) GetWorkspace(ctx context.Context, id uint64) (*lead_scraper_servic
 }
 
 // ListWorkspaces retrieves a paginated list of workspaces from the database
-func (db *Db) ListWorkspaces(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.Workspace, error) {
+func (db *Db) ListWorkspaces(ctx context.Context, accountId uint64, limit, offset int) ([]*lead_scraper_servicev1.Workspace, error) {
 	if limit <= 0 {
 		return nil, ErrInvalidInput
 	}
@@ -43,11 +43,14 @@ func (db *Db) ListWorkspaces(ctx context.Context, limit, offset int) ([]*lead_sc
 		return nil, ErrInvalidInput
 	}
 
+	wQop := db.QueryOperator.WorkspaceORM
+
 	workspaces, err := lead_scraper_servicev1.DefaultListWorkspace(
 		ctx,
 		db.Client.Engine.
-			Limit(limit).
-			Offset(offset))
+		Where(wQop.AccountId.Eq(accountId)).
+		Limit(limit).
+		Offset(offset))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil // Empty list is not an error

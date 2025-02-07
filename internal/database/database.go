@@ -111,7 +111,7 @@ type DatabaseOperations interface {
 	GetWorkspace(ctx context.Context, id uint64) (*lead_scraper_servicev1.Workspace, error)
 	UpdateWorkspace(ctx context.Context, workspace *lead_scraper_servicev1.Workspace) (*lead_scraper_servicev1.Workspace, error)
 	DeleteWorkspace(ctx context.Context, id uint64) error
-	ListWorkspaces(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.Workspace, error)
+	ListWorkspaces(ctx context.Context, accountId uint64, limit, offset int) ([]*lead_scraper_servicev1.Workspace, error)
 
 	// ScrapingJob operations
 	CreateScrapingJob(context.Context, uint64, *lead_scraper_servicev1.ScrapingJob) (*lead_scraper_servicev1.ScrapingJob, error)
