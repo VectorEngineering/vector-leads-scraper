@@ -39,6 +39,13 @@ type URLExtractJob struct {
 	// Entry holds the data structure where the extracted URLs will be stored
 	Entry       *Entry
 	ExitMonitor exiter.Exiter
+	WorkspaceID uint64
+}
+
+func WithURLExtractJobWorkspaceID(workspaceID uint64) URLExtractJobOptions {
+	return func(j *URLExtractJob) {
+		j.WorkspaceID = workspaceID
+	}
 }
 
 // NewURLJob creates a new job for URL extraction from a webpage.

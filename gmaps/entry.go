@@ -94,6 +94,7 @@ type Entry struct {
 	Emails           []string               `json:"emails"`
 	Urls             []string               `json:"urls"`
 	Markdown         string                 `json:"markdown"`
+	JobID            string                 `json:"job_id"` // NOTE: we must pass this as this was passed to the job to executed
 }
 
 func (e *Entry) haversineDistance(lat, lon float64) float64 {

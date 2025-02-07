@@ -57,6 +57,12 @@ func WithGenericExitMonitor(e exiter.Exiter) GenericCrawlJobOptions {
 	}
 }
 
+func WithGenericWorkspaceID(workspaceID uint64) GenericCrawlJobOptions {
+	return func(j *GenericCrawlJob) {
+		j.WorkspaceID = workspaceID
+	}
+}
+
 // GenericCrawlJob represents a generic crawl job that accepts any URL and extracts links
 // recursively up to MaxDepth. It implements the scrapemate.IJob interface and is designed
 // to work with the scrapemate crawler.
@@ -97,6 +103,7 @@ type GenericCrawlJob struct {
 	Deduper deduper.Deduper
 	// ExitMonitor allows external tracking of progress
 	ExitMonitor exiter.Exiter
+	WorkspaceID uint64
 }
 
 // NewGenericCrawlJob creates a new GenericCrawlJob for crawling web pages.

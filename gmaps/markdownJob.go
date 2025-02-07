@@ -39,6 +39,13 @@ type MarkdownExtractJob struct {
 	// Entry holds the data structure where the extracted Markdown will be stored
 	Entry       *Entry
 	ExitMonitor exiter.Exiter
+	WorkspaceID uint64
+}
+
+func WithMarkdownJobWorkspaceID(workspaceID uint64) MarkdownExtractJobOptions {
+	return func(j *MarkdownExtractJob) {
+		j.WorkspaceID = workspaceID
+	}
 }
 
 // NewMarkdownJob creates a new job for extracting Markdown from a webpage.

@@ -33,6 +33,13 @@ type SearchJob struct {
 
 	params      *MapSearchParams
 	ExitMonitor exiter.Exiter
+	WorkspaceID uint64
+}
+
+func WithSearchJobWorkspaceID(workspaceID uint64) SearchJobOptions {
+	return func(j *SearchJob) {
+		j.WorkspaceID = workspaceID
+	}
 }
 
 func NewSearchJob(params *MapSearchParams, opts ...SearchJobOptions) *SearchJob {

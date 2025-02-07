@@ -41,6 +41,13 @@ type EmailExtractJob struct {
 	// Entry holds the data structure where the extracted email addresses will be stored
 	Entry       *Entry
 	ExitMonitor exiter.Exiter
+	WorkspaceID uint64
+}
+
+func WithEmailJobWorkspaceID(workspaceID uint64) EmailExtractJobOptions {
+	return func(j *EmailExtractJob) {
+		j.WorkspaceID = workspaceID
+	}
 }
 
 // NewEmailJob creates a new job for email address extraction from a webpage.

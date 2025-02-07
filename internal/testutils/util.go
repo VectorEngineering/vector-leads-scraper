@@ -247,7 +247,7 @@ func GenerateRandomizedScrapingJob() *proto.ScrapingJob {
 		Name:        GenerateRandomString(10, false, false),
 		Keywords:    []string{"keyword_1", "keyword_2"},
 		Lang:        proto.ScrapingJob_Language(GenerateRandomInt(0, 2)),
-		Zoom:        int32(GenerateRandomInt(1, 20)),
+		Zoom:        int32(GenerateRandomInt(2, 19)),
 		Lat:         "40.7128",
 		Lon:         "-74.0060",
 		FastMode:    false,
