@@ -254,6 +254,33 @@ config:
     exitOnInactivity: ""
     proxies: ""
 
+# Worker Configuration
+worker:
+  # -- Enable worker mode
+  enabled: false
+  # -- Number of worker replicas
+  replicas: 1
+  # -- Worker concurrency (number of parallel jobs)
+  concurrency: 8
+  # -- Maximum scroll depth in search results
+  depth: 1
+  # -- Enable email extraction
+  emailExtraction: false
+  # -- Enable fast mode for reduced data collection
+  fastMode: false
+  # -- Exit after inactivity duration (e.g., '5m')
+  exitOnInactivity: "5m"
+  # -- Comma separated list of proxies
+  proxies: ""
+  # Worker specific resources
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 2000m
+      memory: 1Gi
+
 # PostgreSQL subchart configuration
 postgresql:
   # -- Enable PostgreSQL dependency
