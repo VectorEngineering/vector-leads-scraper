@@ -56,7 +56,8 @@ grpc:
     middleware:
       logging:
         enabled: true
-        loggerEncoding: "json"
+        loggerEncoding: "flatten"
+        eventEncoding: "flatten"
       timeout:
         enabled: true
         timeoutMs: 30000  # 30 seconds for graceful shutdown

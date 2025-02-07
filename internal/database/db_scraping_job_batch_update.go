@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
-	"go.uber.org/zap"
 )
 
 // BatchUpdateScrapingJobs updates multiple scraping jobs in a single batch operation.
@@ -13,18 +12,8 @@ import (
 // If an error occurs during batch processing, it will be logged and the operation
 // will continue with the next batch.
 func (db *Db) BatchUpdateScrapingJobs(ctx context.Context, workspaceID uint64, jobs []*lead_scraper_servicev1.ScrapingJob) ([]*lead_scraper_servicev1.ScrapingJob, error) {
-	if len(jobs) == 0 {
-		return nil, ErrInvalidInput
-	}
-
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
-
-	// Start a transaction
-	tx := db.Client.Engine.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to start transaction: %w", tx.Error)
-	}
 
 	// check that the workspace of interest exists
 	workspaceQop := db.QueryOperator.WorkspaceORM
@@ -33,6 +22,10 @@ func (db *Db) BatchUpdateScrapingJobs(ctx context.Context, workspaceID uint64, j
 	workspace, err := workspaceQop.GetByID(workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
+	}
+
+	if len(jobs) == 0 {
+		return nil, ErrInvalidInput
 	}
 
 	batches := BreakIntoBatches[*lead_scraper_servicev1.ScrapingJob](jobs, batchSize)
@@ -46,12 +39,12 @@ func (db *Db) BatchUpdateScrapingJobs(ctx context.Context, workspaceID uint64, j
 		}
 
 		// for each batch we append to the workspace of interest
-		if err := workspaceQop.ScrapingJobs.Model(&workspace).Append(ormJobs...); err != nil {
+		if err := workspaceQop.ScrapingJobs.Model(&workspace).Replace(ormJobs...); err != nil {
 			return nil, fmt.Errorf("failed to append jobs to workspace: %w", err)
 		}
 
 		// update the workspace
-		res, err := workspaceQop.Where(workspaceQop.Id.Eq(workspaceID)).Updates(workspace)
+		res, err := workspaceQop.Where(workspaceQop.Id.Eq(workspaceID)).Updates(&workspace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update workspace: %w", err)
 		}
@@ -65,14 +58,6 @@ func (db *Db) BatchUpdateScrapingJobs(ctx context.Context, workspaceID uint64, j
 		}
 
 		resultingJobs = append(resultingJobs, ormJobs...)
-	}
-
-	// Commit the transaction
-	if err := tx.Commit().Error; err != nil {
-		db.Logger.Error("failed to commit transaction",
-			zap.Error(err),
-		)
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// convert the orm jobs to jobs

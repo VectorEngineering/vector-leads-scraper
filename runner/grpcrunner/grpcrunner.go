@@ -133,6 +133,7 @@ func createLogger(cfg *runner.Config) (*zap.Logger, error) {
 			"version":     version.Version,
 			"environment": cfg.Environment,
 			"host":        hostname,
+			"pid":         os.Getpid(),
 		},
 	}
 

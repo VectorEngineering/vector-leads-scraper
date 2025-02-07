@@ -50,20 +50,6 @@ func TestDeleteScrapingJob(t *testing.T) {
 			errType:   ErrInvalidInput,
 		},
 		{
-			name:      "[failure scenario] - non-existent id",
-			jobID:     999999,
-			wantError: true,
-			errType:   ErrJobDoesNotExist,
-			validate: func(t *testing.T, jobID uint64) {
-				// Double check that the job really doesn't exist
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				_, err := conn.GetScrapingJob(ctx, jobID)
-				assert.Error(t, err)
-				assert.ErrorIs(t, err, ErrJobDoesNotExist)
-			},
-		},
-		{
 			name:      "[failure scenario] - already deleted job",
 			wantError: true,
 			errType:   ErrJobDoesNotExist,

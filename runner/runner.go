@@ -397,7 +397,7 @@ func banner(messages []string, width int) string {
 }
 
 func Banner() {
-	message1 := "🌍 Google Maps Scraper"
+	message1 := "🌍 Leads Scraper Service"
 	message2 := "⭐ If you find this project useful, please star it on GitHub: https://github.com/Vector/vector-leads-scraper"
 	message3 := "💖 Consider sponsoring to support development: https://github.com/sponsors/gosom"
 
