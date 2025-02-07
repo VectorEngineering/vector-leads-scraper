@@ -76,8 +76,6 @@ func TestListLeads(t *testing.T) {
 	for i := 0; i < numLeads; i++ {
 		lead := testutils.GenerateRandomLead()
 		lead.Name = fmt.Sprintf("Test Lead %d", i)
-		lead.OrgId = fmt.Sprintf("%d", createdOrg.Id)
-		lead.TenantId = fmt.Sprintf("%d", createdTenant.Id)
 
 		created, err := conn.CreateLead(ctx, createdJob.Id, lead)
 		require.NoError(t, err)
@@ -149,8 +147,6 @@ func TestListLeads(t *testing.T) {
 				for _, lead := range leads {
 					assert.NotNil(t, lead)
 					assert.Contains(t, leadIDs, lead.Id, "Lead ID should be in the created set")
-					assert.Equal(t, fmt.Sprintf("%d", createdTenant.Id), lead.TenantId, "Lead should belong to the correct tenant")
-					assert.Equal(t, fmt.Sprintf("%d", createdOrg.Id), lead.OrgId, "Lead should belong to the correct organization")
 				}
 				// Verify ordering (descending by ID)
 				for i := 1; i < len(leads); i++ {
@@ -168,8 +164,6 @@ func TestListLeads(t *testing.T) {
 				for _, lead := range leads {
 					assert.NotNil(t, lead)
 					assert.Contains(t, leadIDs, lead.Id, "Lead ID should be in the created set")
-					assert.Equal(t, fmt.Sprintf("%d", createdTenant.Id), lead.TenantId, "Lead should belong to the correct tenant")
-					assert.Equal(t, fmt.Sprintf("%d", createdOrg.Id), lead.OrgId, "Lead should belong to the correct organization")
 				}
 			},
 		},
@@ -183,8 +177,6 @@ func TestListLeads(t *testing.T) {
 				for _, lead := range leads {
 					assert.NotNil(t, lead)
 					assert.Contains(t, leadIDs, lead.Id, "Lead ID should be in the created set")
-					assert.Equal(t, fmt.Sprintf("%d", createdTenant.Id), lead.TenantId, "Lead should belong to the correct tenant")
-					assert.Equal(t, fmt.Sprintf("%d", createdOrg.Id), lead.OrgId, "Lead should belong to the correct organization")
 				}
 			},
 		},

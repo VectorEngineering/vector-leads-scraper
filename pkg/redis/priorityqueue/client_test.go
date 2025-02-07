@@ -51,21 +51,21 @@ func TestClient_EnqueueTask(t *testing.T) {
 			task:             asynq.NewTask("test_task", []byte("test_payload")),
 			subscriptionType: SubscriptionEnterprise,
 			wantErr:          true,
-			errContains:      "connection refused",
+			errContains:      "NOAUTH Authentication required",
 		},
 		{
 			name:             "pro task",
 			task:             asynq.NewTask("test_task", []byte("test_payload")),
 			subscriptionType: SubscriptionPro,
 			wantErr:          true,
-			errContains:      "connection refused",
+			errContains:      "NOAUTH Authentication required",
 		},
 		{
 			name:             "free task",
 			task:             asynq.NewTask("test_task", []byte("test_payload")),
 			subscriptionType: SubscriptionFree,
 			wantErr:          true,
-			errContains:      "connection refused",
+			errContains:      "NOAUTH Authentication required",
 		},
 		{
 			name:             "invalid subscription type",
@@ -85,8 +85,8 @@ func TestClient_EnqueueTask(t *testing.T) {
 					assert.Contains(t, err.Error(), tt.errContains)
 				}
 				if tt.subscriptionType.IsValid() {
-					// For valid subscription types, error should be about Redis connection
-					assert.Contains(t, err.Error(), "connection refused")
+					// For valid subscription types, error should be about Redis authentication
+					assert.Contains(t, err.Error(), "NOAUTH Authentication required")
 				} else {
 					// For invalid subscription types, error should be about invalid type
 					assert.Contains(t, err.Error(), "invalid subscription type")

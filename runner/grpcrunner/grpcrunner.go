@@ -130,8 +130,8 @@ func createLogger(cfg *runner.Config) (*zap.Logger, error) {
 		InitialFields: map[string]interface{}{
 			"service":     opts.ServiceName,
 			"mode":        "grpc",
-			"version":     "1.0.0", // Add version tracking
-			"environment": os.Getenv("ENV"),
+			"version":     version.Version,
+			"environment": cfg.Environment,
 			"host":        hostname,
 		},
 	}

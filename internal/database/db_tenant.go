@@ -91,7 +91,6 @@ func (db *Db) CreateTenant(ctx context.Context, input *CreateTenantInput) (*lead
 
 	// Get the created tenant with organization preloaded
 	createdTenant, err := tenantQop.WithContext(ctx).
-		Preload(tenantQop.Organization).
 		Where(tenantQop.Id.Eq(tenantORM.Id)).
 		First()
 	if err != nil {
@@ -143,7 +142,6 @@ func (db *Db) GetTenant(ctx context.Context, input *GetTenantInput) (*lead_scrap
 
 	// Get the tenant with organization preloaded
 	tenant, err := tenantQop.WithContext(ctx).
-		Preload(tenantQop.Organization).
 		Where(tenantQop.Id.Eq(input.ID)).
 		First()
 	if err != nil {
@@ -362,8 +360,7 @@ func (db *Db) ListTenants(ctx context.Context, input *ListTenantsInput) ([]*lead
 
 	// Build the query with preloading
 	query := tenantQop.WithContext(ctx).
-		Select(tenantQop.ALL).
-		Preload(tenantQop.Organization)
+		Select(tenantQop.ALL)
 
 	// Add organization filter if specified
 	if input.OrganizationID > 0 {

@@ -132,7 +132,6 @@ func TestUpdateTenant(t *testing.T) {
 
 	tenant.Name = "Updated Tenant"
 	tenant.Description = "Updated Description"
-	tenant.Organization = org
 
 	tests := []struct {
 		name    string
@@ -301,9 +300,6 @@ func TestListTenants(t *testing.T) {
 			wantErr: false,
 			validate: func(t *testing.T, got []*lead_scraper_servicev1.Tenant) {
 				assert.Len(t, got, 5)
-				for _, tenant := range got {
-					assert.Equal(t, org.Id, tenant.Organization.Id)
-				}
 			},
 		},
 		{
@@ -317,9 +313,6 @@ func TestListTenants(t *testing.T) {
 			wantErr: false,
 			validate: func(t *testing.T, got []*lead_scraper_servicev1.Tenant) {
 				assert.Len(t, got, 2)
-				for _, tenant := range got {
-					assert.Equal(t, org.Id, tenant.Organization.Id)
-				}
 			},
 		},
 		{
@@ -333,9 +326,6 @@ func TestListTenants(t *testing.T) {
 			wantErr: false,
 			validate: func(t *testing.T, got []*lead_scraper_servicev1.Tenant) {
 				assert.Len(t, got, 2)
-				for _, tenant := range got {
-					assert.Equal(t, org.Id, tenant.Organization.Id)
-				}
 			},
 		},
 		{

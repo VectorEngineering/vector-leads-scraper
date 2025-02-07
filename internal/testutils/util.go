@@ -478,8 +478,6 @@ func GenerateRandomLead() *proto.Lead {
 		Industry:             industries[GenerateRandomInt(0, len(industries)-1)],
 		EmployeeCount:        int32(GenerateRandomInt(1, 1000)),
 		EstimatedRevenue:     int64(GenerateRandomInt(100000, 10000000)),
-		OrgId:                fmt.Sprintf("org_%s", GenerateRandomString(10, true, false)),
-		TenantId:             fmt.Sprintf("tenant_%s", GenerateRandomString(10, true, false)),
 		CreatedAt:            nil,
 		UpdatedAt:            nil,
 		DeletedAt:            nil,
@@ -789,7 +787,6 @@ func GenerateRandomWorkflowsForWorkspace(workspace *proto.Workspace, count int) 
 	workflows := make([]*proto.ScrapingWorkflow, count)
 	for i := 0; i < count; i++ {
 		workflow := GenerateRandomScrapingWorkflow()
-		workflow.Workspace = workspace
 		workflows[i] = workflow
 	}
 	return workflows
@@ -810,7 +807,6 @@ func GenerateRandomLeadsForWorkspace(workspace *proto.Workspace, count int) []*p
 	leads := make([]*proto.Lead, count)
 	for i := 0; i < count; i++ {
 		lead := GenerateRandomLead()
-		lead.Workspace = workspace
 		leads[i] = lead
 	}
 	return leads
@@ -821,7 +817,6 @@ func GenerateRandomAPIKeysForWorkspace(workspace *proto.Workspace, count int) []
 	keys := make([]*proto.APIKey, count)
 	for i := 0; i < count; i++ {
 		key := GenerateRandomAPIKey()
-		key.Workspace = workspace
 		keys[i] = key
 	}
 	return keys
