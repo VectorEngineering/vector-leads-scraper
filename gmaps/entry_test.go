@@ -476,7 +476,7 @@ func Test_filterAndSortEntriesWithinRadius(t *testing.T) {
 	centerLon := -118.2436
 
 	filtered := gmaps.FilterAndSortEntriesWithinRadius(entries, centerLat, centerLon, 1000.0)
-	
+
 	// Verify length
 	require.Len(t, filtered, 2, "Should only include places within radius")
 

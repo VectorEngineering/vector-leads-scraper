@@ -44,10 +44,10 @@ func TestNewURLJob(t *testing.T) {
 
 func TestURLExtractJob_Process(t *testing.T) {
 	tests := []struct {
-		name        string
-		html        string
+		name         string
+		html         string
 		expectedURLs []string
-		withError   bool
+		withError    bool
 	}{
 		{
 			name: "extracts href links",
@@ -91,8 +91,8 @@ func TestURLExtractJob_Process(t *testing.T) {
 			withError:    false,
 		},
 		{
-			name:        "handles empty document",
-			html:        "",
+			name:         "handles empty document",
+			html:         "",
 			expectedURLs: nil,
 			withError:    false,
 		},
@@ -204,7 +204,7 @@ func TestWithURLJobExitMonitor(t *testing.T) {
 
 func TestURLExtractJob_ProcessWithExitMonitor(t *testing.T) {
 	mockExitMonitor := &mockExiter{}
-	
+
 	job := &URLExtractJob{
 		Entry:       &Entry{},
 		ExitMonitor: mockExitMonitor,
@@ -221,4 +221,4 @@ func TestURLExtractJob_ProcessWithExitMonitor(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, mockExitMonitor.placesCompletedCount)
-} 
+}

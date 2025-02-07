@@ -92,7 +92,7 @@ func TestNewPlaceJob(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := NewPlaceJob(tt.parentID, tt.langCode, tt.url, tt.extractEmail, tt.opts...)
-			
+
 			// Check all fields except ID which is randomly generated
 			assert.Equal(t, tt.want.ParentID, got.ParentID)
 			assert.Equal(t, tt.want.Method, got.Method)
@@ -139,4 +139,4 @@ func TestPlaceJob_UseInResults(t *testing.T) {
 // Skip browser-dependent tests in unit tests
 func TestPlaceJob_BrowserActions(t *testing.T) {
 	t.Skip("Skipping browser-dependent tests")
-} 
+}

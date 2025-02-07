@@ -40,30 +40,30 @@ func TestParseSearchResults(t *testing.T) {
 					[]any{
 						"dummy",
 						[]any{
-							"test-id",           // ID (0)
-							nil, nil, nil, nil,  // 1-4
-							nil, nil, nil, nil,  // 5-8
-							nil, nil,            // 9-10
+							"test-id",          // ID (0)
+							nil, nil, nil, nil, // 1-4
+							nil, nil, nil, nil, // 5-8
+							nil, nil, // 9-10
 							"Test Business",     // Title (11)
 							nil,                 // 12
 							[]any{"Category 1"}, // Categories (13)
-							[]any{               // Business data (14)
-								"test-id",     // 0
-								nil,           // 1
+							[]any{ // Business data (14)
+								"test-id",                         // 0
+								nil,                               // 1
 								[]any{"123 Test St", "Test City"}, // 2 (address)
-								nil,           // 3
+								nil,                               // 3
 								[]any{
 									nil, nil, nil, nil, nil, nil, nil,
 									4.5,  // 7 (rating)
 									100., // 8 (review count)
 								}, // 4
-								nil, nil,      // 5-6
-								[]any{"http://test.com"}, // 7 (website)
-								nil,           // 8
+								nil, nil, // 5-6
+								[]any{"http://test.com"},           // 7 (website)
+								nil,                                // 8
 								[]any{nil, nil, 40.7128, -74.0060}, // 9 (lat/long)
-								"data-id",     // 10
-								"Test Business", // 11
-								nil, nil,       // 12-13
+								"data-id",                          // 10
+								"Test Business",                    // 11
+								nil, nil,                           // 12-13
 								nil, nil, nil, nil, // 14-17
 								nil, nil, nil, nil, // 18-21
 								nil, nil, nil, nil, // 22-25
@@ -71,7 +71,7 @@ func TestParseSearchResults(t *testing.T) {
 								"America/New_York", // 30
 								nil, nil, nil,      // 31-33
 								[]any{nil, nil, nil, nil, []any{nil, nil, nil, nil, "OPERATIONAL"}}, // 34
-								make([]any, 143),   // 35-177
+								make([]any, 143),                 // 35-177
 								[]any{[]any{[]any{"123456789"}}}, // 178 (phone)
 							},
 						},
@@ -153,4 +153,4 @@ func mustMarshal(v any) []byte {
 		panic(err)
 	}
 	return data
-} 
+}

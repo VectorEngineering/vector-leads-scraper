@@ -44,10 +44,10 @@ func TestNewMarkdownJob(t *testing.T) {
 
 func TestMarkdownExtractJob_Process(t *testing.T) {
 	tests := []struct {
-		name            string
-		html            string
+		name             string
+		html             string
 		expectedMarkdown string
-		withError       bool
+		withError        bool
 	}{
 		{
 			name: "converts simple HTML to markdown",
@@ -81,8 +81,8 @@ func TestMarkdownExtractJob_Process(t *testing.T) {
 			withError:        false,
 		},
 		{
-			name:            "handles empty document",
-			html:            "",
+			name:             "handles empty document",
+			html:             "",
 			expectedMarkdown: "",
 			withError:        false,
 		},
@@ -145,7 +145,7 @@ func TestWithMarkdownJobExitMonitor(t *testing.T) {
 
 func TestMarkdownExtractJob_ProcessWithExitMonitor(t *testing.T) {
 	mockExitMonitor := &mockExiter{}
-	
+
 	job := &MarkdownExtractJob{
 		Entry:       &Entry{},
 		ExitMonitor: mockExitMonitor,
@@ -162,4 +162,4 @@ func TestMarkdownExtractJob_ProcessWithExitMonitor(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, mockExitMonitor.placesCompletedCount)
-} 
+}

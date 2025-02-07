@@ -84,8 +84,8 @@ func TestEmailExtractJob_Process(t *testing.T) {
 			withError:     false,
 		},
 		{
-			name: "handles response error",
-			html: `<html><body></body></html>`,
+			name:      "handles response error",
+			html:      `<html><body></body></html>`,
 			withError: true,
 		},
 	}
@@ -259,7 +259,7 @@ func TestWithEmailJobExitMonitor(t *testing.T) {
 
 func TestEmailExtractJob_ProcessWithExitMonitor(t *testing.T) {
 	mockExitMonitor := &mockExiter{}
-	
+
 	job := &EmailExtractJob{
 		Entry:       &Entry{},
 		ExitMonitor: mockExitMonitor,
@@ -288,6 +288,6 @@ func (m *mockExiter) IncrPlacesCompleted(count int) {
 }
 
 // Add missing required methods
-func (m *mockExiter) IncrPlacesFound(_ int)    {}
-func (m *mockExiter) IncrSeedCompleted(_ int)  {}
-func (m *mockExiter) ShouldExit() bool         { return false } 
+func (m *mockExiter) IncrPlacesFound(_ int)   {}
+func (m *mockExiter) IncrSeedCompleted(_ int) {}
+func (m *mockExiter) ShouldExit() bool        { return false }
