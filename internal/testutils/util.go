@@ -259,7 +259,7 @@ func GenerateRandomizedScrapingJob() *proto.ScrapingJob {
 		UpdatedAt:   nil,
 		DeletedAt:   nil,
 		Leads:       GenerateRandomLeads(GenerateRandomInt(0, 1)),
-		Url: GenerateRandomizeUrl(),
+		Url:         GenerateRandomizeUrl(),
 	}
 }
 

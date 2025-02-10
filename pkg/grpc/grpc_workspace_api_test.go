@@ -280,13 +280,15 @@ func TestServer_UpdateWorkspace(t *testing.T) {
 	testCtx := initializeWorkspaceTestContext(t)
 	defer testCtx.Cleanup()
 
-	// Create a test workspace first
-	createResp, err := MockServer.CreateWorkspace(context.Background(), &proto.CreateWorkspaceRequest{
+	req := &proto.CreateWorkspaceRequest{
 		Workspace:      testutils.GenerateRandomWorkspace(),
 		AccountId:      testCtx.Account.Id,
 		OrganizationId: testCtx.Organization.Id,
 		TenantId:       testCtx.TenantId,
-	})
+	}
+	
+	// Create a test workspace first
+	createResp, err := MockServer.CreateWorkspace(context.Background(), req)
 	require.NoError(t, err)
 	require.NotNil(t, createResp)
 	require.NotNil(t, createResp.Workspace)

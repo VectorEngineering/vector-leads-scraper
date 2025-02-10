@@ -259,7 +259,7 @@ func TestContainerInitialization(t *testing.T) {
 
 		container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: req,
-			Started:         true,
+			Started:          true,
 		})
 		if err == nil {
 			container.Terminate(ctx)
