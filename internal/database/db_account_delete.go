@@ -33,9 +33,9 @@ const (
 
 // DeleteAccountParams holds the parameters for deleting an account
 type DeleteAccountParams struct {
-	ID            uint64                                       `validate:"required,gt=0"`
-	DeletionType  DeletionType                                 `validate:"required"`
-	AccountStatus lead_scraper_servicev1.Account_AccountStatus 
+	ID            uint64       `validate:"required,gt=0"`
+	DeletionType  DeletionType `validate:"required"`
+	AccountStatus lead_scraper_servicev1.Account_AccountStatus
 }
 
 func (d *DeleteAccountParams) validate() error {
@@ -76,7 +76,7 @@ func (db *Db) DeleteAccount(ctx context.Context, params *DeleteAccountParams) er
 
 	// Check if account exists
 	req := &GetAccountInput{
-		ID:            params.ID,
+		ID: params.ID,
 	}
 
 	if params.AccountStatus != lead_scraper_servicev1.Account_ACCOUNT_STATUS_UNSPECIFIED {

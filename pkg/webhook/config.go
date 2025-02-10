@@ -51,4 +51,4 @@ func DefaultConfig() Config {
 		},
 		Endpoints: []string{},
 	}
-} 
+}

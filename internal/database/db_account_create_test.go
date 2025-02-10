@@ -22,7 +22,7 @@ type accountTestContext struct {
 	Cleanup      func()
 }
 
-func setupAccountTestContext(t *testing.T) (*accountTestContext) {
+func setupAccountTestContext(t *testing.T) *accountTestContext {
 	ctx := context.Background()
 
 	// Create test organization
@@ -31,31 +31,31 @@ func setupAccountTestContext(t *testing.T) (*accountTestContext) {
 	})
 
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Tenant: testutils.GenerateRandomizedTenant(),
+		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
 	})
 	require.NoError(t, err)
-	
-	cleanup := func() {	
+
+	cleanup := func() {
 		conn.DeleteOrganization(ctx, &DeleteOrganizationInput{ID: org.Id})
 		conn.DeleteTenant(ctx, &DeleteTenantInput{ID: tenant.Id})
 	}
 
 	account, err := conn.CreateAccount(ctx, &CreateAccountInput{
-		Account: testutils.GenerateRandomizedAccount(),
-		OrgID:   org.Id,
+		Account:  testutils.GenerateRandomizedAccount(),
+		OrgID:    org.Id,
 		TenantID: tenant.Id,
 	})
 	require.NoError(t, err)
 
 	// create a workspace
 	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
-		Workspace: testutils.GenerateRandomWorkspace(),
-		AccountID: account.Id,
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountID:      account.Id,
 		OrganizationID: org.Id,
-		TenantID: tenant.Id,
+		TenantID:       tenant.Id,
 	})
-	require.NoError(t, err)	
+	require.NoError(t, err)
 
 	return &accountTestContext{
 		Organization: org,

@@ -27,7 +27,7 @@ func TestServer_CreateScrapingJob(t *testing.T) {
 			name: "success",
 			req: &proto.CreateScrapingJobRequest{
 				AuthPlatformUserId: userId,
-				OrgId:  orgId,
+				OrgId:              orgId,
 			},
 		},
 	}
@@ -107,7 +107,7 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 			name: "success",
 			req: &proto.ListScrapingJobsRequest{
 				AuthPlatformUserId: userId,
-				OrgId:  orgId,
+				OrgId:              orgId,
 			},
 			wantErr: false,
 		},

@@ -194,7 +194,6 @@ func (s *Server) UpdateAccount(ctx context.Context, req *proto.UpdateAccountRequ
 	}
 
 	tenantId := payload.GetTenantId()
-	
 
 	logger.Info("updating account", zap.Uint64("account_id", account.GetId()))
 
@@ -376,7 +375,6 @@ func (s *Server) GetAccountUsage(ctx context.Context, req *proto.GetAccountUsage
 		logger.Error("request is nil")
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
-
 
 	if err := req.ValidateAll(); err != nil {
 		logger.Error("invalid request", zap.Error(err))

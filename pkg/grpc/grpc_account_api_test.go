@@ -18,11 +18,11 @@ type accountTestContext struct {
 	Cleanup      func()
 }
 
-func initializeTestContext(t *testing.T) (*accountTestContext) {
+func initializeTestContext(t *testing.T) *accountTestContext {
 	// create an organization and tenant first
 	org := testutils.GenerateRandomizedOrganization()
 	tenant := testutils.GenerateRandomizedTenant()
-	
+
 	// Ensure required fields are set
 	if org.Name == "" {
 		org.Name = "Test Organization"
@@ -59,8 +59,8 @@ func initializeTestContext(t *testing.T) (*accountTestContext) {
 
 	createAcctResp, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
 		Account:              testutils.GenerateRandomizedAccount(),
-		OrganizationId:      createOrgResp.Organization.Id,
-		TenantId:            createTenantResp.TenantId,
+		OrganizationId:       createOrgResp.Organization.Id,
+		TenantId:             createTenantResp.TenantId,
 		InitialWorkspaceName: "Default Workspace",
 	})
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func initializeTestContext(t *testing.T) (*accountTestContext) {
 
 	cleanup := func() {
 		ctx := context.Background()
-		
+
 		// First get all accounts for this tenant
 		listAcctsResp, err := MockServer.ListAccounts(ctx, &proto.ListAccountsRequest{
 			OrganizationId: createOrgResp.Organization.Id,
@@ -97,7 +97,7 @@ func initializeTestContext(t *testing.T) (*accountTestContext) {
 						}
 					}
 				}
-				
+
 				// Now delete the account
 				_, err = MockServer.DeleteAccount(ctx, &proto.DeleteAccountRequest{
 					Id:             acct.Id,
@@ -131,7 +131,7 @@ func initializeTestContext(t *testing.T) (*accountTestContext) {
 	return &accountTestContext{
 		Organization: createOrgResp.Organization,
 		TenantId:     createTenantResp.TenantId,
-		Cleanup:     cleanup,
+		Cleanup:      cleanup,
 	}
 }
 
@@ -150,8 +150,8 @@ func TestServer_CreateAccount(t *testing.T) {
 			name: "success",
 			req: &proto.CreateAccountRequest{
 				Account:              testutils.GenerateRandomizedAccount(),
-				OrganizationId:      testCtx.Organization.Id,
-				TenantId:            testCtx.TenantId,
+				OrganizationId:       testCtx.Organization.Id,
+				TenantId:             testCtx.TenantId,
 				InitialWorkspaceName: "Test Workspace",
 			},
 			wantErr: false,
@@ -166,8 +166,8 @@ func TestServer_CreateAccount(t *testing.T) {
 			name: "invalid organization id",
 			req: &proto.CreateAccountRequest{
 				Account:              testutils.GenerateRandomizedAccount(),
-				OrganizationId:      0,
-				TenantId:            testCtx.TenantId,
+				OrganizationId:       0,
+				TenantId:             testCtx.TenantId,
 				InitialWorkspaceName: "Test Workspace",
 			},
 			wantErr: true,
@@ -177,8 +177,8 @@ func TestServer_CreateAccount(t *testing.T) {
 			name: "invalid tenant id",
 			req: &proto.CreateAccountRequest{
 				Account:              testutils.GenerateRandomizedAccount(),
-				OrganizationId:      testCtx.Organization.Id,
-				TenantId:            0,
+				OrganizationId:       testCtx.Organization.Id,
+				TenantId:             0,
 				InitialWorkspaceName: "Test Workspace",
 			},
 			wantErr: true,
@@ -211,8 +211,8 @@ func TestServer_GetAccount(t *testing.T) {
 	// create an account first
 	createResp, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
 		Account:              testutils.GenerateRandomizedAccount(),
-		OrganizationId:      testCtx.Organization.Id,
-		TenantId:            testCtx.TenantId,
+		OrganizationId:       testCtx.Organization.Id,
+		TenantId:             testCtx.TenantId,
 		InitialWorkspaceName: "Test Workspace",
 	})
 	require.NoError(t, err)
@@ -298,10 +298,10 @@ func TestServer_UpdateAccount(t *testing.T) {
 	// create an account first
 	createResp, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
 		Account:              testutils.GenerateRandomizedAccount(),
-		OrganizationId:      tc.Organization.Id,
-		TenantId:            tc.TenantId,
+		OrganizationId:       tc.Organization.Id,
+		TenantId:             tc.TenantId,
 		InitialWorkspaceName: "Test Workspace",
-	})	
+	})
 	require.NoError(t, err)
 	require.NotNil(t, createResp)
 	require.NotNil(t, createResp.Account)
@@ -356,12 +356,12 @@ func TestServer_UpdateAccount(t *testing.T) {
 // 		TenantId:            tc.TenantId,
 // 		InitialWorkspaceName: "Test Workspace",
 // 	})
-// 	require.NoError(t, err)	
+// 	require.NoError(t, err)
 // 	require.NotNil(t, createResp)
 // 	require.NotNil(t, createResp.Account)
 
 // 	account = createResp.Account
-	
+
 // 	tests := []struct {
 // 		name    string
 // 		req     *proto.DeleteAccountRequest

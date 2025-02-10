@@ -121,4 +121,4 @@ func TestRedisConfigIntegration_WithContainer(t *testing.T) {
 			t.Errorf("QueuePriorities[%q] = %d, want %d", queue, cfg.QueuePriorities[queue], priority)
 		}
 	}
-} 
+}

@@ -13,7 +13,7 @@ import (
 // CreateTenantInput holds the input parameters for the CreateTenant function
 type CreateTenantInput struct {
 	Tenant         *lead_scraper_servicev1.Tenant `validate:"required"`
-	OrganizationID uint64                          `validate:"required,gt=0"`
+	OrganizationID uint64                         `validate:"required,gt=0"`
 }
 
 func (d *CreateTenantInput) validate() error {
@@ -165,8 +165,8 @@ func (db *Db) GetTenant(ctx context.Context, input *GetTenantInput) (*lead_scrap
 
 // UpdateTenantInput holds the input parameters for the UpdateTenant function
 type UpdateTenantInput struct {
-	ID             uint64 `validate:"required,gt=0"`
-	Tenant         *lead_scraper_servicev1.Tenant
+	ID     uint64 `validate:"required,gt=0"`
+	Tenant *lead_scraper_servicev1.Tenant
 }
 
 func (d *UpdateTenantInput) validate() error {

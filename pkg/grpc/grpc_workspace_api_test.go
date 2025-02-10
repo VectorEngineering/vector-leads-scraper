@@ -23,7 +23,7 @@ func initializeWorkspaceTestContext(t *testing.T) *workspaceTestContext {
 	// create an organization and tenant first
 	org := testutils.GenerateRandomizedOrganization()
 	tenant := testutils.GenerateRandomizedTenant()
-	
+
 	// Ensure required fields are set
 	if org.Name == "" {
 		org.Name = "Test Organization"
@@ -61,8 +61,8 @@ func initializeWorkspaceTestContext(t *testing.T) *workspaceTestContext {
 	// Create a test account
 	createAcctResp, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
 		Account:              testutils.GenerateRandomizedAccount(),
-		OrganizationId:      createOrgResp.Organization.Id,
-		TenantId:            createTenantResp.TenantId,
+		OrganizationId:       createOrgResp.Organization.Id,
+		TenantId:             createTenantResp.TenantId,
 		InitialWorkspaceName: "Default Workspace",
 	})
 	require.NoError(t, err)
@@ -71,7 +71,7 @@ func initializeWorkspaceTestContext(t *testing.T) *workspaceTestContext {
 
 	cleanup := func() {
 		ctx := context.Background()
-		
+
 		// First get all accounts for this tenant
 		listAcctsResp, err := MockServer.ListAccounts(ctx, &proto.ListAccountsRequest{
 			OrganizationId: createOrgResp.Organization.Id,
@@ -99,7 +99,7 @@ func initializeWorkspaceTestContext(t *testing.T) *workspaceTestContext {
 						}
 					}
 				}
-				
+
 				// Now delete the account
 				_, err = MockServer.DeleteAccount(ctx, &proto.DeleteAccountRequest{
 					Id:             acct.Id,
@@ -151,10 +151,10 @@ func TestServer_CreateWorkspace(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.CreateWorkspaceRequest{
-				Workspace: testutils.GenerateRandomWorkspace(),
-				AccountId: testCtx.Account.Id,
+				Workspace:      testutils.GenerateRandomWorkspace(),
+				AccountId:      testCtx.Account.Id,
 				OrganizationId: testCtx.Organization.Id,
-				TenantId: testCtx.TenantId,
+				TenantId:       testCtx.TenantId,
 			},
 			wantErr: false,
 		},
@@ -167,8 +167,8 @@ func TestServer_CreateWorkspace(t *testing.T) {
 		{
 			name: "invalid account id",
 			req: &proto.CreateWorkspaceRequest{
-				Workspace: testutils.GenerateRandomWorkspace(),
-				AccountId: 0,
+				Workspace:      testutils.GenerateRandomWorkspace(),
+				AccountId:      0,
 				OrganizationId: testCtx.Organization.Id,
 				TenantId:       testCtx.TenantId,
 			},
@@ -178,8 +178,8 @@ func TestServer_CreateWorkspace(t *testing.T) {
 		{
 			name: "invalid organization id",
 			req: &proto.CreateWorkspaceRequest{
-				Workspace: testutils.GenerateRandomWorkspace(),
-				AccountId: testCtx.Account.Id,
+				Workspace:      testutils.GenerateRandomWorkspace(),
+				AccountId:      testCtx.Account.Id,
 				OrganizationId: 0,
 				TenantId:       testCtx.TenantId,
 			},
@@ -189,8 +189,8 @@ func TestServer_CreateWorkspace(t *testing.T) {
 		{
 			name: "invalid tenant id",
 			req: &proto.CreateWorkspaceRequest{
-				Workspace: testutils.GenerateRandomWorkspace(),
-				AccountId: testCtx.Account.Id,
+				Workspace:      testutils.GenerateRandomWorkspace(),
+				AccountId:      testCtx.Account.Id,
 				OrganizationId: testCtx.Organization.Id,
 				TenantId:       0,
 			},
@@ -224,8 +224,8 @@ func TestServer_GetWorkspace(t *testing.T) {
 
 	// Create a test workspace first
 	createResp, err := MockServer.CreateWorkspace(context.Background(), &proto.CreateWorkspaceRequest{
-		Workspace: testutils.GenerateRandomWorkspace(),
-		AccountId: testCtx.Account.Id,
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountId:      testCtx.Account.Id,
 		OrganizationId: testCtx.Organization.Id,
 		TenantId:       testCtx.TenantId,
 	})
@@ -242,10 +242,10 @@ func TestServer_GetWorkspace(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.GetWorkspaceRequest{
-				Id: createResp.Workspace.Id,
-				AccountId: testCtx.Account.Id,
+				Id:             createResp.Workspace.Id,
+				AccountId:      testCtx.Account.Id,
 				OrganizationId: testCtx.Organization.Id,
-				TenantId: testCtx.TenantId,
+				TenantId:       testCtx.TenantId,
 			},
 			wantErr: false,
 		},
@@ -282,8 +282,8 @@ func TestServer_UpdateWorkspace(t *testing.T) {
 
 	// Create a test workspace first
 	createResp, err := MockServer.CreateWorkspace(context.Background(), &proto.CreateWorkspaceRequest{
-		Workspace: testutils.GenerateRandomWorkspace(),
-		AccountId: testCtx.Account.Id,
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountId:      testCtx.Account.Id,
 		OrganizationId: testCtx.Organization.Id,
 		TenantId:       testCtx.TenantId,
 	})
@@ -340,8 +340,8 @@ func TestServer_DeleteWorkspace(t *testing.T) {
 
 	// Create a test workspace first
 	createResp, err := MockServer.CreateWorkspace(context.Background(), &proto.CreateWorkspaceRequest{
-		Workspace: testutils.GenerateRandomWorkspace(),
-		AccountId: testCtx.Account.Id,
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountId:      testCtx.Account.Id,
 		OrganizationId: testCtx.Organization.Id,
 		TenantId:       testCtx.TenantId,
 	})

@@ -16,7 +16,7 @@ import (
 func TestCreateScrapingWorkflow(t *testing.T) {
 	tc := setupAccountTestContext(t)
 	defer tc.Cleanup()
-	
+
 	validWorkflow := &lead_scraper_servicev1.ScrapingWorkflow{
 		CronExpression:        "0 0 * * *",
 		RetryCount:            0,
@@ -37,12 +37,12 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		workflow  *lead_scraper_servicev1.ScrapingWorkflow
+		name        string
+		workflow    *lead_scraper_servicev1.ScrapingWorkflow
 		workspaceID uint64
-		wantError bool
-		errType   error
-		validate  func(t *testing.T, workflow *lead_scraper_servicev1.ScrapingWorkflow)
+		wantError   bool
+		errType     error
+		validate    func(t *testing.T, workflow *lead_scraper_servicev1.ScrapingWorkflow)
 	}{
 		{
 			name:      "[success scenario] - valid workflow",
@@ -85,8 +85,8 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 				GeoFencingZoomMax: 20,
 			},
 			workspaceID: tc.Workspace.Id,
-			wantError: true,
-			errType:   ErrInvalidInput,
+			wantError:   true,
+			errType:     ErrInvalidInput,
 		},
 		{
 			name: "[failure scenario] - invalid geo fencing parameters",
@@ -99,8 +99,8 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 				GeoFencingZoomMin: 1,
 				GeoFencingZoomMax: 20,
 			},
-			wantError: true,
-			errType:   ErrInvalidInput,
+			wantError:   true,
+			errType:     ErrInvalidInput,
 			workspaceID: tc.Workspace.Id,
 		},
 		{
@@ -240,9 +240,9 @@ func TestBatchCreateScrapingWorkflows(t *testing.T) {
 
 	// Create a test workspace first
 	createdWorkspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
-		Workspace: testutils.GenerateRandomWorkspace(),
-		AccountID: tc.Account.Id,
-		TenantID:  tc.Tenant.Id,
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
 		OrganizationID: tc.Organization.Id,
 	})
 	require.NoError(t, err)
@@ -389,9 +389,9 @@ func TestBatchCreateScrapingWorkflows_LargeBatch(t *testing.T) {
 
 	// Create a test workspace
 	createdWorkspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
-		Workspace: testutils.GenerateRandomWorkspace(),
-		AccountID: tc.Account.Id,
-		TenantID:  tc.Tenant.Id,
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
 		OrganizationID: tc.Organization.Id,
 	})
 	require.NoError(t, err)

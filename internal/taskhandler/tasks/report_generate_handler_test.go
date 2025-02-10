@@ -84,6 +84,9 @@ func TestReportGeneratePayload_Validate(t *testing.T) {
 }
 
 func TestHandler_processReportGenerateTask(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	tests := []struct {
 		name    string
 		h       *Handler
@@ -92,7 +95,7 @@ func TestHandler_processReportGenerateTask(t *testing.T) {
 	}{
 		{
 			name: "valid task",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeReportGenerate.String(), mustMarshal(t, &ReportGeneratePayload{
 				ReportType: "leads_summary",
 				Format:     "pdf",
@@ -105,7 +108,7 @@ func TestHandler_processReportGenerateTask(t *testing.T) {
 		},
 		{
 			name: "invalid payload",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeReportGenerate.String(), []byte(`{
 				"report_type": "",
 				"format": "",
@@ -114,14 +117,14 @@ func TestHandler_processReportGenerateTask(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed payload",
-			h:    NewHandler(),
-			task: asynq.NewTask(TypeReportGenerate.String(), []byte(`invalid json`)),
+			name:    "malformed payload",
+			h:       NewHandler(sc),
+			task:    asynq.NewTask(TypeReportGenerate.String(), []byte(`invalid json`)),
 			wantErr: true,
 		},
 		{
 			name: "cancelled context",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeReportGenerate.String(), mustMarshal(t, &ReportGeneratePayload{
 				ReportType: "leads_summary",
 				Format:     "pdf",
@@ -141,7 +144,7 @@ func TestHandler_processReportGenerateTask(t *testing.T) {
 				ctx, cancel = context.WithCancel(ctx)
 				cancel()
 			}
-			
+
 			err := tt.h.processReportGenerateTask(ctx, tt.task)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -172,10 +175,10 @@ func TestCreateReportGenerateTask(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:       "missing report type",
-			format:     "pdf",
-			filters:    map[string]string{"status": "active"},
-			wantErr:    true,
+			name:    "missing report type",
+			format:  "pdf",
+			filters: map[string]string{"status": "active"},
+			wantErr: true,
 		},
 		{
 			name:       "missing format",
@@ -211,7 +214,7 @@ func TestCreateReportGenerateTask(t *testing.T) {
 
 				// Verify the task payload
 				var payload struct {
-					Type    string               `json:"type"`
+					Type    string                `json:"type"`
 					Payload ReportGeneratePayload `json:"payload"`
 				}
 				err = json.Unmarshal(got, &payload)

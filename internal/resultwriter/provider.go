@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	defaultBatchSize = 50
+	defaultBatchSize   = 50
 	defaultWorkspaceID = 1 // Default workspace ID for testing
 )
 
@@ -38,11 +38,11 @@ func NewProvider(db *database.Db, logger *zap.Logger, opts ...ProviderOption) *P
 	}
 
 	p := &Provider{
-		db:          db,
-		logger:      logger,
-		mu:          &sync.Mutex{},
-		errc:        make(chan error, 1),
-		batchSize:   defaultBatchSize,
+		db:        db,
+		logger:    logger,
+		mu:        &sync.Mutex{},
+		errc:      make(chan error, 1),
+		batchSize: defaultBatchSize,
 	}
 
 	for _, opt := range opts {
@@ -174,7 +174,7 @@ func (p *Provider) fetchJobs(ctx context.Context) {
 					"", // Query will be extracted from URL
 					int(job.Depth),
 					true, // Always extract email
-					"",  // GeoCoordinates will be extracted from URL
+					"",   // GeoCoordinates will be extracted from URL
 					int(job.Zoom),
 					gmaps.WithWorkspaceID(defaultWorkspaceID),
 				)
@@ -198,4 +198,4 @@ func (p *Provider) fetchJobs(ctx context.Context) {
 			}
 		}
 	}
-} 
+}

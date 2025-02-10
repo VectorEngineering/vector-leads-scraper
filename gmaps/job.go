@@ -25,11 +25,11 @@ type GmapJob struct {
 	LangCode     string
 	ExtractEmail bool
 
-	Deduper     deduper.Deduper
-	ExitMonitor exiter.Exiter
-	WorkspaceID uint64
-	ScrapingJobID       uint64
-	Zoom int
+	Deduper       deduper.Deduper
+	ExitMonitor   exiter.Exiter
+	WorkspaceID   uint64
+	ScrapingJobID uint64
+	Zoom          int
 }
 
 func WithWorkspaceID(workspaceID uint64) GmapJobOptions {

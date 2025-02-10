@@ -76,7 +76,6 @@ func (s *Server) CreateOrganization(ctx context.Context, req *proto.CreateOrgani
 	}, nil
 }
 
-
 // GetOrganization retrieves detailed information about a specific organization,
 // including its configuration, members, and resource usage.
 //
@@ -101,11 +100,10 @@ func (s *Server) GetOrganization(ctx context.Context, req *proto.GetOrganization
 		err error
 	)
 
-	// initialize the trace 	
+	// initialize the trace
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "get-organization")
 	defer cleanup()
-
 
 	// ensure the request is not nil
 	if req == nil {
@@ -169,8 +167,8 @@ func (s *Server) UpdateOrganization(ctx context.Context, req *proto.UpdateOrgani
 	var (
 		err error
 	)
-	
-	// initialize the trace 	
+
+	// initialize the trace
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "update-organization")
 	defer cleanup()
@@ -197,8 +195,8 @@ func (s *Server) UpdateOrganization(ctx context.Context, req *proto.UpdateOrgani
 
 	// Update the organization using the database client
 	organization, err := s.db.UpdateOrganization(ctx, &database.UpdateOrganizationInput{
-		ID: req.GetOrganization().GetId(),
-		Name: req.GetOrganization().GetName(),
+		ID:          req.GetOrganization().GetId(),
+		Name:        req.GetOrganization().GetName(),
 		Description: req.GetOrganization().GetDescription(),
 	})
 	if err != nil {
@@ -235,8 +233,8 @@ func (s *Server) DeleteOrganization(ctx context.Context, req *proto.DeleteOrgani
 	var (
 		err error
 	)
-	
-	// initialize the trace 	
+
+	// initialize the trace
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "delete-organization")
 	defer cleanup()
@@ -301,8 +299,8 @@ func (s *Server) ListOrganizations(ctx context.Context, req *proto.ListOrganizat
 	var (
 		err error
 	)
-	
-	// initialize the trace 	
+
+	// initialize the trace
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "list-organizations")
 	defer cleanup()
@@ -321,7 +319,7 @@ func (s *Server) ListOrganizations(ctx context.Context, req *proto.ListOrganizat
 		return nil, status.Errorf(codes.InvalidArgument, "%s", err.Error())
 	}
 
-	s.logger.Info("listing organizations", 
+	s.logger.Info("listing organizations",
 		zap.Int32("page_size", req.GetPageSize()),
 		zap.Int32("page_number", req.GetPageNumber()))
 
@@ -336,7 +334,7 @@ func (s *Server) ListOrganizations(ctx context.Context, req *proto.ListOrganizat
 
 	// List organizations using the database client
 	organizations, err := s.db.ListOrganizations(ctx, &database.ListOrganizationsInput{
-		Limit: int(pageSize),
+		Limit:  int(pageSize),
 		Offset: offset,
 	})
 	if err != nil {
@@ -354,4 +352,4 @@ func (s *Server) ListOrganizations(ctx context.Context, req *proto.ListOrganizat
 		Organizations:  organizations,
 		NextPageNumber: nextPageNumber,
 	}, nil
-} 
+}

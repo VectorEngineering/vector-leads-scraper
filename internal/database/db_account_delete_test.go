@@ -15,7 +15,7 @@ import (
 )
 
 func TestDeleteAccountParams_validate(t *testing.T) {
-	
+
 	tests := []struct {
 		name    string
 		d       *DeleteAccountParams
@@ -545,7 +545,7 @@ func TestDb_BatchDeleteAccounts(t *testing.T) {
 
 func TestDb_BatchDeleteAccounts_LargeBatch(t *testing.T) {
 	tc := setupAccountTestContext(t)
-	defer tc.Cleanup()	
+	defer tc.Cleanup()
 
 	if testing.Short() {
 		t.Skip("Skipping large batch test in short mode")

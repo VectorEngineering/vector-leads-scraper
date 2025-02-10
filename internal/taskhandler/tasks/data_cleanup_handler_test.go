@@ -130,7 +130,7 @@ func TestCreateDataCleanupTask(t *testing.T) {
 
 				// Verify the task payload
 				var payload struct {
-					Type    string           `json:"type"`
+					Type    string             `json:"type"`
 					Payload DataCleanupPayload `json:"payload"`
 				}
 				err = json.Unmarshal(got, &payload)
@@ -145,6 +145,9 @@ func TestCreateDataCleanupTask(t *testing.T) {
 }
 
 func TestHandler_processDataCleanupTask(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	type args struct {
 		ctx  context.Context
 		task *asynq.Task
@@ -157,7 +160,7 @@ func TestHandler_processDataCleanupTask(t *testing.T) {
 	}{
 		{
 			name: "valid task",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			args: args{
 				ctx: context.Background(),
 				task: asynq.NewTask(TypeDataCleanup.String(), mustMarshal(t, &DataCleanupPayload{
@@ -170,7 +173,7 @@ func TestHandler_processDataCleanupTask(t *testing.T) {
 		},
 		{
 			name: "invalid payload",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			args: args{
 				ctx: context.Background(),
 				task: asynq.NewTask(TypeDataCleanup.String(), []byte(`{
@@ -183,7 +186,7 @@ func TestHandler_processDataCleanupTask(t *testing.T) {
 		},
 		{
 			name: "cancelled context",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			args: args{
 				ctx: func() context.Context {
 					ctx, cancel := context.WithCancel(context.Background())

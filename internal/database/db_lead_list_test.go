@@ -64,9 +64,9 @@ func TestListLeads(t *testing.T) {
 	// create an account for the tenant
 	account := testutils.GenerateRandomizedAccount()
 	createdAccount, err := conn.CreateAccount(ctx, &CreateAccountInput{
-		Account: account,
+		Account:  account,
 		TenantID: createdTenant.Id,
-		OrgID: createdOrg.Id,
+		OrgID:    createdOrg.Id,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createdAccount)
@@ -74,18 +74,18 @@ func TestListLeads(t *testing.T) {
 	// create a workspace for the account
 	workspace := testutils.GenerateRandomWorkspace()
 	createdWorkspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
-		Workspace: workspace,
-		AccountID: createdAccount.Id,
+		Workspace:      workspace,
+		AccountID:      createdAccount.Id,
 		OrganizationID: createdOrg.Id,
-		TenantID: createdTenant.Id,
+		TenantID:       createdTenant.Id,
 	})
 	require.NoError(t, err)
-	require.NotNil(t, createdWorkspace)	
+	require.NotNil(t, createdWorkspace)
 
 	// Create a test scraping job
 	testJob := testutils.GenerateRandomizedScrapingJob()
-	testJob.Leads = nil  // Ensure no leads are attached to the job
-	createdJob, err := conn.CreateScrapingJob(ctx, createdWorkspace.Id, 	testJob)
+	testJob.Leads = nil // Ensure no leads are attached to the job
+	createdJob, err := conn.CreateScrapingJob(ctx, createdWorkspace.Id, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, createdJob)
 

@@ -21,9 +21,9 @@ func TestLeadValidatePayload_Validate(t *testing.T) {
 			p: &LeadValidatePayload{
 				LeadID: "lead123",
 				Fields: map[string]string{
-					"email":    "test@example.com",
-					"phone":    "+1234567890",
-					"website":  "https://example.com",
+					"email":   "test@example.com",
+					"phone":   "+1234567890",
+					"website": "https://example.com",
 					"address": "123 Main St",
 				},
 			},
@@ -71,6 +71,9 @@ func TestLeadValidatePayload_Validate(t *testing.T) {
 }
 
 func TestHandler_processLeadValidateTask(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	tests := []struct {
 		name    string
 		h       *Handler
@@ -79,7 +82,7 @@ func TestHandler_processLeadValidateTask(t *testing.T) {
 	}{
 		{
 			name: "valid task",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeLeadValidate.String(), mustMarshal(t, &LeadValidatePayload{
 				LeadID: "lead123",
 				Fields: map[string]string{
@@ -92,7 +95,7 @@ func TestHandler_processLeadValidateTask(t *testing.T) {
 		},
 		{
 			name: "invalid payload",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeLeadValidate.String(), []byte(`{
 				"lead_id": "",
 				"fields": null
@@ -100,14 +103,14 @@ func TestHandler_processLeadValidateTask(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed payload",
-			h:    NewHandler(),
-			task: asynq.NewTask(TypeLeadValidate.String(), []byte(`invalid json`)),
+			name:    "malformed payload",
+			h:       NewHandler(sc),
+			task:    asynq.NewTask(TypeLeadValidate.String(), []byte(`invalid json`)),
 			wantErr: true,
 		},
 		{
 			name: "cancelled context",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeLeadValidate.String(), mustMarshal(t, &LeadValidatePayload{
 				LeadID: "lead123",
 				Fields: map[string]string{
@@ -126,7 +129,7 @@ func TestHandler_processLeadValidateTask(t *testing.T) {
 				ctx, cancel = context.WithCancel(ctx)
 				cancel()
 			}
-			
+
 			err := tt.h.processLeadValidateTask(ctx, tt.task)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -148,9 +151,9 @@ func TestCreateLeadValidateTask(t *testing.T) {
 			name:   "valid task",
 			leadID: "lead123",
 			fields: map[string]string{
-				"email":    "test@example.com",
-				"phone":    "+1234567890",
-				"website":  "https://example.com",
+				"email":   "test@example.com",
+				"phone":   "+1234567890",
+				"website": "https://example.com",
 				"address": "123 Main St",
 			},
 			wantErr: false,
@@ -187,7 +190,7 @@ func TestCreateLeadValidateTask(t *testing.T) {
 
 				// Verify the task payload
 				var payload struct {
-					Type    string             `json:"type"`
+					Type    string              `json:"type"`
 					Payload LeadValidatePayload `json:"payload"`
 				}
 				err = json.Unmarshal(got, &payload)

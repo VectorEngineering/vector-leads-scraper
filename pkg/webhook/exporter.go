@@ -16,10 +16,10 @@ import (
 
 // httpExporter implements BatchExporter interface for HTTP webhooks
 type httpExporter struct {
-	client              *http.Client
-	endpoints           []string
+	client               *http.Client
+	endpoints            []string
 	compressionThreshold int64
-	retryConfig         RetryConfig
+	retryConfig          RetryConfig
 }
 
 // newHTTPExporter creates a new HTTP exporter
@@ -28,9 +28,9 @@ func newHTTPExporter(cfg Config) *httpExporter {
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		endpoints:           cfg.Endpoints,
+		endpoints:            cfg.Endpoints,
 		compressionThreshold: cfg.CompressionThreshold,
-		retryConfig:         cfg.RetryConfig,
+		retryConfig:          cfg.RetryConfig,
 	}
 }
 
@@ -147,4 +147,4 @@ func (e *httpExporter) sendWithRetry(ctx context.Context, endpoint string, body 
 func (e *httpExporter) Shutdown(ctx context.Context) error {
 	e.client.CloseIdleConnections()
 	return nil
-} 
+}

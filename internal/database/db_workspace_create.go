@@ -112,7 +112,6 @@ func (db *Db) CreateWorkspace(ctx context.Context, input *CreateWorkspaceInput) 
 		return nil, fmt.Errorf("failed to convert workspace to ORM: %w", err)
 	}
 
-
 	// Create the workspace
 	if err := workspaceQop.WithContext(ctx).Create(&workspaceORM); err != nil {
 		tx.Rollback()

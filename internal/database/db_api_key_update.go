@@ -35,7 +35,6 @@ func (db *Db) UpdateAPIKey(ctx context.Context, apiKey *lead_scraper_servicev1.A
 		return nil, fmt.Errorf("API key not found")
 	}
 
-
 	pbResult, err := apiKeyORM.ToPB(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to protobuf: %w", err)

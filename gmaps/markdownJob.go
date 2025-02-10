@@ -26,10 +26,10 @@ type MarkdownExtractJobOptions func(*MarkdownExtractJob)
 //	entry := &Entry{
 //	    WebSite: "https://example.com",
 //	}
-//	
+//
 //	// Create a new job with default settings
 //	job := NewMarkdownJob("parent-123", entry)
-//	
+//
 //	// Or with an exit monitor
 //	monitor := &MyExitMonitor{}
 //	job := NewMarkdownJob("parent-123", entry, WithMarkdownJobExitMonitor(monitor))
@@ -57,10 +57,10 @@ func WithMarkdownJobWorkspaceID(workspaceID uint64) MarkdownExtractJobOptions {
 //	entry := &Entry{
 //	    WebSite: "https://example.com",
 //	}
-//	
+//
 //	// Basic usage
 //	job := NewMarkdownJob("parent-123", entry)
-//	
+//
 //	// With exit monitoring
 //	monitor := &MyExitMonitor{}
 //	job := NewMarkdownJob(
@@ -124,13 +124,13 @@ func WithMarkdownJobExitMonitor(exitMonitor exiter.Exiter) MarkdownExtractJobOpt
 //	crawler := scrapemate.NewCrawler(scrapemate.CrawlerConfig{
 //	    Fetcher: &myFetcher{},
 //	})
-//	
+//
 //	job := NewMarkdownJob("parent-123", entry)
 //	result, err := crawler.Process(context.Background(), job)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-//	
+//
 //	// Access the markdown
 //	entry := result.(*Entry)
 //	fmt.Println(entry.Markdown)

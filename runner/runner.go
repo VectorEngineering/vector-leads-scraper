@@ -108,14 +108,14 @@ type Config struct {
 	RedisRetentionDays int
 
 	// database-specific configurations
-	DatabaseURL string
-	MaxIdleConnections int
-	MaxOpenConnections int
-	MaxConnectionLifetime time.Duration
+	DatabaseURL               string
+	MaxIdleConnections        int
+	MaxOpenConnections        int
+	MaxConnectionLifetime     time.Duration
 	MaxConnectionRetryTimeout time.Duration
-	RetrySleep time.Duration
-	QueryTimeout time.Duration
-	MaxConnectionRetries int
+	RetrySleep                time.Duration
+	QueryTimeout              time.Duration
+	MaxConnectionRetries      int
 
 	// telemetry configuration
 	MetricsReportingEnabled bool
@@ -207,7 +207,7 @@ func ParseConfig() *Config {
 	flag.DurationVar(&cfg.RetrySleep, "db-retry-sleep", 1*time.Second, "amount of time to wait between retries")
 	flag.DurationVar(&cfg.QueryTimeout, "db-query-timeout", 10*time.Second, "maximum amount of time to wait for a query to complete")
 	flag.IntVar(&cfg.MaxConnectionRetries, "db-max-connection-retries", 3, "maximum number of retries to establish a connection")
-	
+
 	flag.Parse()
 
 	if cfg.AwsAccessKey == "" {

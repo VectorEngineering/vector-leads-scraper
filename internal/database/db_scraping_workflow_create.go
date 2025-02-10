@@ -85,7 +85,7 @@ func (db *Db) CreateScrapingWorkflow(ctx context.Context, workspaceID uint64, wo
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
-	
+
 	// append the workflow to the workspace
 	if err := workspaceQop.Workflows.Model(&workspace).Append(&workflowORM); err != nil {
 		return nil, fmt.Errorf("failed to append workflow to workspace: %w", err)
@@ -96,7 +96,7 @@ func (db *Db) CreateScrapingWorkflow(ctx context.Context, workspaceID uint64, wo
 	if err != nil {
 		return nil, fmt.Errorf("failed to update workspace: %w", err)
 	}
-	
+
 	if res.RowsAffected == 0 || res.Error != nil {
 		if res.Error != nil {
 			return nil, fmt.Errorf("failed to update workspace: %w", res.Error)

@@ -37,14 +37,13 @@ func (db *Db) UpdateAccount(ctx context.Context, orgId, tenantId uint64, account
 	acOrm := db.QueryOperator.AccountORM
 	tenantOrm := db.QueryOperator.TenantORM
 
-
 	// ensure the account exist based on the id in the database
 	existingAcct, err := acOrm.WithContext(ctx).Where(
 		acOrm.Id.Eq(account.Id),
 	).First()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account: %w", err)
-	}	
+	}
 	if existingAcct == nil {
 		return nil, fmt.Errorf("account not found")
 	}
@@ -73,14 +72,13 @@ func (db *Db) UpdateAccount(ctx context.Context, orgId, tenantId uint64, account
 		return nil, fmt.Errorf("failed to update account: %w", err)
 	}
 
-
 	// update the tenant
 	res, err := tenantOrm.WithContext(ctx).Updates(tenant)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update tenant: %w", err)
 	}
 
-	if res.RowsAffected == 0 {	
+	if res.RowsAffected == 0 {
 		return nil, fmt.Errorf("tenant not found")
 	}
 

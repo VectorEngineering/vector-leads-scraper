@@ -101,19 +101,19 @@ func TestCreateDataExportTask(t *testing.T) {
 			name:        "missing export type",
 			format:      "json",
 			destination: "s3://bucket/path",
-			wantErr:    true,
+			wantErr:     true,
 		},
 		{
 			name:        "missing format",
 			exportType:  "test-export",
 			destination: "s3://bucket/path",
-			wantErr:    true,
+			wantErr:     true,
 		},
 		{
 			name:       "missing destination",
 			exportType: "test-export",
 			format:     "json",
-			wantErr:   true,
+			wantErr:    true,
 		},
 	}
 
@@ -129,7 +129,7 @@ func TestCreateDataExportTask(t *testing.T) {
 
 				// Verify the task payload
 				var payload struct {
-					Type    string           `json:"type"`
+					Type    string            `json:"type"`
 					Payload DataExportPayload `json:"payload"`
 				}
 				err = json.Unmarshal(got, &payload)
@@ -145,6 +145,9 @@ func TestCreateDataExportTask(t *testing.T) {
 }
 
 func TestHandler_processDataExportTask(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	tests := []struct {
 		name    string
 		h       *Handler
@@ -153,7 +156,7 @@ func TestHandler_processDataExportTask(t *testing.T) {
 	}{
 		{
 			name: "valid task",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeDataExport.String(), mustMarshal(t, &DataExportPayload{
 				ExportType:  "test-export",
 				Format:      "json",
@@ -166,7 +169,7 @@ func TestHandler_processDataExportTask(t *testing.T) {
 		},
 		{
 			name: "invalid payload",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeDataExport.String(), []byte(`{
 				"export_type": "",
 				"format": "",
@@ -175,9 +178,9 @@ func TestHandler_processDataExportTask(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed payload",
-			h:    NewHandler(),
-			task: asynq.NewTask(TypeDataExport.String(), []byte(`invalid json`)),
+			name:    "malformed payload",
+			h:       NewHandler(sc),
+			task:    asynq.NewTask(TypeDataExport.String(), []byte(`invalid json`)),
 			wantErr: true,
 		},
 	}

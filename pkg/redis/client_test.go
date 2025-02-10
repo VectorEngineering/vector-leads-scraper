@@ -187,29 +187,29 @@ func TestClient_EnqueueTaskBasedOnSubscription(t *testing.T) {
 	payload := []byte(`{"job_id":"test-job","keywords":["test"],"fast_mode":true,"lang":"en","depth":1}`)
 
 	tests := []struct {
-		name            string
+		name             string
 		subscriptionType priorityqueue.SubscriptionType
-		wantErr         bool
+		wantErr          bool
 	}{
 		{
-			name:            "enterprise subscription",
+			name:             "enterprise subscription",
 			subscriptionType: priorityqueue.SubscriptionEnterprise,
-			wantErr:         false,
+			wantErr:          false,
 		},
 		{
-			name:            "pro subscription",
+			name:             "pro subscription",
 			subscriptionType: priorityqueue.SubscriptionPro,
-			wantErr:         false,
+			wantErr:          false,
 		},
 		{
-			name:            "free subscription",
+			name:             "free subscription",
 			subscriptionType: priorityqueue.SubscriptionFree,
-			wantErr:         false,
+			wantErr:          false,
 		},
 		{
-			name:            "invalid subscription",
+			name:             "invalid subscription",
 			subscriptionType: "invalid",
-			wantErr:         true,
+			wantErr:          true,
 		},
 	}
 
@@ -233,7 +233,7 @@ func TestClient_TaskOperations(t *testing.T) {
 	payload := []byte(`{"key": "value"}`)
 
 	// First enqueue a task and wait for it to be available
-	err := client.EnqueueTask(ctx, taskType, payload, 
+	err := client.EnqueueTask(ctx, taskType, payload,
 		asynq.Queue(queue),
 		asynq.TaskID("test-task-id"),
 		asynq.Retention(time.Hour))
@@ -335,9 +335,9 @@ func TestRetryWithBackoff(t *testing.T) {
 func TestClient_IsHealthy(t *testing.T) {
 	client, cleanup := setupTestClient(t)
 	// We'll handle cleanup manually in this test
-	
+
 	ctx := context.Background()
-	
+
 	tests := []struct {
 		name    string
 		setup   func()
@@ -349,7 +349,7 @@ func TestClient_IsHealthy(t *testing.T) {
 			setup: func() {
 				// No setup needed for healthy client
 			},
-			want: true,
+			want:    true,
 			cleanup: true,
 		},
 		{
@@ -357,7 +357,7 @@ func TestClient_IsHealthy(t *testing.T) {
 			setup: func() {
 				client.Close() // Close the client to make it unhealthy
 			},
-			want: false,
+			want:    false,
 			cleanup: false, // Don't run cleanup since client is already closed
 		},
 	}
@@ -369,7 +369,7 @@ func TestClient_IsHealthy(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("IsHealthy() = %v, want %v", got, tt.want)
 			}
-			
+
 			// Only run cleanup if specified
 			if tt.cleanup {
 				cleanup()

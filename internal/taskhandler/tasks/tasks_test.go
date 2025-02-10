@@ -146,10 +146,10 @@ func TestNewTask(t *testing.T) {
 
 func TestParsePayload(t *testing.T) {
 	tests := []struct {
-		name        string
-		taskType    TaskType
-		payload     interface{}
-		wantErr     bool
+		name         string
+		taskType     TaskType
+		payload      interface{}
+		wantErr      bool
 		validateFunc func(t *testing.T, got interface{})
 	}{
 		{
@@ -205,13 +205,13 @@ func TestParsePayload(t *testing.T) {
 			name:     "invalid task type",
 			taskType: "invalid",
 			payload:  map[string]interface{}{},
-			wantErr: true,
+			wantErr:  true,
 		},
 		{
 			name:     "invalid payload json",
 			taskType: TypeEmailExtract,
 			payload:  "invalid json",
-			wantErr: true,
+			wantErr:  true,
 		},
 	}
 

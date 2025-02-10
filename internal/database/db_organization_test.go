@@ -248,9 +248,9 @@ func TestDeleteOrganization(t *testing.T) {
 					// Create accounts for each tenant
 					for j := 0; j < 2; j++ {
 						account, err := conn.CreateAccount(ctx, &CreateAccountInput{
-							Account:   testutils.GenerateRandomizedAccount(),
+							Account:  testutils.GenerateRandomizedAccount(),
 							TenantID: tenant.Id,
-							OrgID: org.Id,
+							OrgID:    org.Id,
 						})
 						require.NoError(t, err)
 
@@ -306,8 +306,8 @@ func TestDeleteOrganization(t *testing.T) {
 			// Verify all tenants were deleted
 			tenants, err := conn.ListTenants(ctx, &ListTenantsInput{
 				OrganizationID: input.ID,
-				Limit:         100,
-				Offset:        0,
+				Limit:          100,
+				Offset:         0,
 			})
 			require.NoError(t, err)
 			assert.Empty(t, tenants)

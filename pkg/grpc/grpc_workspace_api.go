@@ -147,7 +147,7 @@ func (s *Server) ListWorkspaces(ctx context.Context, req *proto.ListWorkspacesRe
 	}
 
 	if _, err := s.db.GetTenant(ctx, &database.GetTenantInput{
-		ID:             req.GetTenantId(),
+		ID: req.GetTenantId(),
 	}); err != nil {
 		logger.Error("failed to get tenant", zap.Error(err))
 		return nil, status.Errorf(codes.Internal, "failed to get tenant: %s", err.Error())

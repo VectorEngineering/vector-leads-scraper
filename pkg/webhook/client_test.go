@@ -129,7 +129,7 @@ func TestClientBatching(t *testing.T) {
 	defer mu.Unlock()
 
 	assert.Len(t, receivedBatches, 2)
-	
+
 	// First batch should have 2 records (MaxBatchSize)
 	assert.Len(t, receivedBatches[0].Records, 2)
 	assert.Equal(t, "1", receivedBatches[0].Records[0].ID)
@@ -227,4 +227,4 @@ func TestClientShutdown(t *testing.T) {
 	// Sending after shutdown should fail
 	err = client.Send(ctx, record)
 	assert.Error(t, err)
-} 
+}

@@ -64,30 +64,30 @@ func parseQueuePriorities(s string) (map[string]int, error) {
 
 	priorities := make(map[string]int)
 	pairs := strings.Split(s, ",")
-	
+
 	for _, pair := range pairs {
 		parts := strings.Split(pair, ":")
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("invalid queue priority format: %s", pair)
 		}
-		
+
 		queue := strings.TrimSpace(parts[0])
 		if queue == "" {
 			return nil, fmt.Errorf("empty queue name in priority pair: %s", pair)
 		}
-		
+
 		priority, err := strconv.Atoi(strings.TrimSpace(parts[1]))
 		if err != nil {
 			return nil, fmt.Errorf("invalid priority value in pair %s: %w", pair, err)
 		}
-		
+
 		if priority < 1 {
 			return nil, fmt.Errorf("priority must be greater than 0: %s", pair)
 		}
-		
+
 		priorities[queue] = priority
 	}
-	
+
 	return priorities, nil
 }
 

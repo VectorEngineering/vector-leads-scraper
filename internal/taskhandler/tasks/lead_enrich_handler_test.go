@@ -67,6 +67,9 @@ func TestLeadEnrichPayload_Validate(t *testing.T) {
 }
 
 func TestHandler_processLeadEnrichTask(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	tests := []struct {
 		name    string
 		h       *Handler
@@ -75,7 +78,7 @@ func TestHandler_processLeadEnrichTask(t *testing.T) {
 	}{
 		{
 			name: "valid task",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeLeadEnrich.String(), mustMarshal(t, &LeadEnrichPayload{
 				LeadID: "lead123",
 				EnrichTypes: []string{
@@ -87,7 +90,7 @@ func TestHandler_processLeadEnrichTask(t *testing.T) {
 		},
 		{
 			name: "invalid payload",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeLeadEnrich.String(), []byte(`{
 				"lead_id": "",
 				"enrich_types": []
@@ -95,16 +98,16 @@ func TestHandler_processLeadEnrichTask(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed payload",
-			h:    NewHandler(),
-			task: asynq.NewTask(TypeLeadEnrich.String(), []byte(`invalid json`)),
+			name:    "malformed payload",
+			h:       NewHandler(sc),
+			task:    asynq.NewTask(TypeLeadEnrich.String(), []byte(`invalid json`)),
 			wantErr: true,
 		},
 		{
 			name: "cancelled context",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeLeadEnrich.String(), mustMarshal(t, &LeadEnrichPayload{
-				LeadID: "lead123",
+				LeadID:      "lead123",
 				EnrichTypes: []string{"company_info"},
 			})),
 			wantErr: true,
@@ -119,7 +122,7 @@ func TestHandler_processLeadEnrichTask(t *testing.T) {
 				ctx, cancel = context.WithCancel(ctx)
 				cancel()
 			}
-			
+
 			err := tt.h.processLeadEnrichTask(ctx, tt.task)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -132,10 +135,10 @@ func TestHandler_processLeadEnrichTask(t *testing.T) {
 
 func TestCreateLeadEnrichTask(t *testing.T) {
 	tests := []struct {
-		name       string
-		leadID     string
+		name        string
+		leadID      string
 		enrichTypes []string
-		wantErr    bool
+		wantErr     bool
 	}{
 		{
 			name:   "valid task",
@@ -147,22 +150,22 @@ func TestCreateLeadEnrichTask(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:       "missing lead ID",
-			leadID:     "",
+			name:        "missing lead ID",
+			leadID:      "",
 			enrichTypes: []string{"company_info"},
-			wantErr:    true,
+			wantErr:     true,
 		},
 		{
-			name:       "empty enrich types",
-			leadID:     "lead123",
+			name:        "empty enrich types",
+			leadID:      "lead123",
 			enrichTypes: []string{},
-			wantErr:    true,
+			wantErr:     true,
 		},
 		{
-			name:       "nil enrich types",
-			leadID:     "lead123",
+			name:        "nil enrich types",
+			leadID:      "lead123",
 			enrichTypes: nil,
-			wantErr:    true,
+			wantErr:     true,
 		},
 	}
 
@@ -178,7 +181,7 @@ func TestCreateLeadEnrichTask(t *testing.T) {
 
 				// Verify the task payload
 				var payload struct {
-					Type    string           `json:"type"`
+					Type    string            `json:"type"`
 					Payload LeadEnrichPayload `json:"payload"`
 				}
 				err = json.Unmarshal(got, &payload)

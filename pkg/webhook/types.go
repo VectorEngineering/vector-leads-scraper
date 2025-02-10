@@ -54,4 +54,4 @@ type Client interface {
 
 	// Shutdown gracefully shuts down the client
 	Shutdown(ctx context.Context) error
-} 
+}

@@ -26,10 +26,10 @@ type URLExtractJobOptions func(*URLExtractJob)
 //	entry := &Entry{
 //	    WebSite: "https://example.com",
 //	}
-//	
+//
 //	// Create a new job with default settings
 //	job := NewURLJob("parent-123", entry)
-//	
+//
 //	// Or with an exit monitor
 //	monitor := &MyExitMonitor{}
 //	job := NewURLJob("parent-123", entry, WithURLJobExitMonitor(monitor))
@@ -57,10 +57,10 @@ func WithURLExtractJobWorkspaceID(workspaceID uint64) URLExtractJobOptions {
 //	entry := &Entry{
 //	    WebSite: "https://example.com",
 //	}
-//	
+//
 //	// Basic usage
 //	job := NewURLJob("parent-123", entry)
-//	
+//
 //	// With exit monitoring
 //	monitor := &MyExitMonitor{}
 //	job := NewURLJob(
@@ -124,13 +124,13 @@ func WithURLJobExitMonitor(exitMonitor exiter.Exiter) URLExtractJobOptions {
 //	crawler := scrapemate.NewCrawler(scrapemate.CrawlerConfig{
 //	    Fetcher: &myFetcher{},
 //	})
-//	
+//
 //	job := NewURLJob("parent-123", entry)
 //	result, err := crawler.Process(context.Background(), job)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-//	
+//
 //	// Access the extracted URLs
 //	entry := result.(*Entry)
 //	for _, url := range entry.Urls {
@@ -188,7 +188,7 @@ func (j *URLExtractJob) ProcessOnFetchError() bool {
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-//	
+//
 //	urls := docURLExtractor(doc)
 //	for _, url := range urls {
 //	    fmt.Println(url)

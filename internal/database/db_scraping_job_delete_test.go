@@ -287,7 +287,7 @@ func TestBatchDeleteScrapingJobs(t *testing.T) {
 	}
 }
 
-func TestBatchDeleteScrapingJobs_LargeBatch(t *testing.T) {	
+func TestBatchDeleteScrapingJobs_LargeBatch(t *testing.T) {
 	tc := setupAccountTestContext(t)
 	defer tc.Cleanup()
 

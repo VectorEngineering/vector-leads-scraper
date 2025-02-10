@@ -68,6 +68,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Vector/vector-leads-scraper/internal/database"
+	"github.com/Vector/vector-leads-scraper/pkg/redis/scheduler"
 	"github.com/hibiken/asynq"
 )
 
@@ -143,13 +145,15 @@ type TaskHandler interface {
 //		log.Fatal(err)
 //	}
 type Handler struct {
-	maxRetries    int           // Maximum number of retry attempts for failed tasks
-	retryInterval time.Duration // Time to wait between retry attempts
-	taskTimeout   time.Duration // Maximum time allowed for task execution
-	dataFolder    string        // Directory for storing task results and data
-	concurrency   int           // Number of concurrent scraping operations
-	proxies       []string      // List of proxy servers for scraping
-	disableReuse  bool          // Flag to disable page reuse in scraping
+	maxRetries    int                         // Maximum number of retry attempts for failed tasks
+	retryInterval time.Duration               // Time to wait between retry attempts
+	taskTimeout   time.Duration               // Maximum time allowed for task execution
+	dataFolder    string                      // Directory for storing task results and data
+	concurrency   int                         // Number of concurrent scraping operations
+	proxies       []string                    // List of proxy servers for scraping
+	disableReuse  bool                        // Flag to disable page reuse in scraping
+	scheduler     *scheduler.Scheduler        // Scheduler for periodic tasks
+	db            database.DatabaseOperations // Database for task operations
 }
 
 // HandlerOption defines a function type for configuring Handler instances.
@@ -254,21 +258,29 @@ func WithDisablePageReuse(disable bool) HandlerOption {
 	}
 }
 
+func WithDatabase(db database.DatabaseOperations) HandlerOption {
+	return func(h *Handler) {
+		h.db = db
+	}
+}
+
 // NewHandler creates a new task handler with the specified options.
 // It initializes a Handler with default values and applies any provided
 // options to customize the configuration.
 //
 // Parameters:
+//   - scheduler: The scheduler instance for managing periodic tasks
 //   - opts: Variable number of HandlerOption functions to configure the handler
 //
 // Returns:
 //   - *Handler: A new Handler instance with the specified configuration
-func NewHandler(opts ...HandlerOption) *Handler {
+func NewHandler(scheduler *scheduler.Scheduler, opts ...HandlerOption) *Handler {
 	h := &Handler{
 		maxRetries:    3,
 		retryInterval: 5 * time.Second,
 		taskTimeout:   30 * time.Second,
 		concurrency:   2,
+		scheduler:     scheduler,
 	}
 
 	for _, opt := range opts {
@@ -320,6 +332,8 @@ func (h *Handler) ProcessTask(ctx context.Context, task *asynq.Task) error {
 		return h.processDataImportTask(ctx, task)
 	case TypeDataCleanup.String():
 		return h.processDataCleanupTask(ctx, task)
+	case TypeWorkflowExecution.String():
+		return h.processWorkflowExecutionTask(ctx, task)
 	default:
 		return fmt.Errorf("unknown task type: %s", task.Type())
 	}

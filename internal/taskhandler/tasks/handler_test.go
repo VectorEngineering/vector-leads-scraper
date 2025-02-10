@@ -34,8 +34,11 @@ func (h *mockBlockingHandler) ProcessTask(ctx context.Context, task *asynq.Task)
 }
 
 func TestNewHandler(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	t.Run("default configuration", func(t *testing.T) {
-		h := NewHandler()
+		h := NewHandler(sc)
 		assert.Equal(t, 3, h.maxRetries)
 		assert.Equal(t, 5*time.Second, h.retryInterval)
 		assert.Equal(t, 30*time.Second, h.taskTimeout)
@@ -47,7 +50,7 @@ func TestNewHandler(t *testing.T) {
 
 	t.Run("custom configuration", func(t *testing.T) {
 		proxies := []string{"proxy1", "proxy2"}
-		h := NewHandler(
+		h := NewHandler(sc,
 			WithMaxRetries(5),
 			WithRetryInterval(10*time.Second),
 			WithTaskTimeout(1*time.Minute),
@@ -68,8 +71,11 @@ func TestNewHandler(t *testing.T) {
 }
 
 func TestProcessTask(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	t.Run("unknown task type", func(t *testing.T) {
-		h := NewHandler()
+		h := NewHandler(sc)
 		task := asynq.NewTask("unknown_type", nil)
 		err := h.ProcessTask(context.Background(), task)
 		assert.Error(t, err)
@@ -78,6 +84,7 @@ func TestProcessTask(t *testing.T) {
 
 	t.Run("scrape task", func(t *testing.T) {
 		h := NewHandler(
+			sc,
 			WithDataFolder(t.TempDir()),
 			WithConcurrency(1),
 		)
@@ -88,7 +95,11 @@ func TestProcessTask(t *testing.T) {
 	})
 
 	t.Run("context timeout", func(t *testing.T) {
+		sc, cleanup := setupScheduler(t)
+		defer cleanup()
+
 		baseHandler := NewHandler(
+			sc,
 			WithDataFolder(t.TempDir()),
 			WithTaskTimeout(1*time.Hour), // Long timeout to ensure context timeout triggers first
 		)
@@ -115,7 +126,11 @@ func TestProcessTask(t *testing.T) {
 }
 
 func TestTaskValidation(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	h := NewHandler(
+		sc,
 		WithDataFolder(t.TempDir()),
 	)
 

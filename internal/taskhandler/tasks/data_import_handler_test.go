@@ -129,7 +129,7 @@ func TestCreateDataImportTask(t *testing.T) {
 
 				// Verify the task payload
 				var payload struct {
-					Type    string           `json:"type"`
+					Type    string            `json:"type"`
 					Payload DataImportPayload `json:"payload"`
 				}
 				err = json.Unmarshal(got, &payload)
@@ -145,6 +145,9 @@ func TestCreateDataImportTask(t *testing.T) {
 }
 
 func TestHandler_processDataImportTask(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	tests := []struct {
 		name    string
 		h       *Handler
@@ -153,7 +156,7 @@ func TestHandler_processDataImportTask(t *testing.T) {
 	}{
 		{
 			name: "valid task",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeDataImport.String(), mustMarshal(t, &DataImportPayload{
 				ImportType: "test-import",
 				Source:     "s3://bucket/path",
@@ -166,7 +169,7 @@ func TestHandler_processDataImportTask(t *testing.T) {
 		},
 		{
 			name: "invalid payload",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeDataImport.String(), []byte(`{
 				"import_type": "",
 				"source": "",
@@ -175,9 +178,9 @@ func TestHandler_processDataImportTask(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed payload",
-			h:    NewHandler(),
-			task: asynq.NewTask(TypeDataImport.String(), []byte(`invalid json`)),
+			name:    "malformed payload",
+			h:       NewHandler(sc),
+			task:    asynq.NewTask(TypeDataImport.String(), []byte(`invalid json`)),
 			wantErr: true,
 		},
 	}

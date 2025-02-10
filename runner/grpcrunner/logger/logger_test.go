@@ -181,7 +181,7 @@ func TestZapWriter(t *testing.T) {
 	require.NoError(t, err)
 
 	writer := &zapWriter{zapLogger.Sugar()}
-	
+
 	// Test Write method
 	n, err := writer.Write([]byte("test message"))
 	assert.NoError(t, err)

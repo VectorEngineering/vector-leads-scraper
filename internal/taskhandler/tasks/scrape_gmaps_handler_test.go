@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Vector/vector-leads-scraper/pkg/redis/scheduler"
 	"github.com/hibiken/asynq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -130,8 +131,14 @@ func TestProcessScrapeTask(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel() // Run tests in parallel
 
+			scheduler := scheduler.New(asynq.RedisClientOpt{
+				Addr:     "localhost:6379",
+				Password: "",
+				DB:       0,
+			}, nil)
+
 			// Create handler with temp directory
-			h := NewHandler(WithDataFolder(tempDir))
+			h := NewHandler(scheduler, WithDataFolder(tempDir))
 			if tt.setupHdlr != nil {
 				tt.setupHdlr(h)
 			}
@@ -180,6 +187,9 @@ func TestProcessScrapeTask(t *testing.T) {
 }
 
 func TestSetupMate(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	tests := []struct {
 		name        string
 		payload     *ScrapePayload
@@ -214,7 +224,7 @@ func TestSetupMate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel() // Run tests in parallel
 
-			h := NewHandler()
+			h := NewHandler(sc)
 			if tt.setupHdlr != nil {
 				tt.setupHdlr(h)
 			}

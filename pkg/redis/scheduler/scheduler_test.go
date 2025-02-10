@@ -295,7 +295,7 @@ func TestScheduler_ErrorHandling(t *testing.T) {
 		},
 		ShutdownTimeout: time.Second,
 	}
-	
+
 	scheduler := New(asynq.RedisClientOpt{
 		Addr:     redisContainer.GetAddress(),
 		Password: redisContainer.Password,
@@ -313,7 +313,7 @@ func TestScheduler_ErrorHandling(t *testing.T) {
 		errCh <- scheduler.Run(runCtx)
 	}()
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Force an error by closing the client
 	scheduler.client.Close()
 	cancel() // Cancel the context before stopping
@@ -326,17 +326,17 @@ func TestScheduler_ConcurrentOperations(t *testing.T) {
 	redisContainer, err := testcontainers.NewRedisContainer(ctx)
 	require.NoError(t, err)
 	defer redisContainer.Terminate(ctx)
-	
+
 	scheduler := New(asynq.RedisClientOpt{
 		Addr:     redisContainer.GetAddress(),
 		Password: redisContainer.Password,
 		DB:       0,
 	}, nil)
-	
+
 	// Test concurrent registrations before running
 	var wg sync.WaitGroup
 	errCh := make(chan error, 10)
-	
+
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(i int) {
@@ -350,14 +350,14 @@ func TestScheduler_ConcurrentOperations(t *testing.T) {
 			}
 		}(i)
 	}
-	
+
 	wg.Wait()
 	close(errCh)
-	
+
 	for err := range errCh {
 		assert.NoError(t, err)
 	}
-	
+
 	// Verify all tasks were registered
 	entries := scheduler.GetEntries()
 	assert.Len(t, entries, 10)
@@ -407,25 +407,25 @@ func TestScheduler_InvalidOperations(t *testing.T) {
 	redisContainer, err := testcontainers.NewRedisContainer(ctx)
 	require.NoError(t, err)
 	defer redisContainer.Terminate(ctx)
-	
+
 	scheduler := New(asynq.RedisClientOpt{
 		Addr:     redisContainer.GetAddress(),
 		Password: redisContainer.Password,
 		DB:       0,
 	}, nil)
-	
+
 	// Try to register a task with empty spec
 	_, err = scheduler.Register("", asynq.NewTask("test", nil))
 	assert.Error(t, err, "Empty spec should cause an error")
-	
+
 	// Try to register a task with nil task
 	_, err = scheduler.Register("* * * * *", nil)
 	assert.Error(t, err, "Nil task should cause an error")
-	
+
 	// Try to unregister an empty entry ID
 	err = scheduler.Unregister("")
 	assert.Error(t, err, "Empty entry ID should cause an error")
-	
+
 	// Try to unregister while running
 	runCtx, cancel := context.WithCancel(ctx)
 	errCh := make(chan error, 1)
@@ -433,11 +433,11 @@ func TestScheduler_InvalidOperations(t *testing.T) {
 		errCh <- scheduler.Run(runCtx)
 	}()
 	time.Sleep(100 * time.Millisecond)
-	
+
 	err = scheduler.Unregister("some-id")
 	assert.Error(t, err, "Unregistering while running should cause an error")
 	assert.Contains(t, err.Error(), "cannot unregister tasks while scheduler is running")
-	
+
 	cancel()
 	<-errCh // Wait for the scheduler to stop
 	err = scheduler.Stop()

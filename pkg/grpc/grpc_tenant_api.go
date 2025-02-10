@@ -41,8 +41,8 @@ func (s *Server) CreateTenant(ctx context.Context, req *proto.CreateTenantReques
 	var (
 		err error
 	)
-	
-	// initialize the trace 	
+
+	// initialize the trace
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "create-tenant")
 	defer cleanup()
@@ -109,12 +109,11 @@ func (s *Server) GetTenant(ctx context.Context, req *proto.GetTenantRequest) (*p
 	var (
 		err error
 	)
-	
-	// initialize the trace 	
+
+	// initialize the trace
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "get-tenant")
 	defer cleanup()
-
 
 	// ensure the request is not nil
 	if req == nil {
@@ -182,12 +181,11 @@ func (s *Server) UpdateTenant(ctx context.Context, req *proto.UpdateTenantReques
 	var (
 		err error
 	)
-	
-	// initialize the trace 	
+
+	// initialize the trace
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "update-tenant")
 	defer cleanup()
-
 
 	// ensure the request is not nil
 	if req == nil {
@@ -211,8 +209,8 @@ func (s *Server) UpdateTenant(ctx context.Context, req *proto.UpdateTenantReques
 
 	// Update the tenant using the database client
 	result, err := s.db.UpdateTenant(ctx, &database.UpdateTenantInput{
-		ID:             req.GetTenant().GetId(),
-		Tenant:         req.GetTenant(),
+		ID:     req.GetTenant().GetId(),
+		Tenant: req.GetTenant(),
 	})
 	if err != nil {
 		s.logger.Error("failed to update tenant", zap.Error(err))
@@ -251,8 +249,8 @@ func (s *Server) DeleteTenant(ctx context.Context, req *proto.DeleteTenantReques
 	var (
 		err error
 	)
-	
-	// initialize the trace 	
+
+	// initialize the trace
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "delete-tenant")
 	defer cleanup()
@@ -317,7 +315,7 @@ func (s *Server) DeleteTenant(ctx context.Context, req *proto.DeleteTenantReques
 //	})
 func (s *Server) ListTenants(ctx context.Context, req *proto.ListTenantsRequest) (*proto.ListTenantsResponse, error) {
 	var (
-		err error
+		err    error
 		logger = s.logger.With(zap.String("method", "ListTenants"))
 	)
 
@@ -341,7 +339,7 @@ func (s *Server) ListTenants(ctx context.Context, req *proto.ListTenantsRequest)
 		return nil, status.Errorf(codes.InvalidArgument, "%s", err.Error())
 	}
 
-	s.logger.Info("listing tenants", 
+	s.logger.Info("listing tenants",
 		zap.Int32("page_size", req.GetPageSize()),
 		zap.Int32("page_number", req.GetPageNumber()))
 
@@ -356,7 +354,7 @@ func (s *Server) ListTenants(ctx context.Context, req *proto.ListTenantsRequest)
 	if pageNumber < 1 {
 		pageNumber = 1
 	}
-	offset := int(pageSize) * (int(pageNumber) - 1)  // Subtract 1 since page numbers start at 1
+	offset := int(pageSize) * (int(pageNumber) - 1) // Subtract 1 since page numbers start at 1
 
 	// List tenants using the database client
 	results, err := s.db.ListTenants(ctx, &database.ListTenantsInput{
@@ -379,4 +377,4 @@ func (s *Server) ListTenants(ctx context.Context, req *proto.ListTenantsRequest)
 		Tenants:        results,
 		NextPageNumber: nextPageNumber,
 	}, nil
-} 
+}

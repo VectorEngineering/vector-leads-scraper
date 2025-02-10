@@ -34,7 +34,7 @@ func TestBatchUpdateScrapingJobs(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		job := testutils.GenerateRandomizedScrapingJob()
 		job.Status = lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED
-		
+
 		createdJob, err := conn.CreateScrapingJob(ctx, tc.Workspace.Id, job)
 		require.NoError(t, err)
 		require.NotNil(t, createdJob)
@@ -72,7 +72,7 @@ func TestBatchUpdateScrapingJobs(t *testing.T) {
 				for i, job := range updatedJobs {
 					assert.Equal(t, jobs[i].Id, job.Id)
 					assert.Equal(t, lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_COMPLETED, job.Status)
-					
+
 					// TODO: re-enable this and fix the batch update
 					// Verify job was actually updated in database
 					// fetchedJob, err := conn.GetScrapingJob(ctx, job.Id)
@@ -113,4 +113,4 @@ func TestBatchUpdateScrapingJobs(t *testing.T) {
 			}
 		})
 	}
-} 
+}

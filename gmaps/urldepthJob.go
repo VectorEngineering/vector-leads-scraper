@@ -79,7 +79,7 @@ func WithGenericWorkspaceID(workspaceID uint64) GenericCrawlJobOptions {
 //	    3, // maxDepth
 //	    0, // currentDepth
 //	)
-//	
+//
 //	// Or with deduplication and monitoring
 //	deduper := &MyDeduper{}
 //	monitor := &MyExitMonitor{}
@@ -125,7 +125,7 @@ type GenericCrawlJob struct {
 //	    3, // maxDepth
 //	    0, // currentDepth
 //	)
-//	
+//
 //	// With all options
 //	job := NewGenericCrawlJob(
 //	    "job-123",
@@ -173,7 +173,7 @@ func NewGenericCrawlJob(id, urlStr string, maxDepth, depth int, opts ...GenericC
 //	crawler := scrapemate.NewCrawler(scrapemate.CrawlerConfig{
 //	    Fetcher: &myFetcher{},
 //	})
-//	
+//
 //	job := NewGenericCrawlJob("job-123", "https://example.com", 3, 0)
 //	result, err := crawler.Process(context.Background(), job)
 //	if err != nil {

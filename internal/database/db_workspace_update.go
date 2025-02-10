@@ -43,7 +43,7 @@ func (db *Db) UpdateWorkspace(ctx context.Context, workspace *lead_scraper_servi
 
 	wQop := db.QueryOperator.WorkspaceORM
 	res, err := wQop.Where(wQop.Id.Eq(workspace.Id)).Updates(gormWorkspace)
-	if err != nil {	
+	if err != nil {
 		return nil, fmt.Errorf("failed to update workspace: %w", err)
 	}
 
@@ -54,7 +54,6 @@ func (db *Db) UpdateWorkspace(ctx context.Context, workspace *lead_scraper_servi
 
 		return nil, ErrWorkspaceDoesNotExist
 	}
-
 
 	// convert the gorm workspace to a protobuf workspace
 	updatedWorkspace, err := gormWorkspace.ToPB(ctx)

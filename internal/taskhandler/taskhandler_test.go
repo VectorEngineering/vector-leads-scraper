@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -50,6 +51,7 @@ func setupTestHandler(t *testing.T) (*Handler, func()) {
 			RedisPort:     ctx.RedisConfig.Port,
 			RedisPassword: ctx.RedisConfig.Password,
 			RedisDB:       0,
+			Addr:         fmt.Sprintf("%s:%d", ctx.RedisConfig.Host, ctx.RedisConfig.Port),
 		}
 
 		opts := &Options{

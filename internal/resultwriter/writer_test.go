@@ -95,7 +95,7 @@ func setupTest(t *testing.T) *testSetup {
 		Workspace:      workspace,
 		AccountID:      createdAccount.Id,
 		OrganizationID: createdOrg.Id,
-		TenantID:      createdTenant.Id,
+		TenantID:       createdTenant.Id,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createdWorkspace)
@@ -414,19 +414,19 @@ func TestResultWriter_Close(t *testing.T) {
 		{
 			name: "success - with webhook",
 			cfg: &Config{
-				WebhookEnabled:         true,
-				WebhookEndpoints:       []string{"http://example.com"},
-				WebhookBatchSize:       100,
-				BatchSize:              50,
-				WebhookFlushInterval:   time.Second,
-				FlushInterval:          time.Second,
-				WebhookRetryInterval:   time.Second,
+				WebhookEnabled:       true,
+				WebhookEndpoints:     []string{"http://example.com"},
+				WebhookBatchSize:     100,
+				BatchSize:            50,
+				WebhookFlushInterval: time.Second,
+				FlushInterval:        time.Second,
+				WebhookRetryInterval: time.Second,
 			},
 			wantError: false,
 		},
 		{
-			name: "success - without webhook",
-			cfg:  DefaultConfig(),
+			name:      "success - without webhook",
+			cfg:       DefaultConfig(),
 			wantError: false,
 		},
 	}
@@ -448,9 +448,9 @@ func TestResultWriter_Close(t *testing.T) {
 
 func TestConvertEntryToLead_WithBusinessHours(t *testing.T) {
 	entry := &gmaps.Entry{
-		ID:           "test-id",
-		Title:        "Test Business",
-		Category:     "Test Category",
+		ID:       "test-id",
+		Title:    "Test Business",
+		Category: "Test Category",
 		OpenHours: map[string][]string{
 			"Monday":    {"09:00", "17:00"},
 			"Tuesday":   {"09:00", "17:00"},
@@ -458,7 +458,7 @@ func TestConvertEntryToLead_WithBusinessHours(t *testing.T) {
 			"Thursday":  {"09:00", "17:00"},
 			"Friday":    {"09:00", "17:00"},
 			"Saturday":  {"10:00", "15:00"},
-			"Sunday":    {},  // Closed
+			"Sunday":    {}, // Closed
 		},
 		CompleteAddress: gmaps.Address{
 			City:    "Test City",
@@ -525,13 +525,13 @@ func TestResultWriter_Run_WithWebhook(t *testing.T) {
 
 	// Create writer with webhook enabled
 	cfg := &Config{
-		WebhookEnabled:         true,
-		WebhookEndpoints:       []string{"http://example.com"},
-		WebhookBatchSize:       100,
-		BatchSize:              50,
-		WebhookFlushInterval:   time.Second,
-		FlushInterval:          time.Second,
-		WebhookRetryInterval:   time.Second,
+		WebhookEnabled:       true,
+		WebhookEndpoints:     []string{"http://example.com"},
+		WebhookBatchSize:     100,
+		BatchSize:            50,
+		WebhookFlushInterval: time.Second,
+		FlushInterval:        time.Second,
+		WebhookRetryInterval: time.Second,
 	}
 
 	writer, err := New(setup.db, setup.logger, cfg)
@@ -699,7 +699,7 @@ func TestProvider(t *testing.T) {
 		// Create a job with non-UNSPECIFIED status
 		scrapingJob := testutils.GenerateRandomizedScrapingJob()
 		scrapingJob.Status = lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_COMPLETED
-		scrapingJob.Url = "https://example.com"  // Set a valid URL
+		scrapingJob.Url = "https://example.com" // Set a valid URL
 		job, err := setup.db.CreateScrapingJob(ctx, setup.workspace.Id, scrapingJob)
 		require.NoError(t, err)
 		require.NotNil(t, job)
@@ -803,4 +803,4 @@ func TestProvider(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid ScrapingJob.Zoom")
 	})
-} 
+}

@@ -48,9 +48,9 @@ func (db *Db) ListWorkspaces(ctx context.Context, accountId uint64, limit, offse
 	workspaces, err := lead_scraper_servicev1.DefaultListWorkspace(
 		ctx,
 		db.Client.Engine.
-		Where(wQop.AccountId.Eq(accountId)).
-		Limit(limit).
-		Offset(offset))
+			Where(wQop.AccountId.Eq(accountId)).
+			Limit(limit).
+			Offset(offset))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil // Empty list is not an error

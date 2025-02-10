@@ -185,7 +185,7 @@ func TestServer_UpdateTenant(t *testing.T) {
 	defer tc.Cleanup()
 
 	createResp, err := MockServer.CreateTenant(context.Background(), &proto.CreateTenantRequest{
-		Tenant: testutils.GenerateRandomizedTenant(),
+		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationId: tc.Organization.Id,
 	})
 	require.NoError(t, err)
@@ -360,7 +360,7 @@ func TestServer_ListTenants(t *testing.T) {
 		tenant := testutils.GenerateRandomizedTenant()
 		tenant.Name = fmt.Sprintf("Test Tenant %d", i)
 		tenant.Description = fmt.Sprintf("Test tenant description %d", i)
-		
+
 		createResp, err := MockServer.CreateTenant(context.Background(), &proto.CreateTenantRequest{
 			Tenant:         tenant,
 			OrganizationId: tc.Organization.Id,
@@ -372,11 +372,11 @@ func TestServer_ListTenants(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		req            *proto.ListTenantsRequest
-		wantErr        bool
-		errCode        codes.Code
-		expectedCount  int
+		name             string
+		req              *proto.ListTenantsRequest
+		wantErr          bool
+		errCode          codes.Code
+		expectedCount    int
 		expectedNextPage int32
 	}{
 		{
@@ -386,8 +386,8 @@ func TestServer_ListTenants(t *testing.T) {
 				PageNumber:     1,
 				OrganizationId: tc.Organization.Id,
 			},
-			wantErr:        false,
-			expectedCount:  2,
+			wantErr:          false,
+			expectedCount:    2,
 			expectedNextPage: 2,
 		},
 		{
@@ -397,8 +397,8 @@ func TestServer_ListTenants(t *testing.T) {
 				PageNumber:     2,
 				OrganizationId: tc.Organization.Id,
 			},
-			wantErr:        false,
-			expectedCount:  2,
+			wantErr:          false,
+			expectedCount:    2,
 			expectedNextPage: 3,
 		},
 		{
@@ -434,4 +434,4 @@ func TestServer_ListTenants(t *testing.T) {
 			assert.Equal(t, tt.expectedNextPage, resp.NextPageNumber)
 		})
 	}
-} 
+}

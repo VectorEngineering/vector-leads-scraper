@@ -50,7 +50,7 @@ func (db *Db) BatchUpdateScrapingJobs(ctx context.Context, workspaceID uint64, j
 		}
 
 		if res.RowsAffected == 0 || res.Error != nil {
-			if res.Error != nil {	
+			if res.Error != nil {
 				return nil, fmt.Errorf("failed to update workspace: %w", res.Error)
 			}
 
@@ -61,7 +61,7 @@ func (db *Db) BatchUpdateScrapingJobs(ctx context.Context, workspaceID uint64, j
 	}
 
 	// convert the orm jobs to jobs
-	resultSet	, err := db.convertJobsORMToJobs(ctx, resultingJobs)
+	resultSet, err := db.convertJobsORMToJobs(ctx, resultingJobs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert jobs to orm: %w", err)
 	}

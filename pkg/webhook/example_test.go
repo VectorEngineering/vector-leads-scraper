@@ -36,7 +36,7 @@ func Example() {
 
 	// Create a record
 	record := webhook.Record{
-		ID:   "123",
+		ID: "123",
 		Data: map[string]interface{}{
 			"name":    "Example Business",
 			"address": "123 Main St",
@@ -104,4 +104,4 @@ func Example_withCustomProcessor() {
 	if err := client.Flush(ctx); err != nil {
 		log.Printf("Failed to flush records: %v", err)
 	}
-} 
+}

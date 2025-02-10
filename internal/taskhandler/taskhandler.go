@@ -87,6 +87,7 @@ import (
 
 	"github.com/Vector/vector-leads-scraper/internal/taskhandler/tasks"
 	"github.com/Vector/vector-leads-scraper/pkg/redis"
+	"github.com/Vector/vector-leads-scraper/pkg/redis/scheduler"
 	"github.com/Vector/vector-leads-scraper/runner"
 	"github.com/hibiken/asynq"
 )
@@ -101,6 +102,7 @@ type Handler struct {
 	wg         sync.WaitGroup               // WaitGroup for graceful shutdown
 	done       chan struct{}                // Channel for shutdown signaling
 	logger     *log.Logger                  // Logger for handler operations
+	scheduler  *scheduler.Scheduler         // Scheduler for scheduled tasks
 }
 
 // Options configures the task handler.
@@ -172,6 +174,13 @@ func New(cfg *runner.Config, opts *Options) (*Handler, error) {
 		return nil, fmt.Errorf("failed to initialize Redis components: %w", err)
 	}
 
+	// Initialize the scheduler
+	scheduler := scheduler.New(asynq.RedisClientOpt{
+		Addr:     cfg.Addr,
+		Password: cfg.RedisPassword,
+		DB:       cfg.RedisDB,
+	}, nil)
+
 	// Create the handler instance with empty handlers map
 	h := &Handler{
 		mux:        asynq.NewServeMux(),
@@ -179,11 +188,13 @@ func New(cfg *runner.Config, opts *Options) (*Handler, error) {
 		components: components,
 		done:       make(chan struct{}),
 		logger:     logger,
+		scheduler:  scheduler,
 	}
 
 	// Register task handlers
 	for _, taskType := range opts.TaskTypes {
 		if err := h.RegisterHandler(taskType, tasks.NewHandler(
+			scheduler,
 			tasks.WithMaxRetries(opts.MaxRetries),
 			tasks.WithRetryInterval(opts.RetryInterval),
 		)); err != nil {
@@ -467,4 +478,12 @@ func (h *Handler) GetTaskDetails(ctx context.Context, taskId string, queue strin
 	}
 
 	return h.components.Client.GetTaskInfo(ctx, taskId, queue)
+}
+
+func (h *Handler) RegisterScheduledTask(ctx context.Context, cronExpression string, task *asynq.Task, opts ...asynq.Option) (string, error) {
+	return h.scheduler.Register(cronExpression, task, opts...)
+}
+
+func (h *Handler) UnregisterScheduledTask(ctx context.Context, entryID string) error {
+	return h.scheduler.Unregister(entryID)
 }

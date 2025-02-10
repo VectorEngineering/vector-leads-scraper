@@ -28,10 +28,10 @@ type EmailExtractJobOptions func(*EmailExtractJob)
 //	entry := &Entry{
 //	    WebSite: "https://example.com",
 //	}
-//	
+//
 //	// Create a new job with default settings
 //	job := NewEmailJob("parent-123", entry)
-//	
+//
 //	// Or with an exit monitor
 //	monitor := &MyExitMonitor{}
 //	job := NewEmailJob("parent-123", entry, WithEmailJobExitMonitor(monitor))
@@ -59,10 +59,10 @@ func WithEmailJobWorkspaceID(workspaceID uint64) EmailExtractJobOptions {
 //	entry := &Entry{
 //	    WebSite: "https://example.com",
 //	}
-//	
+//
 //	// Basic usage
 //	job := NewEmailJob("parent-123", entry)
-//	
+//
 //	// With exit monitoring
 //	monitor := &MyExitMonitor{}
 //	job := NewEmailJob(
@@ -128,13 +128,13 @@ func WithEmailJobExitMonitor(exitMonitor exiter.Exiter) EmailExtractJobOptions {
 //	crawler := scrapemate.NewCrawler(scrapemate.CrawlerConfig{
 //	    Fetcher: &myFetcher{},
 //	})
-//	
+//
 //	job := NewEmailJob("parent-123", entry)
 //	result, err := crawler.Process(context.Background(), job)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-//	
+//
 //	// Access the extracted emails
 //	entry := result.(*Entry)
 //	for _, email := range entry.Emails {
@@ -189,7 +189,7 @@ func (j *EmailExtractJob) ProcessOnFetchError() bool {
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-//	
+//
 //	emails := docEmailExtractor(doc)
 //	for _, email := range emails {
 //	    fmt.Println(email)

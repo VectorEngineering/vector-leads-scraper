@@ -39,19 +39,19 @@ func TestExporterCompression(t *testing.T) {
 	defer server.Close()
 
 	tests := []struct {
-		name                string
+		name                 string
 		compressionThreshold int64
-		wantCompression     bool
+		wantCompression      bool
 	}{
 		{
-			name:                "no compression",
+			name:                 "no compression",
 			compressionThreshold: 1024 * 1024, // 1MB
-			wantCompression:     false,
+			wantCompression:      false,
 		},
 		{
-			name:                "with compression",
+			name:                 "with compression",
 			compressionThreshold: 1, // 1 byte
-			wantCompression:     true,
+			wantCompression:      true,
 		},
 	}
 
@@ -224,4 +224,4 @@ func TestExporterContextCancellation(t *testing.T) {
 	err := exporter.Export(ctx, batch)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), context.DeadlineExceeded.Error())
-} 
+}

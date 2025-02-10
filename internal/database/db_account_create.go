@@ -109,8 +109,6 @@ func (db *Db) CreateAccount(ctx context.Context, input *CreateAccountInput) (*le
 	if tenantOrm == nil {
 		return nil, ErrTenantDoesNotExist
 	}
-	
-	
 
 	// Check if account with same email already exists
 	existing, err := db.GetAccountByEmail(ctx, input.Account.Email)

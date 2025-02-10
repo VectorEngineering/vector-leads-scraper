@@ -420,7 +420,7 @@ func TestDeleteWebhookConfig(t *testing.T) {
 
 func TestListWebhookConfigs(t *testing.T) {
 	ctx := context.Background()
-		tc := setupAccountTestContext(t)
+	tc := setupAccountTestContext(t)
 	defer tc.Cleanup()
 
 	// Create a test workspace

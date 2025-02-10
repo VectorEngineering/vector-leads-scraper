@@ -40,7 +40,7 @@ func TestCreateTenant(t *testing.T) {
 		{
 			name: "invalid organization id",
 			input: &CreateTenantInput{
-				Tenant: testutils.GenerateRandomizedTenant(),
+				Tenant:         testutils.GenerateRandomizedTenant(),
 				OrganizationID: 0,
 			},
 			wantErr: true,
@@ -74,7 +74,7 @@ func TestGetTenant(t *testing.T) {
 
 	// Create test tenant
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Tenant: testutils.GenerateRandomizedTenant(),
+		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
 	})
 	require.NoError(t, err)
@@ -141,8 +141,8 @@ func TestUpdateTenant(t *testing.T) {
 		{
 			name: "success",
 			input: &UpdateTenantInput{
-				ID:             tenant.Id,
-				Tenant:         tenant,
+				ID:     tenant.Id,
+				Tenant: tenant,
 			},
 			wantErr: false,
 		},
@@ -179,7 +179,7 @@ func TestDeleteTenant(t *testing.T) {
 
 	// Create test tenant
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Tenant: testutils.GenerateRandomizedTenant(),
+		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
 	})
 	require.NoError(t, err)
@@ -267,10 +267,10 @@ func TestListTenants(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		input   *ListTenantsInput
-		want    int
-		wantErr bool
+		name     string
+		input    *ListTenantsInput
+		want     int
+		wantErr  bool
 		validate func(t *testing.T, got []*lead_scraper_servicev1.Tenant)
 	}{
 		{
@@ -498,7 +498,7 @@ func TestUpdateTenantInput_Validate(t *testing.T) {
 		{
 			name: "invalid tenant",
 			input: &UpdateTenantInput{
-				ID: 1,
+				ID:     1,
 				Tenant: &lead_scraper_servicev1.Tenant{
 					// Empty tenant without required fields
 				},

@@ -92,7 +92,7 @@ type DatabaseOperations interface {
 	DeleteOrganization(context.Context, *DeleteOrganizationInput) error
 	ListOrganizations(context.Context, *ListOrganizationsInput) ([]*lead_scraper_servicev1.Organization, error)
 
-		// Tenant operations
+	// Tenant operations
 	CreateTenant(ctx context.Context, input *CreateTenantInput) (*lead_scraper_servicev1.Tenant, error)
 	GetTenant(context.Context, *GetTenantInput) (*lead_scraper_servicev1.Tenant, error)
 	UpdateTenant(context.Context, *UpdateTenantInput) (*lead_scraper_servicev1.Tenant, error)

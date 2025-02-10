@@ -6,7 +6,10 @@ import (
 	"time"
 
 	"github.com/Vector/vector-leads-scraper/internal/database"
+	"github.com/Vector/vector-leads-scraper/internal/taskhandler/tasks"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
+	"github.com/hibiken/asynq"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -57,6 +60,9 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRe
 
 	workflow := req.GetWorkflow()
 
+	// get the status of the workflow
+	currentWorkflowStatus := workflow.Status
+
 	// Validate cron expression
 	if !isValidCronExpression(workflow.GetCronExpression()) {
 		logger.Error("invalid cron expression", zap.String("cron", workflow.GetCronExpression()))
@@ -88,6 +94,38 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRe
 	if err != nil {
 		logger.Error("failed to create workflow", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create workflow")
+	}
+
+	if currentWorkflowStatus == proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE {
+		// Create workflow execution task
+		task, err := tasks.CreateWorkflowExecutionTask(
+			workflow.GetId(),
+			req.GetWorkspaceId(),
+			workflow.GetName(),
+			workflow.GetCronExpression(),
+			&tasks.GeoFencing{
+				Latitude:  workflow.GetGeoFencingLat(),
+				Longitude: workflow.GetGeoFencingLon(),
+				ZoomMin:   workflow.GetGeoFencingZoomMin(),
+				ZoomMax:   workflow.GetGeoFencingZoomMax(),
+			},
+			time.Now().UTC(),
+		)
+		if err != nil {
+			logger.Error("failed to create workflow execution task", zap.Error(err))
+			return nil, status.Error(codes.Internal, "failed to prepare workflow execution")
+		}
+
+		// schedule the workflow via the scheduler
+		createdWorkflow.ScheduledEntryId, err = s.taskHandler.RegisterScheduledTask(ctx, workflow.CronExpression, task)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		// now update the created workflow with this entry id
+		if _, err := s.db.UpdateScrapingWorkflow(ctx, createdWorkflow); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	}
 
 	return &proto.CreateWorkflowResponse{
@@ -304,6 +342,12 @@ func (s *Server) TriggerWorkflow(ctx context.Context, req *proto.TriggerWorkflow
 
 	logger.Info("triggering workflow", zap.Uint64("workflow_id", req.GetId()))
 
+	// get the workspace by id
+	workspace, err := s.db.GetWorkspace(ctx, req.GetWorkspaceId())
+	if err != nil {
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
 	// Get workflow to check if it exists and is active
 	workflow, err := s.db.GetScrapingWorkflow(ctx, req.GetId())
 	if err != nil {
@@ -318,14 +362,47 @@ func (s *Server) TriggerWorkflow(ctx context.Context, req *proto.TriggerWorkflow
 		return nil, status.Error(codes.FailedPrecondition, "workflow is not active")
 	}
 
-	// Create execution record
-	executionID := fmt.Sprintf("exec_%d_%d", req.GetId(), time.Now().Unix())
-	
-	// TODO: Implement actual workflow execution logic
-	// This would typically involve:
-	// 1. Creating an execution record
-	// 2. Enqueueing the workflow for processing
-	// 3. Setting up monitoring and alerts
+	// Create workflow execution task
+	taskPayload, err := tasks.CreateWorkflowExecutionTask(
+		workflow.GetId(),
+		workspace.GetId(),
+		workflow.GetName(),
+		workflow.GetCronExpression(),
+		&tasks.GeoFencing{
+			Latitude:  workflow.GetGeoFencingLat(),
+			Longitude: workflow.GetGeoFencingLon(),
+			ZoomMin:   workflow.GetGeoFencingZoomMin(),
+			ZoomMax:   workflow.GetGeoFencingZoomMax(),
+		},
+		time.Now().UTC(),
+	)
+	if err != nil {
+		logger.Error("failed to create workflow execution task", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to prepare workflow execution")
+	}
+
+	// Create a unique execution ID
+	executionID := fmt.Sprintf("wf_exec_%d_%d", workflow.GetId(), time.Now().Unix())
+
+	taskCfg := tasks.TaskConfigs[tasks.TypeWorkflowExecution]
+
+	// Enqueue the workflow execution task
+	err = s.taskHandler.EnqueueTask(ctx,
+		tasks.TypeWorkflowExecution,
+		taskPayload.Payload(),
+		asynq.Queue(string(taskCfg.Queue)),
+		asynq.MaxRetry(taskCfg.MaxRetries),
+		asynq.Timeout(taskCfg.Timeout),
+		asynq.TaskID(executionID),
+	)
+	if err != nil {
+		logger.Error("failed to enqueue workflow execution", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to start workflow execution")
+	}
+
+	logger.Info("workflow execution enqueued",
+		zap.String("execution_id", executionID),
+		zap.Uint64("workflow_id", workflow.GetId()))
 
 	return &proto.TriggerWorkflowResponse{
 		JobId: executionID,
@@ -384,16 +461,28 @@ func (s *Server) PauseWorkflow(ctx context.Context, req *proto.PauseWorkflowRequ
 		return nil, status.Error(codes.Internal, "failed to pause workflow")
 	}
 
+	// unregister the workflow from the scheduler
+	if err := s.taskHandler.UnregisterScheduledTask(ctx, workflow.ScheduledEntryId); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	return &proto.PauseWorkflowResponse{
 		Workflow: updatedWorkflow,
 	}, nil
 }
 
 // Helper functions
+// isValidCronExpression performs a basic validation by ensuring the expression has exactly 5 fields.
+// This does not validate the ranges or allowed characters within each field.
+func isValidCronExpression(expr string) bool {
+	// Ensure the expression is not empty.
+	if expr == "" {
+		return false
+	}
 
-func isValidCronExpression(cron string) bool {
-	// TODO: Implement proper cron expression validation
-	return cron != ""
+	// Attempt to parse the cron expression.
+	_, err := cron.ParseStandard(expr)
+	return err == nil
 }
 
 func isValidLatitude(lat float64) bool {

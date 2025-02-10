@@ -36,12 +36,12 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		BatchSize:                   50,
-		FlushInterval:              time.Minute,
-		WebhookEnabled:             false,
-		WebhookBatchSize:           100,
-		WebhookFlushInterval:       time.Minute,
-		WebhookRetryMax:            3,
-		WebhookRetryInterval:       5 * time.Second,
+		FlushInterval:               time.Minute,
+		WebhookEnabled:              false,
+		WebhookBatchSize:            100,
+		WebhookFlushInterval:        time.Minute,
+		WebhookRetryMax:             3,
+		WebhookRetryInterval:        5 * time.Second,
 		WebhookCompressionThreshold: 1024,
 	}
-} 
+}

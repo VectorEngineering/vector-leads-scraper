@@ -248,10 +248,10 @@ func TestNewRedisConfig(t *testing.T) {
 		{
 			name: "valid Redis URL",
 			envVars: map[string]string{
-				"REDIS_URL":           "redis://:password123@localhost:6380/2",
-				"REDIS_WORKERS":       "5",
+				"REDIS_URL":            "redis://:password123@localhost:6380/2",
+				"REDIS_WORKERS":        "5",
 				"REDIS_RETRY_INTERVAL": "1m",
-				"REDIS_MAX_RETRIES":   "3",
+				"REDIS_MAX_RETRIES":    "3",
 				"REDIS_RETENTION_DAYS": "7",
 			},
 			want: &RedisConfig{
@@ -278,16 +278,16 @@ func TestNewRedisConfig(t *testing.T) {
 		{
 			name: "valid TLS config",
 			envVars: map[string]string{
-				"REDIS_HOST":          "localhost",
-				"REDIS_PORT":          "6379",
-				"REDIS_DB":            "0",
-				"REDIS_USE_TLS":       "true",
-				"REDIS_CERT_FILE":     certFile.Name(),
-				"REDIS_KEY_FILE":      keyFile.Name(),
-				"REDIS_CA_FILE":       caFile.Name(),
-				"REDIS_WORKERS":       "5",
+				"REDIS_HOST":           "localhost",
+				"REDIS_PORT":           "6379",
+				"REDIS_DB":             "0",
+				"REDIS_USE_TLS":        "true",
+				"REDIS_CERT_FILE":      certFile.Name(),
+				"REDIS_KEY_FILE":       keyFile.Name(),
+				"REDIS_CA_FILE":        caFile.Name(),
+				"REDIS_WORKERS":        "5",
 				"REDIS_RETRY_INTERVAL": "1m",
-				"REDIS_MAX_RETRIES":   "3",
+				"REDIS_MAX_RETRIES":    "3",
 				"REDIS_RETENTION_DAYS": "7",
 			},
 			want: &RedisConfig{
@@ -297,7 +297,7 @@ func TestNewRedisConfig(t *testing.T) {
 				UseTLS:          true,
 				CertFile:        certFile.Name(),
 				KeyFile:         keyFile.Name(),
-				CAFile:         caFile.Name(),
+				CAFile:          caFile.Name(),
 				Workers:         5,
 				RetryInterval:   time.Minute,
 				MaxRetries:      3,
@@ -413,9 +413,9 @@ func TestRedisConfig_QueuePriorities(t *testing.T) {
 			name: "custom priorities",
 			envVars: map[string]string{
 				"REDIS_QUEUE_PRIORITIES": "queue1:1,queue2:2,queue3:3",
-				"REDIS_WORKERS":         "5",
+				"REDIS_WORKERS":          "5",
 				"REDIS_RETRY_INTERVAL":   "1m",
-				"REDIS_MAX_RETRIES":     "3",
+				"REDIS_MAX_RETRIES":      "3",
 				"REDIS_RETENTION_DAYS":   "7",
 			},
 			want: map[string]int{
@@ -872,10 +872,10 @@ func Test_validateTLSConfig(t *testing.T) {
 			name: "valid TLS config with all files",
 			args: struct{ cfg *RedisConfig }{
 				cfg: &RedisConfig{
-					UseTLS:    true,
-					CertFile:  certFile.Name(),
-					KeyFile:   keyFile.Name(),
-					CAFile:    caFile.Name(),
+					UseTLS:   true,
+					CertFile: certFile.Name(),
+					KeyFile:  keyFile.Name(),
+					CAFile:   caFile.Name(),
 				},
 			},
 			wantErr: false,
@@ -884,9 +884,9 @@ func Test_validateTLSConfig(t *testing.T) {
 			name: "valid TLS config without CA file",
 			args: struct{ cfg *RedisConfig }{
 				cfg: &RedisConfig{
-					UseTLS:    true,
-					CertFile:  certFile.Name(),
-					KeyFile:   keyFile.Name(),
+					UseTLS:   true,
+					CertFile: certFile.Name(),
+					KeyFile:  keyFile.Name(),
 				},
 			},
 			wantErr: false,
@@ -895,8 +895,8 @@ func Test_validateTLSConfig(t *testing.T) {
 			name: "missing cert file",
 			args: struct{ cfg *RedisConfig }{
 				cfg: &RedisConfig{
-					UseTLS:    true,
-					KeyFile:   keyFile.Name(),
+					UseTLS:  true,
+					KeyFile: keyFile.Name(),
 				},
 			},
 			wantErr: true,
@@ -905,8 +905,8 @@ func Test_validateTLSConfig(t *testing.T) {
 			name: "missing key file",
 			args: struct{ cfg *RedisConfig }{
 				cfg: &RedisConfig{
-					UseTLS:    true,
-					CertFile:  certFile.Name(),
+					UseTLS:   true,
+					CertFile: certFile.Name(),
 				},
 			},
 			wantErr: true,
@@ -915,9 +915,9 @@ func Test_validateTLSConfig(t *testing.T) {
 			name: "non-existent cert file",
 			args: struct{ cfg *RedisConfig }{
 				cfg: &RedisConfig{
-					UseTLS:    true,
-					CertFile:  "nonexistent.crt",
-					KeyFile:   keyFile.Name(),
+					UseTLS:   true,
+					CertFile: "nonexistent.crt",
+					KeyFile:  keyFile.Name(),
 				},
 			},
 			wantErr: true,

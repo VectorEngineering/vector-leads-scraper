@@ -44,8 +44,8 @@ import (
 var MockServer *Server
 
 type GrpcTestContext struct {
-	Database *database.Db
-	Redis *redisC.Client
+	Database    *database.Db
+	Redis       *redisC.Client
 	TaskHandler *taskhandler.Handler
 }
 
@@ -97,10 +97,10 @@ func NewMockGrpcServer() *Server {
 	}
 
 	return &Server{
-		logger:    logger,
-		config:    config,
-		db:        testCtx.Database,
-		telemetry: &instrumentation.Client{},
+		logger:      logger,
+		config:      config,
+		db:          testCtx.Database,
+		telemetry:   &instrumentation.Client{},
 		taskHandler: testCtx.TaskHandler,
 	}
 }
@@ -123,7 +123,6 @@ func setupTestContainers(ctx context.Context, logger *zap.Logger) (*GrpcTestCont
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PostgreSQL container: %w", err)
 	}
-
 
 	cfg := &config.RedisConfig{
 		Host:     "localhost",
@@ -196,8 +195,8 @@ func setupTestContainers(ctx context.Context, logger *zap.Logger) (*GrpcTestCont
 	}
 
 	return &GrpcTestContext{
-		Database: db,
-		Redis: redisClient,
+		Database:    db,
+		Redis:       redisClient,
 		TaskHandler: taskHandler,
 	}, nil
 }

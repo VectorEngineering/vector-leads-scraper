@@ -83,6 +83,9 @@ func TestLeadProcessPayload_Validate(t *testing.T) {
 }
 
 func TestHandler_processLeadProcessTask(t *testing.T) {
+	sc, cleanup := setupScheduler(t)
+	defer cleanup()
+
 	tests := []struct {
 		name    string
 		h       *Handler
@@ -91,7 +94,7 @@ func TestHandler_processLeadProcessTask(t *testing.T) {
 	}{
 		{
 			name: "valid task",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeLeadProcess.String(), mustMarshal(t, &LeadProcessPayload{
 				LeadID:    "lead123",
 				Source:    "gmaps",
@@ -104,7 +107,7 @@ func TestHandler_processLeadProcessTask(t *testing.T) {
 		},
 		{
 			name: "invalid payload",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeLeadProcess.String(), []byte(`{
 				"lead_id": "",
 				"source": "",
@@ -113,14 +116,14 @@ func TestHandler_processLeadProcessTask(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed payload",
-			h:    NewHandler(),
-			task: asynq.NewTask(TypeLeadProcess.String(), []byte(`invalid json`)),
+			name:    "malformed payload",
+			h:       NewHandler(sc),
+			task:    asynq.NewTask(TypeLeadProcess.String(), []byte(`invalid json`)),
 			wantErr: true,
 		},
 		{
 			name: "cancelled context",
-			h:    NewHandler(),
+			h:    NewHandler(sc),
 			task: asynq.NewTask(TypeLeadProcess.String(), mustMarshal(t, &LeadProcessPayload{
 				LeadID:    "lead123",
 				Source:    "gmaps",
@@ -138,7 +141,7 @@ func TestHandler_processLeadProcessTask(t *testing.T) {
 				ctx, cancel = context.WithCancel(ctx)
 				cancel()
 			}
-			
+
 			err := tt.h.processLeadProcessTask(ctx, tt.task)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -182,11 +185,11 @@ func TestCreateLeadProcessTask(t *testing.T) {
 			wantErr:   true,
 		},
 		{
-			name:      "zero batch size gets default",
-			leadID:    "lead123",
-			source:    "gmaps",
-			metadata:  map[string]string{"category": "restaurant"},
-			wantErr:   false,
+			name:     "zero batch size gets default",
+			leadID:   "lead123",
+			source:   "gmaps",
+			metadata: map[string]string{"category": "restaurant"},
+			wantErr:  false,
 		},
 		{
 			name:      "nil metadata is valid",
@@ -209,7 +212,7 @@ func TestCreateLeadProcessTask(t *testing.T) {
 
 				// Verify the task payload
 				var payload struct {
-					Type    string            `json:"type"`
+					Type    string             `json:"type"`
 					Payload LeadProcessPayload `json:"payload"`
 				}
 				err = json.Unmarshal(got, &payload)

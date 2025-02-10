@@ -29,9 +29,9 @@ func TestCreateWorkspace(t *testing.T) {
 
 	// Create test account
 	account, err := conn.CreateAccount(ctx, &CreateAccountInput{
-		Account:        testutils.GenerateRandomizedAccount(),
-		TenantID:      tenant.Id,
-		OrgID: org.Id,
+		Account:  testutils.GenerateRandomizedAccount(),
+		TenantID: tenant.Id,
+		OrgID:    org.Id,
 	})
 	require.NoError(t, err)
 
@@ -43,7 +43,7 @@ func TestCreateWorkspace(t *testing.T) {
 		errType error
 	}{
 		{
-			name:  "success - create workspace with valid input",
+			name: "success - create workspace with valid input",
 			setup: func() *CreateWorkspaceInput {
 				return &CreateWorkspaceInput{
 					Workspace:      testutils.GenerateRandomWorkspace(),
@@ -186,9 +186,9 @@ func TestCreateWorkspace(t *testing.T) {
 				require.NoError(t, err)
 
 				otherAccount, err := conn.CreateAccount(ctx, &CreateAccountInput{
-					Account:        testutils.GenerateRandomizedAccount(),
-					TenantID:      otherTenant.Id,
-					OrgID: org.Id,
+					Account:  testutils.GenerateRandomizedAccount(),
+					TenantID: otherTenant.Id,
+					OrgID:    org.Id,
 				})
 				require.NoError(t, err)
 
@@ -292,7 +292,7 @@ func TestDb_CreateWorkspace(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workspace, err := conn.CreateWorkspace(tt.args.ctx, &CreateWorkspaceInput{
-				Workspace: tt.args.workspace,
+				Workspace:      tt.args.workspace,
 				AccountID:      tc.Account.Id,
 				TenantID:       tc.Tenant.Id,
 				OrganizationID: tc.Organization.Id,
@@ -336,7 +336,7 @@ func TestDb_CreateWorkspace_ConcurrentCreation(t *testing.T) {
 			defer wg.Done()
 			mockWorkspace := testutils.GenerateRandomWorkspace()
 			workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
-				Workspace: mockWorkspace,
+				Workspace:      mockWorkspace,
 				AccountID:      tc.Account.Id,
 				TenantID:       tc.Tenant.Id,
 				OrganizationID: tc.Organization.Id,

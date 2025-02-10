@@ -170,6 +170,11 @@ func (h *Handler) processScrapeTask(ctx context.Context, task *asynq.Task) error
 	}
 	defer mate.Close()
 
+	return h.runScraping(ctx, mate, &payload)
+}
+
+// runScraping handles the core scraping logic with the configured scrapemate instance
+func (h *Handler) runScraping(ctx context.Context, mate *scrapemateapp.ScrapemateApp, payload *ScrapePayload) error {
 	var coords string
 	if payload.Lat != "" && payload.Lon != "" {
 		coords = payload.Lat + "," + payload.Lon
@@ -199,30 +204,32 @@ func (h *Handler) processScrapeTask(ctx context.Context, task *asynq.Task) error
 		return fmt.Errorf("failed to create seed jobs: %w", err)
 	}
 
-	if len(seedJobs) > 0 {
-		exitMonitor.SetSeedCount(len(seedJobs))
+	if len(seedJobs) == 0 {
+		return nil
+	}
 
-		allowedSeconds := max(60, len(seedJobs)*10*payload.Depth/50+120)
-		if payload.MaxTime > 0 {
-			if payload.MaxTime.Seconds() < 180 {
-				allowedSeconds = 180
-			} else {
-				allowedSeconds = int(payload.MaxTime.Seconds())
-			}
+	exitMonitor.SetSeedCount(len(seedJobs))
+
+	allowedSeconds := max(60, len(seedJobs)*10*payload.Depth/50+120)
+	if payload.MaxTime > 0 {
+		if payload.MaxTime.Seconds() < 180 {
+			allowedSeconds = 180
+		} else {
+			allowedSeconds = int(payload.MaxTime.Seconds())
 		}
+	}
 
-		log.Printf("running job %s with %d seed jobs and %d allowed seconds", payload.JobID, len(seedJobs), allowedSeconds)
+	log.Printf("running job %s with %d seed jobs and %d allowed seconds", payload.JobID, len(seedJobs), allowedSeconds)
 
-		jobCtx, jobCancel := context.WithTimeout(ctx, time.Duration(allowedSeconds)*time.Second)
-		defer jobCancel()
+	jobCtx, jobCancel := context.WithTimeout(ctx, time.Duration(allowedSeconds)*time.Second)
+	defer jobCancel()
 
-		exitMonitor.SetCancelFunc(jobCancel)
-		go exitMonitor.Run(jobCtx)
+	exitMonitor.SetCancelFunc(jobCancel)
+	go exitMonitor.Run(jobCtx)
 
-		if err := mate.Start(jobCtx, seedJobs...); err != nil {
-			if err != context.DeadlineExceeded && err != context.Canceled {
-				return fmt.Errorf("failed to run scraping: %w", err)
-			}
+	if err := mate.Start(jobCtx, seedJobs...); err != nil {
+		if err != context.DeadlineExceeded && err != context.Canceled {
+			return fmt.Errorf("failed to run scraping: %w", err)
 		}
 	}
 

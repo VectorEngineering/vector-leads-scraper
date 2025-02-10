@@ -234,9 +234,9 @@ func TestBatchCreateScrapingJobs(t *testing.T) {
 
 	// Create a test workspace first
 	createdWorkspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
-		Workspace: testutils.GenerateRandomWorkspace(),
-		AccountID: tc.Account.Id,
-		TenantID:  tc.Tenant.Id,
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
 		OrganizationID: tc.Organization.Id,
 	})
 	require.NoError(t, err)
@@ -363,9 +363,9 @@ func TestBatchCreateScrapingJobs_LargeBatch(t *testing.T) {
 
 	// Create a test workspace
 	createdWorkspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
-		Workspace: testutils.GenerateRandomWorkspace(),
-		AccountID: tc.Account.Id,
-		TenantID:  tc.Tenant.Id,
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
 		OrganizationID: tc.Organization.Id,
 	})
 	require.NoError(t, err)

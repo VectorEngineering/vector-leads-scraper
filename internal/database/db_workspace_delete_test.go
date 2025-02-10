@@ -34,7 +34,7 @@ func TestDb_DeleteWorkspace(t *testing.T) {
 			},
 			setup: func(t *testing.T) *lead_scraper_servicev1.Workspace {
 				workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
-					Workspace: testContext.Workspace,
+					Workspace:      testContext.Workspace,
 					AccountID:      tc.Account.Id,
 					TenantID:       tc.Tenant.Id,
 					OrganizationID: tc.Organization.Id,
@@ -98,7 +98,7 @@ func TestDb_DeleteWorkspace_ConcurrentDeletions(t *testing.T) {
 
 	for i := 0; i < numWorkspaces; i++ {
 		workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
-			Workspace: testContext.Workspace,
+			Workspace:      testContext.Workspace,
 			AccountID:      tc.Account.Id,
 			TenantID:       tc.Tenant.Id,
 			OrganizationID: tc.Organization.Id,

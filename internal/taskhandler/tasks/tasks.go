@@ -33,6 +33,8 @@ const (
 	TypeHealthCheck TaskType = "health:check"
 	// TypeConnectionTest represents a connection test task
 	TypeConnectionTest TaskType = "connection:test"
+	// TypeWorkflowExecution represents a workflow execution task
+	TypeWorkflowExecution TaskType = "workflow:execute"
 )
 
 // String returns the string representation of the task type
@@ -53,6 +55,7 @@ func DefaultTaskTypes() []string {
 		TypeDataExport.String(),
 		TypeDataImport.String(),
 		TypeDataCleanup.String(),
+		TypeWorkflowExecution.String(),
 	}
 }
 
@@ -159,6 +162,14 @@ var TaskConfigs = map[TaskType]TaskConfig{
 		Timeout:     1 * time.Minute,
 		Description: "System health check",
 		Queue:       priorityqueue.SubscriptionEnterprise,
+	},
+	TypeWorkflowExecution: {
+		Type:        TypeWorkflowExecution,
+		Priority:    PriorityLevelHigh,
+		MaxRetries:  3,
+		Timeout:     30 * time.Minute,
+		Description: "Execute workflow tasks",
+		Queue:       priorityqueue.SubscriptionPro,
 	},
 }
 
@@ -277,6 +288,15 @@ func ParsePayload(taskType TaskType, payloadBytes []byte) (interface{}, error) {
 		payload = p
 	case TypeDataCleanup:
 		p := &DataCleanupPayload{}
+		if err := json.Unmarshal(payloadBytes, p); err != nil {
+			return nil, err
+		}
+		if err := p.Validate(); err != nil {
+			return nil, err
+		}
+		payload = p
+	case TypeWorkflowExecution:
+		p := &WorkflowExecutionPayload{}
 		if err := json.Unmarshal(payloadBytes, p); err != nil {
 			return nil, err
 		}

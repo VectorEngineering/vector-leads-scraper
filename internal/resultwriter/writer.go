@@ -52,7 +52,7 @@ func New(db *database.Db, logger *zap.Logger, cfg *Config) (*ResultWriter, error
 	// Initialize webhook client if enabled
 	if cfg.WebhookEnabled && len(cfg.WebhookEndpoints) > 0 {
 		webhookCfg := webhook.Config{
-			Endpoints:     cfg.WebhookEndpoints,
+			Endpoints:    cfg.WebhookEndpoints,
 			MaxBatchSize: cfg.WebhookBatchSize,
 			BatchTimeout: cfg.WebhookFlushInterval,
 			RetryConfig: webhook.RetryConfig{
@@ -88,7 +88,7 @@ func (r *ResultWriter) Run(ctx context.Context, in <-chan scrapemate.Result) err
 		if !ok {
 			return errors.New("invalid data type")
 		}
-		
+
 		runnableJob, ok := result.Job.(*gmaps.GmapJob)
 		if !ok {
 			return errors.New("invalid job type")
@@ -105,7 +105,7 @@ func (r *ResultWriter) Run(ctx context.Context, in <-chan scrapemate.Result) err
 			for id, buff := range buffers {
 				if len(buff) > 0 {
 					if _, err := r.db.BatchCreateLeads(ctx, id, buff); err != nil {
-						r.logger.Error("failed to write leads", 
+						r.logger.Error("failed to write leads",
 							zap.Error(err),
 							zap.Uint64("job_id", id),
 							zap.Int("count", len(buff)))
@@ -122,7 +122,7 @@ func (r *ResultWriter) Run(ctx context.Context, in <-chan scrapemate.Result) err
 	for id, buff := range buffers {
 		if len(buff) > 0 {
 			if _, err := r.db.BatchCreateLeads(ctx, id, buff); err != nil {
-				r.logger.Error("failed to write leads", 
+				r.logger.Error("failed to write leads",
 					zap.Error(err),
 					zap.Uint64("job_id", id),
 					zap.Int("count", len(buff)))
@@ -157,44 +157,44 @@ func (w *ResultWriter) Close() error {
 func convertEntryToLead(entry *gmaps.Entry) *lead_scraper_servicev1.Lead {
 	lead := &lead_scraper_servicev1.Lead{
 		// Basic business details
-		Name:          entry.Title,
-		Website:       entry.WebSite,
-		Phone:         entry.Phone,
-		Address:       entry.Address,
-		City:         entry.CompleteAddress.City,
-		State:        entry.CompleteAddress.State,
-		Country:      entry.CompleteAddress.Country,
-		
+		Name:    entry.Title,
+		Website: entry.WebSite,
+		Phone:   entry.Phone,
+		Address: entry.Address,
+		City:    entry.CompleteAddress.City,
+		State:   entry.CompleteAddress.State,
+		Country: entry.CompleteAddress.Country,
+
 		// Location data
-		Latitude:     entry.Latitude,
-		Longitude:    entry.Longtitude,
-		
+		Latitude:  entry.Latitude,
+		Longitude: entry.Longtitude,
+
 		// Google-specific data
 		GoogleRating:  float32(entry.ReviewRating),
 		ReviewCount:   int32(entry.ReviewCount),
-		PlaceId:      entry.Cid,
+		PlaceId:       entry.Cid,
 		GoogleMapsUrl: entry.Link,
-		
+
 		// Business categorization
-		Industry:                entry.Category,
+		Industry:                 entry.Category,
 		GoogleMyBusinessCategory: entry.Category,
-		Types:                   entry.Categories,
-		
+		Types:                    entry.Categories,
+
 		// Business status and hours
 		BusinessStatus: entry.Status,
-		
+
 		// Reviews and ratings
 		Rating:         float32(entry.ReviewRating),
 		RatingCategory: entry.Category,
 		Count:          int32(entry.ReviewCount),
-		
+
 		// Media
 		MainPhotoUrl: entry.Thumbnail,
-		
+
 		// Additional metadata
 		Timezone:     entry.Timezone,
 		BusinessType: "UNSPECIFIED", // Default value
-		
+
 		// Contact info
 		AlternatePhones: []string{entry.Phone}, // Add main phone as alternate
 	}
@@ -249,4 +249,4 @@ func getMainPhotoURL(photos []string) string {
 		return photos[0]
 	}
 	return ""
-} 
+}

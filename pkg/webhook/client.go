@@ -18,9 +18,9 @@ type client struct {
 
 	// Batch management
 	currentBatch *Batch
-	batchMu     sync.Mutex
-	batchTimer  *time.Timer
-	done        chan struct{}
+	batchMu      sync.Mutex
+	batchTimer   *time.Timer
+	done         chan struct{}
 
 	// Shutdown management
 	shutdownOnce sync.Once
@@ -34,9 +34,9 @@ func NewClient(cfg Config) (Client, error) {
 	}
 
 	c := &client{
-		config:    cfg,
-		exporter:  newHTTPExporter(cfg),
-		done:      make(chan struct{}),
+		config:   cfg,
+		exporter: newHTTPExporter(cfg),
+		done:     make(chan struct{}),
 	}
 
 	c.processor = c.exporter // Use exporter as the processor by default
@@ -175,4 +175,4 @@ func (c *client) Shutdown(ctx context.Context) error {
 	})
 
 	return c.shutdownErr
-} 
+}

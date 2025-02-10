@@ -446,8 +446,8 @@ func (g *GRPCRunner) Close(ctx context.Context) error {
 }
 
 type coreDependencies struct {
-	postgresClient *postgresdb.Client
-	dbOperations *database.Db
+	postgresClient        *postgresdb.Client
+	dbOperations          *database.Db
 	instrumentationClient *instrumentation.Client
 }
 
@@ -483,8 +483,8 @@ func configurePostgresClient(cfg *runner.Config, logger *zap.Logger) (*coreDepen
 	}
 
 	return &coreDependencies{
-		postgresClient: client,
-		dbOperations: dbOperations,
+		postgresClient:        client,
+		dbOperations:          dbOperations,
 		instrumentationClient: instrumentationClient,
 	}, nil
 }

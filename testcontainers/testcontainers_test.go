@@ -222,10 +222,10 @@ func TestContainerInitialization(t *testing.T) {
 			Image:        "redis:latest",
 			ExposedPorts: []string{"invalid_port/tcp"},
 		}
-		
+
 		container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: req,
-			Started:         true,
+			Started:          true,
 		})
 		if err == nil {
 			container.Terminate(ctx)
@@ -239,10 +239,10 @@ func TestContainerInitialization(t *testing.T) {
 			Image:        "postgres:latest",
 			ExposedPorts: []string{"invalid_port/tcp"},
 		}
-		
+
 		container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: req,
-			Started:         true,
+			Started:          true,
 		})
 		if err == nil {
 			container.Terminate(ctx)
@@ -252,14 +252,38 @@ func TestContainerInitialization(t *testing.T) {
 
 	t.Run("handles invalid Redis image", func(t *testing.T) {
 		ctx := context.Background()
-		_, err := NewRedisContainer(ctx)
-		assert.NoError(t, err)
+		req := testcontainers.ContainerRequest{
+			Image:        "nonexistent-redis:invalid",
+			ExposedPorts: []string{"6379/tcp"},
+		}
+
+		container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+			ContainerRequest: req,
+			Started:         true,
+		})
+		if err == nil {
+			container.Terminate(ctx)
+			t.Fatal("Expected error for invalid image")
+		}
+		assert.Contains(t, err.Error(), "pull access denied" /* or check for appropriate error message */)
 	})
 
 	t.Run("handles invalid Postgres image", func(t *testing.T) {
 		ctx := context.Background()
-		_, err := NewPostgresContainer(ctx)
-		assert.NoError(t, err)
+		req := testcontainers.ContainerRequest{
+			Image:        "nonexistent-postgres:latest",
+			ExposedPorts: []string{"5432/tcp"},
+		}
+
+		container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+			ContainerRequest: req,
+			Started:          true,
+		})
+		if err == nil {
+			container.Terminate(ctx)
+			t.Fatal("Expected error for invalid image")
+		}
+		assert.Contains(t, err.Error(), "pull access denied" /* or check for appropriate error message */)
 	})
 }
 
@@ -272,7 +296,7 @@ func TestCleanupOrder(t *testing.T) {
 	t.Run("executes cleanup in reverse order", func(t *testing.T) {
 		var cleanupOrder []int
 		ctx := NewTestContext(t)
-		
+
 		// Add numbered cleanup functions
 		for i := 0; i < 3; i++ {
 			i := i // capture loop variable
@@ -440,7 +464,7 @@ func TestConnectionManagement(t *testing.T) {
 		ctx := NewTestContext(t)
 		// Force connection error by closing the pool
 		ctx.DB.Close()
-		
+
 		// Attempt operations after pool closure
 		err := ctx.DB.Ping(ctx.ctx)
 		assert.Error(t, err)
@@ -530,10 +554,10 @@ func TestCleanupBehavior(t *testing.T) {
 
 	t.Run("handles multiple cleanups", func(t *testing.T) {
 		ctx := NewTestContext(t)
-		
+
 		// First cleanup
 		ctx.Cleanup()
-		
+
 		// Second cleanup should be safe
 		ctx.cleanup = nil
 		ctx.Cleanup()

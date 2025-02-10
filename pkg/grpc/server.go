@@ -123,9 +123,9 @@ func (server *Server) RegisterGrpcServer(srv *grpc.Server) {
 //	)
 func NewServer(config *Config, logger *zap.Logger, db database.DatabaseOperations, taskHandler *taskhandler.Handler, opts ...ServerOption) (*Server, error) {
 	srv := &Server{
-		logger: logger,
-		config: config,
-		db:     db,
+		logger:      logger,
+		config:      config,
+		db:          db,
 		taskHandler: taskHandler,
 	}
 
