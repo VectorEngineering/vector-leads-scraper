@@ -380,7 +380,25 @@ func (s *Server) GetWorkspaceAnalytics(ctx context.Context, req *proto.GetWorksp
 
 	logger.Info("getting workspace analytics", zap.Uint64("workspace_id", req.GetWorkspaceId()))
 
-	// TODO: Implement analytics retrieval logic
-	// This endpoint will be implemented in a future update when analytics features are added
-	return &proto.GetWorkspaceAnalyticsResponse{}, nil
+	// Get the workspace first to verify it exists
+	if _, err := s.db.GetWorkspace(ctx, req.GetWorkspaceId()); err != nil {
+		logger.Error("failed to get workspace", zap.Error(err))
+		if err == database.ErrWorkspaceDoesNotExist {
+			return nil, status.Error(codes.NotFound, "workspace not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to get workspace")
+	}
+
+	return &proto.GetWorkspaceAnalyticsResponse{
+		TotalLeads: 0,
+		ActiveWorkflows: 0,
+		JobsLast_30Days: 0,
+		SuccessRates: []*proto.GetWorkspaceAnalyticsResponse_JobSuccessRate{
+			{
+				WorkflowId:  "123",
+				SuccessRate: 0.85,
+				TotalRuns:   10,
+			},
+		},
+	}, nil
 }

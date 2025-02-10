@@ -388,8 +388,32 @@ func (s *Server) GetAccountUsage(ctx context.Context, req *proto.GetAccountUsage
 
 	logger.Info("getting account usage", zap.Uint64("account_id", req.GetId()))
 
-	// TODO: Implement usage retrieval logic
-	return &proto.GetAccountUsageResponse{}, nil
+	// Get the account first to verify it exists
+	account, err := s.db.GetAccount(ctx, &database.GetAccountInput{
+		ID: req.GetId(),
+	})
+	if err != nil {
+		logger.Error("failed to get account", zap.Error(err))
+		if err == database.ErrAccountDoesNotExist {
+			return nil, status.Error(codes.NotFound, "account not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to get account")
+	}
+
+	// Get usage metrics from the database
+	usage := &proto.AccountUsage{
+		AccountId:           account.Id,
+		TotalScrapingJobs:  0, // TODO: Implement actual metrics
+		ActiveScrapingJobs: 0,
+		TotalLeads:         0,
+		StorageUsageBytes:  0,
+		ApiCallCount:       0,
+		LastUpdated:       nil,
+	}
+
+	return &proto.GetAccountUsageResponse{
+		Usage: usage,
+	}, nil
 }
 
 // UpdateAccountSettings modifies the settings for an account.
@@ -429,6 +453,36 @@ func (s *Server) UpdateAccountSettings(ctx context.Context, req *proto.UpdateAcc
 		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
 	}
 
-	// TODO: Implement settings update logic
-	return &proto.UpdateAccountSettingsResponse{}, nil
+	// Extract settings
+	settings := req.GetSettings()
+	if settings == nil {
+		logger.Error("settings is nil")
+		return nil, status.Error(codes.InvalidArgument, "settings is required")
+	}
+
+	// Get the account first to verify it exists
+	account, err := s.db.GetAccount(ctx, &database.GetAccountInput{
+		ID: req.GetAccountId(),
+	})
+	if err != nil {
+		logger.Error("failed to get account", zap.Error(err))
+		if err == database.ErrAccountDoesNotExist {
+			return nil, status.Error(codes.NotFound, "account not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to get account")
+	}
+
+	// Update account settings
+	account.Settings = settings
+
+	// Save updated account
+	updatedAccount, err := s.db.UpdateAccount(ctx, account.OrganizationId, account.TenantId, account)
+	if err != nil {
+		logger.Error("failed to update account settings", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to update account settings")
+	}
+
+	return &proto.UpdateAccountSettingsResponse{
+		Settings: updatedAccount.Settings,
+	}, nil
 }

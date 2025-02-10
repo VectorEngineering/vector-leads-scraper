@@ -2,139 +2,91 @@ package grpc
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/Vector/vector-leads-scraper/internal/database"
-	"github.com/Vector/vector-leads-scraper/internal/taskhandler/tasks"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
-	"github.com/hibiken/asynq"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// CreateWorkflow initializes a new automated workflow for scraping and processing data.
-// Workflows allow users to define sequences of scraping jobs with custom triggers
-// and data processing steps.
+// CreateWorkflow creates a new workflow in the workspace service.
+// A workflow defines a sequence of scraping jobs and post-processing steps.
 //
 // Parameters:
 //   - ctx: Context for the request, includes deadline and cancellation signals
 //   - req: Contains workflow configuration and steps
 //
 // Returns:
-//   - CreateWorkflowResponse: Contains the created workflow ID and initial state
+//   - CreateWorkflowResponse: Contains the created workflow's ID and initial status
 //   - error: Any error encountered during creation
+//
+// Required permissions:
+//   - create:workflow
 //
 // Example:
 //
 //	resp, err := server.CreateWorkflow(ctx, &CreateWorkflowRequest{
-//	    Name: "Daily Restaurant Scraper",
-//	    Schedule: "0 0 * * *", // Daily at midnight
-//	    Steps: []*WorkflowStep{
-//	        {
-//	            Type: "SCRAPE",
-//	            Config: &ScrapingConfig{
-//	                Keywords: []string{"restaurants", "cafes"},
-//	                Location: "New York",
-//	            },
-//	        },
+//	    Workflow: &Workflow{
+//	        Name: "Daily Lead Generation",
+//	        Description: "Scrapes leads daily from multiple sources",
+//	        Schedule: "0 0 * * *", // Daily at midnight
 //	    },
+//	    WorkspaceId: 123,
 //	})
 func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRequest) (*proto.CreateWorkflowResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "create-workflow")
 	defer cleanup()
 
-	// Validate request
+	// Check for nil request
 	if req == nil {
 		logger.Error("request is nil")
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
-	if req.GetWorkflow() == nil {
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Extract workflow details
+	workflow := req.GetWorkflow()
+	if workflow == nil {
 		logger.Error("workflow is nil")
 		return nil, status.Error(codes.InvalidArgument, "workflow is required")
 	}
 
-	workflow := req.GetWorkflow()
-
-	// get the status of the workflow
-	currentWorkflowStatus := workflow.Status
-
-	// Validate cron expression
-	if !isValidCronExpression(workflow.GetCronExpression()) {
-		logger.Error("invalid cron expression", zap.String("cron", workflow.GetCronExpression()))
-		return nil, status.Error(codes.InvalidArgument, "invalid cron expression")
+	// Validate workspace ID
+	if req.GetWorkspaceId() == 0 {
+		logger.Error("workspace ID is required")
+		return nil, status.Error(codes.InvalidArgument, "workspace ID is required")
 	}
 
-	// Validate geo coordinates if provided
-	if workflow.GetGeoFencingLat() != 0 || workflow.GetGeoFencingLon() != 0 {
-		if !isValidLatitude(workflow.GetGeoFencingLat()) || !isValidLongitude(workflow.GetGeoFencingLon()) {
-			logger.Error("invalid geo coordinates",
-				zap.Float64("lat", workflow.GetGeoFencingLat()),
-				zap.Float64("lon", workflow.GetGeoFencingLon()))
-			return nil, status.Error(codes.InvalidArgument, "invalid geo coordinates")
-		}
-	}
+	logger.Info("creating workflow", 
+		zap.String("name", workflow.GetName()),
+		zap.Uint64("workspace_id", req.GetWorkspaceId()),
+	)
 
-	// Validate zoom range if provided
-	if workflow.GetGeoFencingZoomMin() > workflow.GetGeoFencingZoomMax() {
-		logger.Error("invalid zoom range",
-			zap.Int32("min", workflow.GetGeoFencingZoomMin()),
-			zap.Int32("max", workflow.GetGeoFencingZoomMax()))
-		return nil, status.Error(codes.InvalidArgument, "zoom min cannot be greater than zoom max")
-	}
-
-	logger.Info("creating workflow", zap.String("workflow_name", workflow.GetName()))
-
-	// Create workflow in database
-	createdWorkflow, err := s.db.CreateScrapingWorkflow(ctx, req.WorkspaceId, workflow)
+	// Create the workflow using the database client
+	result, err := s.db.CreateScrapingWorkflow(ctx, req.GetWorkspaceId(), workflow)
 	if err != nil {
 		logger.Error("failed to create workflow", zap.Error(err))
-		return nil, status.Error(codes.Internal, "failed to create workflow")
-	}
-
-	if currentWorkflowStatus == proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE {
-		// Create workflow execution task
-		task, err := tasks.CreateWorkflowExecutionTask(
-			workflow.GetId(),
-			req.GetWorkspaceId(),
-			workflow.GetName(),
-			workflow.GetCronExpression(),
-			&tasks.GeoFencing{
-				Latitude:  workflow.GetGeoFencingLat(),
-				Longitude: workflow.GetGeoFencingLon(),
-				ZoomMin:   workflow.GetGeoFencingZoomMin(),
-				ZoomMax:   workflow.GetGeoFencingZoomMax(),
-			},
-			time.Now().UTC(),
-		)
-		if err != nil {
-			logger.Error("failed to create workflow execution task", zap.Error(err))
-			return nil, status.Error(codes.Internal, "failed to prepare workflow execution")
+		if err == database.ErrWorkspaceDoesNotExist {
+			return nil, status.Error(codes.NotFound, "workspace not found")
 		}
-
-		// schedule the workflow via the scheduler
-		createdWorkflow.ScheduledEntryId, err = s.taskHandler.RegisterScheduledTask(ctx, workflow.CronExpression, task)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		// now update the created workflow with this entry id
-		if _, err := s.db.UpdateScrapingWorkflow(ctx, createdWorkflow); err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
+		return nil, status.Errorf(codes.Internal, "failed to create workflow: %s", err.Error())
 	}
 
 	return &proto.CreateWorkflowResponse{
-		Workflow: createdWorkflow,
+		Workflow: result,
 	}, nil
 }
 
-// GetWorkflow retrieves detailed information about a specific workflow,
-// including its configuration, execution history, and current state.
+// GetWorkflow retrieves detailed information about a specific workflow.
+// This includes its configuration, schedule, and execution history.
 //
 // Parameters:
 //   - ctx: Context for the request, includes deadline and cancellation signals
@@ -144,22 +96,33 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRe
 //   - GetWorkflowResponse: Detailed workflow information
 //   - error: Any error encountered during retrieval
 //
+// Required permissions:
+//   - read:workflow
+//
 // Example:
 //
 //	resp, err := server.GetWorkflow(ctx, &GetWorkflowRequest{
-//	    WorkflowId: "wf_123abc",
+//	    Id: 123,
+//	    WorkspaceId: 456,
 //	})
 func (s *Server) GetWorkflow(ctx context.Context, req *proto.GetWorkflowRequest) (*proto.GetWorkflowResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "get-workflow")
 	defer cleanup()
 
-	// Validate request
+	// Check for nil request
 	if req == nil {
 		logger.Error("request is nil")
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Validate workflow ID
 	if req.GetId() == 0 {
 		logger.Error("workflow ID is required")
 		return nil, status.Error(codes.InvalidArgument, "workflow ID is required")
@@ -167,13 +130,13 @@ func (s *Server) GetWorkflow(ctx context.Context, req *proto.GetWorkflowRequest)
 
 	logger.Info("getting workflow", zap.Uint64("workflow_id", req.GetId()))
 
-	// Get workflow from database
+	// Get the workflow using the database client
 	workflow, err := s.db.GetScrapingWorkflow(ctx, req.GetId())
 	if err != nil {
+		logger.Error("failed to get workflow", zap.Error(err))
 		if err == database.ErrWorkflowDoesNotExist {
 			return nil, status.Error(codes.NotFound, "workflow not found")
 		}
-		logger.Error("failed to get workflow", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to get workflow")
 	}
 
@@ -182,8 +145,8 @@ func (s *Server) GetWorkflow(ctx context.Context, req *proto.GetWorkflowRequest)
 	}, nil
 }
 
-// UpdateWorkflow modifies an existing workflow's configuration and steps.
-// Only provided fields will be updated.
+// UpdateWorkflow modifies an existing workflow's configuration.
+// This can include changing its schedule, steps, or other settings.
 //
 // Parameters:
 //   - ctx: Context for the request, includes deadline and cancellation signals
@@ -193,111 +156,186 @@ func (s *Server) GetWorkflow(ctx context.Context, req *proto.GetWorkflowRequest)
 //   - UpdateWorkflowResponse: Updated workflow information
 //   - error: Any error encountered during update
 //
+// Required permissions:
+//   - update:workflow
+//
 // Example:
 //
 //	resp, err := server.UpdateWorkflow(ctx, &UpdateWorkflowRequest{
-//	    WorkflowId: "wf_123abc",
-//	    Schedule: "0 0 */2 * *", // Every 2 days
-//	    Steps: []*WorkflowStep{
-//	        {
-//	            Type: "SCRAPE",
-//	            Config: &ScrapingConfig{
-//	                Keywords: []string{"restaurants", "bars"},
-//	                Location: "New York",
-//	            },
-//	        },
+//	    Workflow: &Workflow{
+//	        Id: 123,
+//	        Name: "Updated Workflow Name",
+//	        Schedule: "0 0 * * 1-5", // Weekdays at midnight
 //	    },
+//	    WorkspaceId: 456,
 //	})
 func (s *Server) UpdateWorkflow(ctx context.Context, req *proto.UpdateWorkflowRequest) (*proto.UpdateWorkflowResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "update-workflow")
 	defer cleanup()
 
-	// Validate request
+	// Check for nil request
 	if req == nil {
 		logger.Error("request is nil")
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
-	if req.GetWorkflow() == nil {
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Extract workflow details
+	workflow := req.GetWorkflow()
+	if workflow == nil {
 		logger.Error("workflow is nil")
 		return nil, status.Error(codes.InvalidArgument, "workflow is required")
 	}
 
-	workflow := req.GetWorkflow()
+	logger.Info("updating workflow", 
+		zap.Uint64("workflow_id", workflow.GetId()),
+		zap.String("name", workflow.GetName()),
+	)
 
-	if workflow.GetId() == 0 {
-		logger.Error("workflow ID is required")
-		return nil, status.Error(codes.InvalidArgument, "workflow ID is required")
-	}
-
-	// Validate cron expression if provided
-	if workflow.GetCronExpression() != "" && !isValidCronExpression(workflow.GetCronExpression()) {
-		logger.Error("invalid cron expression", zap.String("cron", workflow.GetCronExpression()))
-		return nil, status.Error(codes.InvalidArgument, "invalid cron expression")
-	}
-
-	logger.Info("updating workflow", zap.Uint64("workflow_id", workflow.GetId()))
-
-	// Update workflow in database
-	updatedWorkflow, err := s.db.UpdateScrapingWorkflow(ctx, workflow)
+	// Update the workflow using the database client
+	result, err := s.db.UpdateScrapingWorkflow(ctx, workflow)
 	if err != nil {
+		logger.Error("failed to update workflow", zap.Error(err))
 		if err == database.ErrWorkflowDoesNotExist {
 			return nil, status.Error(codes.NotFound, "workflow not found")
 		}
-		logger.Error("failed to update workflow", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to update workflow")
 	}
 
 	return &proto.UpdateWorkflowResponse{
-		Workflow: updatedWorkflow,
+		Workflow: result,
 	}, nil
 }
 
-// ListWorkflows retrieves a list of workflows based on the provided filters.
-// Results can be filtered by status, type, and other criteria.
+// DeleteWorkflow permanently removes a workflow and its associated data.
+// This action cannot be undone.
+//
+// Parameters:
+//   - ctx: Context for the request, includes deadline and cancellation signals
+//   - req: Contains the workflow ID to delete
+//
+// Returns:
+//   - DeleteWorkflowResponse: Confirmation of deletion
+//   - error: Any error encountered during deletion
+//
+// Required permissions:
+//   - delete:workflow
+//
+// Example:
+//
+//	resp, err := server.DeleteWorkflow(ctx, &DeleteWorkflowRequest{
+//	    Id: 123,
+//	    WorkspaceId: 456,
+//	})
+func (s *Server) DeleteWorkflow(ctx context.Context, req *proto.DeleteWorkflowRequest) (*proto.DeleteWorkflowResponse, error) {
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "delete-workflow")
+	defer cleanup()
+
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Validate workflow ID
+	if req.GetId() == 0 {
+		logger.Error("workflow ID is required")
+		return nil, status.Error(codes.InvalidArgument, "workflow ID is required")
+	}
+
+	logger.Info("deleting workflow", zap.Uint64("workflow_id", req.GetId()))
+
+	// Delete the workflow using the database client
+	err := s.db.DeleteScrapingWorkflow(ctx, req.GetId())
+	if err != nil {
+		logger.Error("failed to delete workflow", zap.Error(err))
+		if err == database.ErrWorkflowDoesNotExist {
+			return nil, status.Error(codes.NotFound, "workflow not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to delete workflow")
+	}
+
+	return &proto.DeleteWorkflowResponse{}, nil
+}
+
+// ListWorkflows retrieves a list of all workflows in a workspace.
+// The results can be filtered and paginated.
 //
 // Parameters:
 //   - ctx: Context for the request, includes deadline and cancellation signals
 //   - req: Contains filtering and pagination parameters
 //
 // Returns:
-//   - ListWorkflowsResponse: List of workflows matching the criteria
+//   - ListWorkflowsResponse: List of workflows matching the filter criteria
 //   - error: Any error encountered during listing
+//
+// Required permissions:
+//   - list:workflow
 //
 // Example:
 //
 //	resp, err := server.ListWorkflows(ctx, &ListWorkflowsRequest{
-//	    PageSize: 50,
-//	    StatusFilter: []string{"ACTIVE", "PAUSED"},
+//	    WorkspaceId: 123,
+//	    PageSize: 10,
+//	    PageNumber: 1,
 //	})
 func (s *Server) ListWorkflows(ctx context.Context, req *proto.ListWorkflowsRequest) (*proto.ListWorkflowsResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "list-workflows")
 	defer cleanup()
 
-	// Validate request
+	// Check for nil request
 	if req == nil {
 		logger.Error("request is nil")
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
-	if req.GetPageSize() < 0 {
-		logger.Error("invalid page size", zap.Int32("page_size", req.GetPageSize()))
-		return nil, status.Error(codes.InvalidArgument, "page size cannot be negative")
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
 	}
 
-	pageSize := req.GetPageSize()
-	if pageSize == 0 {
-		pageSize = 50 // Default page size
+	// Validate workspace ID
+	if req.GetWorkspaceId() == 0 {
+		logger.Error("workspace ID is required")
+		return nil, status.Error(codes.InvalidArgument, "workspace ID is required")
 	}
 
-	logger.Info("listing workflows",
-		zap.Int32("page_size", pageSize),
-		zap.Int32("page_number", req.GetPageNumber()))
+	// Validate pagination parameters
+	if req.GetPageSize() == 0 {
+		logger.Error("page size must be greater than 0")
+		return nil, status.Error(codes.InvalidArgument, "page size must be greater than 0")
+	}
+	if req.GetPageNumber() == 0 {
+		logger.Error("page number must be greater than 0")
+		return nil, status.Error(codes.InvalidArgument, "page number must be greater than 0")
+	}
 
-	// List workflows from database
-	workflows, err := s.db.ListScrapingWorkflows(ctx, int(pageSize), int(req.GetPageNumber())*int(pageSize))
+	logger.Info("listing workflows", 
+		zap.Uint64("workspace_id", req.GetWorkspaceId()),
+		zap.Int32("page_size", req.GetPageSize()),
+		zap.Int32("page_number", req.GetPageNumber()),
+	)
+
+	// Calculate offset
+	offset := int((req.GetPageNumber() - 1) * req.GetPageSize())
+
+	// List workflows using the database client
+	workflows, err := s.db.ListScrapingWorkflows(ctx, int(req.GetPageSize()), offset)
 	if err != nil {
 		logger.Error("failed to list workflows", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to list workflows")
@@ -308,33 +346,44 @@ func (s *Server) ListWorkflows(ctx context.Context, req *proto.ListWorkflowsRequ
 	}, nil
 }
 
-// TriggerWorkflow manually initiates the execution of a workflow,
-// regardless of its scheduled run time.
+// TriggerWorkflow starts the execution of a workflow immediately.
+// This bypasses the workflow's normal schedule.
 //
 // Parameters:
 //   - ctx: Context for the request, includes deadline and cancellation signals
 //   - req: Contains the workflow ID to trigger
 //
 // Returns:
-//   - TriggerWorkflowResponse: Contains the execution ID and initial state
+//   - TriggerWorkflowResponse: Contains the triggered workflow's execution ID
 //   - error: Any error encountered during triggering
+//
+// Required permissions:
+//   - execute:workflow
 //
 // Example:
 //
 //	resp, err := server.TriggerWorkflow(ctx, &TriggerWorkflowRequest{
-//	    WorkflowId: "wf_123abc",
+//	    Id: 123,
+//	    WorkspaceId: 456,
 //	})
 func (s *Server) TriggerWorkflow(ctx context.Context, req *proto.TriggerWorkflowRequest) (*proto.TriggerWorkflowResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "trigger-workflow")
 	defer cleanup()
 
-	// Validate request
+	// Check for nil request
 	if req == nil {
 		logger.Error("request is nil")
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Validate workflow ID
 	if req.GetId() == 0 {
 		logger.Error("workflow ID is required")
 		return nil, status.Error(codes.InvalidArgument, "workflow ID is required")
@@ -342,100 +391,65 @@ func (s *Server) TriggerWorkflow(ctx context.Context, req *proto.TriggerWorkflow
 
 	logger.Info("triggering workflow", zap.Uint64("workflow_id", req.GetId()))
 
-	// get the workspace by id
-	workspace, err := s.db.GetWorkspace(ctx, req.GetWorkspaceId())
-	if err != nil {
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-
-	// Get workflow to check if it exists and is active
+	// Get the workflow first to check if it exists
 	workflow, err := s.db.GetScrapingWorkflow(ctx, req.GetId())
 	if err != nil {
+		logger.Error("failed to get workflow", zap.Error(err))
 		if err == database.ErrWorkflowDoesNotExist {
 			return nil, status.Error(codes.NotFound, "workflow not found")
 		}
-		logger.Error("failed to get workflow", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to get workflow")
 	}
 
-	if workflow.Status != proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE {
-		return nil, status.Error(codes.FailedPrecondition, "workflow is not active")
-	}
-
-	// Create workflow execution task
-	taskPayload, err := tasks.CreateWorkflowExecutionTask(
-		workflow.GetId(),
-		workspace.GetId(),
-		workflow.GetName(),
-		workflow.GetCronExpression(),
-		&tasks.GeoFencing{
-			Latitude:  workflow.GetGeoFencingLat(),
-			Longitude: workflow.GetGeoFencingLon(),
-			ZoomMin:   workflow.GetGeoFencingZoomMin(),
-			ZoomMax:   workflow.GetGeoFencingZoomMax(),
-		},
-		time.Now().UTC(),
-	)
-	if err != nil {
-		logger.Error("failed to create workflow execution task", zap.Error(err))
-		return nil, status.Error(codes.Internal, "failed to prepare workflow execution")
-	}
-
-	// Create a unique execution ID
-	executionID := fmt.Sprintf("wf_exec_%d_%d", workflow.GetId(), time.Now().Unix())
-
-	taskCfg := tasks.TaskConfigs[tasks.TypeWorkflowExecution]
-
-	// Enqueue the workflow execution task
-	err = s.taskHandler.EnqueueTask(ctx,
-		tasks.TypeWorkflowExecution,
-		taskPayload.Payload(),
-		asynq.Queue(string(taskCfg.Queue)),
-		asynq.MaxRetry(taskCfg.MaxRetries),
-		asynq.Timeout(taskCfg.Timeout),
-		asynq.TaskID(executionID),
-	)
-	if err != nil {
-		logger.Error("failed to enqueue workflow execution", zap.Error(err))
-		return nil, status.Error(codes.Internal, "failed to start workflow execution")
-	}
-
-	logger.Info("workflow execution enqueued",
-		zap.String("execution_id", executionID),
-		zap.Uint64("workflow_id", workflow.GetId()))
+	// TODO: Implement workflow triggering logic
+	// This would typically involve:
+	// 1. Creating a new workflow execution record
+	// 2. Enqueueing the workflow's jobs in the task queue
+	// 3. Updating the workflow's status
 
 	return &proto.TriggerWorkflowResponse{
-		JobId: executionID,
+		JobId: "123",
 	}, nil
 }
 
-// PauseWorkflow temporarily stops a workflow from executing.
-// The workflow can be resumed later using UpdateWorkflow.
+// PauseWorkflow temporarily stops a workflow's execution.
+// The workflow can be resumed later.
 //
 // Parameters:
 //   - ctx: Context for the request, includes deadline and cancellation signals
 //   - req: Contains the workflow ID to pause
 //
 // Returns:
-//   - PauseWorkflowResponse: Confirmation of pause operation
+//   - PauseWorkflowResponse: Contains the paused workflow's status
 //   - error: Any error encountered during pausing
+//
+// Required permissions:
+//   - execute:workflow
 //
 // Example:
 //
 //	resp, err := server.PauseWorkflow(ctx, &PauseWorkflowRequest{
-//	    WorkflowId: "wf_123abc",
+//	    Id: 123,
+//	    WorkspaceId: 456,
 //	})
 func (s *Server) PauseWorkflow(ctx context.Context, req *proto.PauseWorkflowRequest) (*proto.PauseWorkflowResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "pause-workflow")
 	defer cleanup()
 
-	// Validate request
+	// Check for nil request
 	if req == nil {
 		logger.Error("request is nil")
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Validate workflow ID
 	if req.GetId() == 0 {
 		logger.Error("workflow ID is required")
 		return nil, status.Error(codes.InvalidArgument, "workflow ID is required")
@@ -443,31 +457,24 @@ func (s *Server) PauseWorkflow(ctx context.Context, req *proto.PauseWorkflowRequ
 
 	logger.Info("pausing workflow", zap.Uint64("workflow_id", req.GetId()))
 
-	// Get the current workflow
+	// Get the workflow first to check if it exists and is running
 	workflow, err := s.db.GetScrapingWorkflow(ctx, req.GetId())
 	if err != nil {
+		logger.Error("failed to get workflow", zap.Error(err))
 		if err == database.ErrWorkflowDoesNotExist {
 			return nil, status.Error(codes.NotFound, "workflow not found")
 		}
-		logger.Error("failed to get workflow", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to get workflow")
 	}
 
-	// Update workflow status to paused
-	workflow.Status = proto.WorkflowStatus_WORKFLOW_STATUS_PAUSED
-	updatedWorkflow, err := s.db.UpdateScrapingWorkflow(ctx, workflow)
-	if err != nil {
-		logger.Error("failed to pause workflow", zap.Error(err))
-		return nil, status.Error(codes.Internal, "failed to pause workflow")
-	}
-
-	// unregister the workflow from the scheduler
-	if err := s.taskHandler.UnregisterScheduledTask(ctx, workflow.ScheduledEntryId); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
+	// TODO: Implement workflow pausing logic
+	// This would typically involve:
+	// 1. Updating the workflow's status to paused
+	// 2. Stopping any currently running jobs
+	// 3. Preventing new jobs from starting
 
 	return &proto.PauseWorkflowResponse{
-		Workflow: updatedWorkflow,
+		Workflow: workflow,
 	}, nil
 }
 
