@@ -52,7 +52,7 @@ func initializeWebhookTestContext(t *testing.T) *webhookTestContext {
 	require.NotNil(t, createAcctResp.Account)
 
 	// Create workspace
-	workspace := testutils.GenerateRandomizedWorkspace()
+	workspace := testutils.GenerateRandomWorkspace()
 	createWorkspaceResp, err := MockServer.CreateWorkspace(context.Background(), &proto.CreateWorkspaceRequest{
 		Workspace:      workspace,
 		AccountId:      createAcctResp.Account.Id,
@@ -365,7 +365,7 @@ func TestServer_UpdateWebhook(t *testing.T) {
 		{
 			name: "error - missing webhook",
 			req: &proto.UpdateWebhookRequest{
-				WorkspaceId: testCtx.Workspace.Id,
+				Webhook: testutils.GenerateRandomWebhookConfig(),
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -377,7 +377,6 @@ func TestServer_UpdateWebhook(t *testing.T) {
 					Id:          999999,
 					WebhookName: "Non-existent",
 				},
-				WorkspaceId: testCtx.Workspace.Id,
 			},
 			wantErr: true,
 			errCode: codes.NotFound,
