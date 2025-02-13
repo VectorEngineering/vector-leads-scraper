@@ -29,12 +29,15 @@ func setupAccountTestContext(t *testing.T) *accountTestContext {
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
 		Organization: testutils.GenerateRandomizedOrganization(),
 	})
+	require.NoError(t, err)
+	require.NotNil(t, org)
 
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
 		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
 	})
 	require.NoError(t, err)
+	require.NotNil(t, tenant)
 
 	cleanup := func() {
 		conn.DeleteOrganization(ctx, &DeleteOrganizationInput{ID: org.Id})
@@ -47,6 +50,7 @@ func setupAccountTestContext(t *testing.T) *accountTestContext {
 		TenantID: tenant.Id,
 	})
 	require.NoError(t, err)
+	require.NotNil(t, account)
 
 	// create a workspace
 	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
@@ -56,6 +60,7 @@ func setupAccountTestContext(t *testing.T) *accountTestContext {
 		TenantID:       tenant.Id,
 	})
 	require.NoError(t, err)
+	require.NotNil(t, workspace)
 
 	return &accountTestContext{
 		Organization: org,

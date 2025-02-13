@@ -12,6 +12,10 @@ import (
 
 // DeleteWorkspace deletes a workspace from the database
 func (db *Db) DeleteWorkspace(ctx context.Context, id uint64) error {
+	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
+	defer cancel()
+
+	
 	if id == 0 {
 		return ErrInvalidInput
 	}
