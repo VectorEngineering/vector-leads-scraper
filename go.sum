@@ -71,8 +71,8 @@ github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWX
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/SolomonAIEngineering/backend-core-library v1.30.0 h1:c4W2Mvd7uh6wOVTLqV4TUzfj7IeHkycI//KXrWmrHTQ=
 github.com/SolomonAIEngineering/backend-core-library v1.30.0/go.mod h1:DQv8Xb1rljobwulkSPf+1fnknm/V2SkzVcIgP3lPT/w=
-github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250210004652-c6f40eed5be6 h1:83gSqaST+HQcA0bwENLiKPnIFZQCk96vQb3WvdBkR2o=
-github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250210004652-c6f40eed5be6/go.mod h1:IxfUHQhLfFULZm7FwQ3Tx0qanQJQGwFpoAu6doCVOQo=
+github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250213225905-8116beb290aa h1:UDiIYe8/QikKuqVMlrf0gpX4jHFVrZyzdN6uX5dgDRY=
+github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250213225905-8116beb290aa/go.mod h1:IxfUHQhLfFULZm7FwQ3Tx0qanQJQGwFpoAu6doCVOQo=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
 github.com/adhocore/gronx v1.19.5 h1:cwIG4nT1v9DvadxtHBe6MzE+FZ1JDvAUC45U2fl4eSQ=
 github.com/adhocore/gronx v1.19.5/go.mod h1:7oUY1WAU8rEJWmAxXR2DN0JaO4gi9khSgKjiRypqteg=

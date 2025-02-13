@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Vector/vector-leads-scraper/internal/database"
+	"github.com/Vector/vector-leads-scraper/runner/grpcrunner/middleware"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -25,9 +26,16 @@ func (s *Server) CreateTenantAPIKey(ctx context.Context, req *proto.CreateTenant
 		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
 	}
 
+	// get the tenant id from the context
+	tenantId, err := middleware.GetTenantID(ctx)
+	if err != nil {
+		logger.Error("failed to get tenant id from context", zap.Error(err))
+		return nil, status.Errorf(codes.Internal, "failed to get tenant id from context: %s", err.Error())
+	}
+
 	logger.Info("creating tenant API key")
 
-	apiKey, err := s.db.CreateTenantAPIKey(ctx, req.GetTenantId(), req.GetName(), req.GetScopes())
+	apiKey, err := s.db.CreateTenantApiKey(ctx, tenantId, &req.ApiKey)
 	if err != nil {
 		logger.Error("failed to create tenant API key", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create tenant API key")

@@ -4,6 +4,7 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -95,23 +96,42 @@ func validateTenantAndOrg(tenantID, orgID string) error {
 			Message: "organization ID cannot be empty",
 		}
 	}
+
+
+	// ensure we can convert the tenantID and orgID to uint64
+	 _, err := strconv.ParseUint(tenantID, 10, 64)
+	if err != nil {
+		return &AuthenticationError{
+			Code:    codes.InvalidArgument,
+			Message: "tenant ID is not a valid uint64",
+		}
+	}
+
+	_, err = strconv.ParseUint(orgID, 10, 64)
+	if err != nil {
+		return &AuthenticationError{
+			Code:    codes.InvalidArgument,
+			Message: "organization ID is not a valid uint64",
+		}
+	}
+
 	return nil
 }
 
 // GetTenantID retrieves the tenant ID from context
-func GetTenantID(ctx context.Context) (string, error) {
+func GetTenantID(ctx context.Context) (uint64, error) {
 	tenantID, ok := ctx.Value(tenantIDKey).(string)
 	if !ok {
-		return "", fmt.Errorf("tenant ID not found in context")
+		return 0, fmt.Errorf("tenant ID not found in context")
 	}
-	return tenantID, nil
+	return strconv.ParseUint(tenantID, 10, 64)
 }
 
 // GetOrgID retrieves the organization ID from context
-func GetOrgID(ctx context.Context) (string, error) {
+func GetOrgID(ctx context.Context) (uint64, error) {
 	orgID, ok := ctx.Value(orgIDKey).(string)
 	if !ok {
-		return "", fmt.Errorf("organization ID not found in context")
+		return 0, fmt.Errorf("organization ID not found in context")
 	}
-	return orgID, nil
+	return strconv.ParseUint(orgID, 10, 64)
 }

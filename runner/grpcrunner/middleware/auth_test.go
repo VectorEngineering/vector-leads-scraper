@@ -14,8 +14,8 @@ func TestExtractAuthInfo(t *testing.T) {
 		setupContext  func() context.Context
 		expectedError bool
 		expectedCode  codes.Code
-		expectedTID   string
-		expectedOrgID string
+		expectedTID   uint64
+		expectedOrgID uint64
 	}{
 		{
 			name: "missing metadata",
@@ -51,14 +51,14 @@ func TestExtractAuthInfo(t *testing.T) {
 			name: "valid auth info",
 			setupContext: func() context.Context {
 				md := metadata.New(map[string]string{
-					"x-tenant-id":       "tenant123",
-					"x-organization-id": "org123",
+					"x-tenant-id":       "123",
+					"x-organization-id": "123",
 				})
 				return metadata.NewIncomingContext(context.Background(), md)
 			},
 			expectedError: false,
-			expectedTID:   "tenant123",
-			expectedOrgID: "org123",
+			expectedTID:   123,
+			expectedOrgID: 123,
 		},
 	}
 
@@ -94,7 +94,7 @@ func TestExtractAuthInfo(t *testing.T) {
 				t.Errorf("failed to get tenant ID: %v", err)
 			}
 			if tid != tt.expectedTID {
-				t.Errorf("expected tenant ID %s, got %s", tt.expectedTID, tid)
+				t.Errorf("expected tenant ID %d, got %d", tt.expectedTID, tid)
 			}
 
 			orgID, err := GetOrgID(newCtx)
@@ -102,7 +102,7 @@ func TestExtractAuthInfo(t *testing.T) {
 				t.Errorf("failed to get org ID: %v", err)
 			}
 			if orgID != tt.expectedOrgID {
-				t.Errorf("expected org ID %s, got %s", tt.expectedOrgID, orgID)
+				t.Errorf("expected org ID %d, got %d", tt.expectedOrgID, orgID)
 			}
 		})
 	}
@@ -113,7 +113,7 @@ func TestGetTenantID(t *testing.T) {
 		name          string
 		setupContext  func() context.Context
 		expectedError bool
-		expectedTID   string
+		expectedTID   uint64
 	}{
 		{
 			name: "missing tenant ID",
@@ -125,10 +125,10 @@ func TestGetTenantID(t *testing.T) {
 		{
 			name: "valid tenant ID",
 			setupContext: func() context.Context {
-				return context.WithValue(context.Background(), tenantIDKey, "tenant123")
+				return context.WithValue(context.Background(), tenantIDKey, "123")
 			},
 			expectedError: false,
-			expectedTID:   "tenant123",
+			expectedTID:   123,
 		},
 	}
 
@@ -150,7 +150,7 @@ func TestGetTenantID(t *testing.T) {
 			}
 
 			if tid != tt.expectedTID {
-				t.Errorf("expected tenant ID %s, got %s", tt.expectedTID, tid)
+				t.Errorf("expected tenant ID %d, got %d", tt.expectedTID, tid)
 			}
 		})
 	}
@@ -161,7 +161,7 @@ func TestGetOrgID(t *testing.T) {
 		name          string
 		setupContext  func() context.Context
 		expectedError bool
-		expectedOrgID string
+		expectedOrgID uint64
 	}{
 		{
 			name: "missing org ID",
@@ -173,10 +173,10 @@ func TestGetOrgID(t *testing.T) {
 		{
 			name: "valid org ID",
 			setupContext: func() context.Context {
-				return context.WithValue(context.Background(), orgIDKey, "org123")
+				return context.WithValue(context.Background(), orgIDKey, "123")
 			},
 			expectedError: false,
-			expectedOrgID: "org123",
+			expectedOrgID: 123,
 		},
 	}
 
@@ -198,7 +198,7 @@ func TestGetOrgID(t *testing.T) {
 			}
 
 			if orgID != tt.expectedOrgID {
-				t.Errorf("expected org ID %s, got %s", tt.expectedOrgID, orgID)
+				t.Errorf("expected org ID %d, got %d", tt.expectedOrgID, orgID)
 			}
 		})
 	}

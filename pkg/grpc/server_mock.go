@@ -44,7 +44,7 @@ import (
 var MockServer *Server
 
 type GrpcTestContext struct {
-	Database    *database.Db
+	Database    database.DatabaseOperations
 	Redis       *redisC.Client
 	TaskHandler *taskhandler.Handler
 }

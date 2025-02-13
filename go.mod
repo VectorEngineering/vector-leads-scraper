@@ -7,7 +7,7 @@ require (
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.2.2
 	github.com/PuerkitoBio/goquery v1.10.0
 	github.com/SolomonAIEngineering/backend-core-library v1.30.0
-	github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250210004652-c6f40eed5be6
+	github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250213225905-8116beb290aa
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/aws-sdk-go-v2 v1.32.6
 	github.com/aws/aws-sdk-go-v2/config v1.28.6

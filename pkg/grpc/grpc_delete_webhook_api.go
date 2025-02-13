@@ -50,7 +50,7 @@ func (s *Server) DeleteWebhook(ctx context.Context, req *proto.DeleteWebhookRequ
 	logger.Info("deleting webhook", zap.Uint64("webhook_id", req.WebhookId))
 
 	// Delete the webhook using the database client
-	err := s.db.DeleteWebhookConfig(ctx, req.WorkspaceId, req.WebhookId, database.DeletionTypeSoft)
+	err := s.db.DeleteWebhookConfig(ctx, req.WorkspaceId, req.WebhookId, database.DeletionTypeHard)
 	if err != nil {
 		logger.Error("failed to delete webhook", zap.Error(err))
 		if err == database.ErrInvalidInput {

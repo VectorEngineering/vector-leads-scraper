@@ -127,6 +127,8 @@ type DatabaseOperations interface {
 	UpdateScrapingWorkflow(ctx context.Context, workflow *lead_scraper_servicev1.ScrapingWorkflow) (*lead_scraper_servicev1.ScrapingWorkflow, error)
 	DeleteScrapingWorkflow(ctx context.Context, id uint64) error
 	ListScrapingWorkflows(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.ScrapingWorkflow, error)
+	BatchCreateScrapingWorkflows(ctx context.Context, workspaceID uint64, workflows []*lead_scraper_servicev1.ScrapingWorkflow) ([]*lead_scraper_servicev1.ScrapingWorkflow, error)
+	BatchDeleteScrapingWorkflows(ctx context.Context, ids []uint64) error
 
 	// Lead operations
 	CreateLead(ctx context.Context, jobID uint64, lead *lead_scraper_servicev1.Lead) (*lead_scraper_servicev1.Lead, error)
@@ -142,6 +144,20 @@ type DatabaseOperations interface {
 	UpdateAPIKey(ctx context.Context, apiKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error)
 	DeleteAPIKey(ctx context.Context, id uint64) error
 	ListAPIKeys(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.APIKey, error)
+
+	// WebhookConfig operations
+	CreateWebhookConfig(ctx context.Context, workspaceId uint64, webhook *lead_scraper_servicev1.WebhookConfig) (*lead_scraper_servicev1.WebhookConfig, error)
+	GetWebhookConfig(ctx context.Context, workspaceId uint64, webhookId uint64) (*lead_scraper_servicev1.WebhookConfig, error)
+	UpdateWebhookConfig(ctx context.Context, workspaceId uint64, webhook *lead_scraper_servicev1.WebhookConfig) (*lead_scraper_servicev1.WebhookConfig, error)
+	DeleteWebhookConfig(ctx context.Context, workspaceId uint64, webhookId uint64, deletionType DeletionType) error
+	ListWebhookConfigs(ctx context.Context, workspaceId uint64, limit int, offset int) ([]*lead_scraper_servicev1.WebhookConfig, error)
+
+	// TenantAPIKey operations
+	CreateTenantApiKey(ctx context.Context, tenantId uint64, apiKey *lead_scraper_servicev1.TenantAPIKey) (*lead_scraper_servicev1.TenantAPIKey, error)
+	GetTenantApiKey(ctx context.Context, tenantId uint64, apiKeyId uint64) (*lead_scraper_servicev1.TenantAPIKey, error)
+	UpdateTenantApiKey(ctx context.Context, tenantId uint64, apiKey *lead_scraper_servicev1.TenantAPIKey) (*lead_scraper_servicev1.TenantAPIKey, error)
+	DeleteTenantApiKey(ctx context.Context, tenantId uint64, apiKeyId uint64, deletionType DeletionType) error
+	ListTenantApiKeys(ctx context.Context, tenantId uint64, limit int, offset int) ([]*lead_scraper_servicev1.TenantAPIKey, error)
 }
 
 // Db implements DatabaseOperations and provides connection handling for PostgreSQL.

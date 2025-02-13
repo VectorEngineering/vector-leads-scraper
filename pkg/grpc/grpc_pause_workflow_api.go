@@ -49,8 +49,18 @@ func (s *Server) PauseWorkflow(ctx context.Context, req *proto.PauseWorkflowRequ
 
 	logger.Info("pausing workflow", zap.Uint64("workflow_id", req.Id))
 
+	// get the scraping workflow by id
+	scrapingWorkflow, err := s.db.GetScrapingWorkflow(ctx, req.Id)
+	if err != nil {
+		logger.Error("failed to get scraping workflow", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get scraping workflow")
+	}
+
+	// set the status to paused
+	scrapingWorkflow.Status = proto.WorkflowStatus_WORKFLOW_STATUS_PAUSED
+	
 	// Pause the workflow using the database client
-	err := s.db.PauseWorkflow(ctx, req.WorkspaceId, req.Id)
+	updatedScrapingWorkflow, err := s.db.UpdateScrapingWorkflow(ctx, scrapingWorkflow)
 	if err != nil {
 		logger.Error("failed to pause workflow", zap.Error(err))
 		if err == database.ErrInvalidInput {
@@ -59,5 +69,7 @@ func (s *Server) PauseWorkflow(ctx context.Context, req *proto.PauseWorkflowRequ
 		return nil, status.Error(codes.Internal, "failed to pause workflow")
 	}
 
-	return &proto.PauseWorkflowResponse{}, nil
+	return &proto.PauseWorkflowResponse{
+		Workflow: updatedScrapingWorkflow,
+	}, nil
 } 

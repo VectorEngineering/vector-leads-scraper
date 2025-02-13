@@ -8,6 +8,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
+	"gorm.io/gen/field"
 )
 
 // CreateOrganizationInput holds the input parameters for the CreateOrganization function
@@ -226,7 +227,7 @@ func (db *Db) DeleteOrganization(ctx context.Context, input *DeleteOrganizationI
 
 	// Delete all associated tenants first
 	tenantQop := db.QueryOperator.TenantORM
-	if _, err := tenantQop.WithContext(ctx).Where(tenantQop.OrganizationId.Eq(input.ID)).Delete(); err != nil {
+	if _, err := tenantQop.WithContext(ctx).Where(tenantQop.OrganizationId.Eq(input.ID)).Select(field.AssociationFields).Delete(); err != nil {
 		tx.Rollback()
 		db.Logger.Error("failed to delete organization's tenants",
 			zap.Error(err),
@@ -235,7 +236,7 @@ func (db *Db) DeleteOrganization(ctx context.Context, input *DeleteOrganizationI
 	}
 
 	// Delete the organization
-	if _, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).Delete(); err != nil {
+	if _, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).Select(field.AssociationFields).Delete(); err != nil {
 		tx.Rollback()
 		db.Logger.Error("failed to delete organization",
 			zap.Error(err),

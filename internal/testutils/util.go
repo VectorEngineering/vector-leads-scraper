@@ -317,8 +317,6 @@ func GenerateRandomAPIKey() *proto.APIKey {
 		Name:                       fmt.Sprintf("API Key %s", GenerateRandomString(6, false, false)),
 		KeyHash:                    GenerateRandomString(32, true, false),
 		KeyPrefix:                  keyPrefix,
-		OrgId:                      fmt.Sprintf("org_%s", GenerateRandomString(10, true, false)),
-		TenantId:                   fmt.Sprintf("tenant_%s", GenerateRandomString(10, true, false)),
 		Scopes:                     []string{"read", "write"},
 		AllowedIps:                 []string{GenerateRandomIP(), GenerateRandomIP()},
 		AllowedDomains:             []string{GenerateRandomizeUrl(), GenerateRandomizeUrl()},

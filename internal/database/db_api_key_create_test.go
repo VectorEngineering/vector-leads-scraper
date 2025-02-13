@@ -33,8 +33,6 @@ func TestCreateAPIKey(t *testing.T) {
 				assert.Equal(t, validAPIKey.Name, apiKey.Name)
 				assert.Equal(t, validAPIKey.KeyHash, apiKey.KeyHash)
 				assert.Equal(t, validAPIKey.KeyPrefix, apiKey.KeyPrefix)
-				assert.Equal(t, validAPIKey.OrgId, apiKey.OrgId)
-				assert.Equal(t, validAPIKey.TenantId, apiKey.TenantId)
 				assert.Equal(t, validAPIKey.Scopes, apiKey.Scopes)
 				assert.Equal(t, validAPIKey.AllowedIps, apiKey.AllowedIps)
 				assert.Equal(t, validAPIKey.IsTestKey, apiKey.IsTestKey)

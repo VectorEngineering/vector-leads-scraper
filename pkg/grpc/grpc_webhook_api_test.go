@@ -340,7 +340,6 @@ func TestServer_UpdateWebhook(t *testing.T) {
 					VerifySsl:     false,
 					SigningSecret: "updated-secret",
 				},
-				WorkspaceId: testCtx.Workspace.Id,
 			},
 			wantErr: false,
 			verify: func(t *testing.T, resp *proto.UpdateWebhookResponse) {
