@@ -139,7 +139,7 @@ type DatabaseOperations interface {
 	ListLeads(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.Lead, error)
 
 	// APIKey operations
-	CreateAPIKey(ctx context.Context, apiKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error)
+	CreateAPIKey(ctx context.Context, workspaceId uint64, apiKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error)
 	GetAPIKey(ctx context.Context, id uint64) (*lead_scraper_servicev1.APIKey, error)
 	UpdateAPIKey(ctx context.Context, apiKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error)
 	DeleteAPIKey(ctx context.Context, id uint64) error

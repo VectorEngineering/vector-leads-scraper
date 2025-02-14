@@ -8,7 +8,7 @@ import (
 )
 
 // CreateAPIKey creates a new API key in the database
-func (db *Db) CreateAPIKey(ctx context.Context, apiKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error) {
+func (db *Db) CreateAPIKey(ctx context.Context, workspaceId uint64, apiKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error) {
 	if apiKey == nil {
 		return nil, ErrInvalidInput
 	}
@@ -16,16 +16,42 @@ func (db *Db) CreateAPIKey(ctx context.Context, apiKey *lead_scraper_servicev1.A
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
+	// validate the API key
+	if err := apiKey.ValidateAll(); err != nil {
+		return nil, fmt.Errorf("invalid API key: %w", err)
+	}
+
 	// convert to ORM model
 	apiKeyORM, err := apiKey.ToORM(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to ORM model: %w", err)
 	}
 
-	// create the API key
-	result := db.Client.Engine.WithContext(ctx).Create(&apiKeyORM)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to create API key: %w", result.Error)
+	// get the workspace by id 
+	wQop := db.QueryOperator.WorkspaceORM
+	workspace, err := wQop.WithContext(ctx).Where(wQop.Id.Eq(workspaceId)).First()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get workspace: %w", err)
+	}
+
+	if workspace == nil {
+		return nil, ErrNotFound
+	}
+
+	// append the api key to the workspace
+	if err := wQop.ApiKeys.Model(workspace).Append(&apiKeyORM); err != nil {
+		return nil, fmt.Errorf("failed to append API key to workspace: %w", err)
+	}
+
+	// update the workspace 
+	res, err := wQop.WithContext(ctx).Updates(workspace)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update workspace: %w", err)
+	}
+
+	// if the number of rows affected is 0, then the workspace was not found
+	if res.RowsAffected == 0 {
+		return nil, ErrNotFound
 	}
 
 	// convert back to protobuf

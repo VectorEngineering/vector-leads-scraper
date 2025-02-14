@@ -13,9 +13,12 @@ import (
 )
 
 func TestDeleteAPIKey(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test API key first
 	testKey := testutils.GenerateRandomAPIKey()
-	created, err := conn.CreateAPIKey(context.Background(), testKey)
+	created, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, testKey)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -56,7 +59,7 @@ func TestDeleteAPIKey(t *testing.T) {
 			setup: func(t *testing.T) uint64 {
 				// Create and delete a key
 				key := testutils.GenerateRandomAPIKey()
-				created, err := conn.CreateAPIKey(context.Background(), key)
+				created, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, key)
 				require.NoError(t, err)
 				require.NotNil(t, created)
 
@@ -107,6 +110,9 @@ func TestDeleteAPIKey(t *testing.T) {
 }
 
 func TestDeleteAPIKey_ConcurrentDeletions(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	numKeys := 5
 	var wg sync.WaitGroup
 	errors := make(chan error, numKeys)
@@ -116,7 +122,7 @@ func TestDeleteAPIKey_ConcurrentDeletions(t *testing.T) {
 	for i := 0; i < numKeys; i++ {
 		key := testutils.GenerateRandomAPIKey()
 		key.Name = fmt.Sprintf("Test Key %d", i)
-		created, err := conn.CreateAPIKey(context.Background(), key)
+		created, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, key)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		keyIDs[i] = created.Id

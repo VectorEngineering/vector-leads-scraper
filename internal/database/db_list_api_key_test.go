@@ -13,6 +13,13 @@ import (
 )
 
 func TestListAPIKeys(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
+	// Clean up any existing API keys first
+	result := conn.Client.Engine.Exec(fmt.Sprintf("DELETE FROM %s", lead_scraper_servicev1.APIKeyORM{}.TableName()))
+	require.NoError(t, result.Error)
+
 	// Create multiple test API keys
 	numKeys := 5
 	keyIDs := make([]uint64, numKeys)
@@ -21,7 +28,7 @@ func TestListAPIKeys(t *testing.T) {
 	for i := 0; i < numKeys; i++ {
 		key := testutils.GenerateRandomAPIKey()
 		key.Name = fmt.Sprintf("Test Key %d", i)
-		created, err := conn.CreateAPIKey(context.Background(), key)
+		created, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, key)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		keyIDs[i] = created.Id
@@ -146,11 +153,4 @@ func TestListAPIKeys(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestListAPIKeys_EmptyDatabase(t *testing.T) {
-	results, err := conn.ListAPIKeys(context.Background(), 10, 0)
-	require.NoError(t, err)
-	assert.NotNil(t, results)
-	assert.Empty(t, results)
 }

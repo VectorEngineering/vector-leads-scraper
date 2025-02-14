@@ -14,9 +14,12 @@ import (
 )
 
 func TestUpdateAPIKey(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test API key first
 	testKey := testutils.GenerateRandomAPIKey()
-	created, err := conn.CreateAPIKey(context.Background(), testKey)
+	created, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, testKey)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -130,9 +133,12 @@ func TestUpdateAPIKey(t *testing.T) {
 }
 
 func TestUpdateAPIKey_ConcurrentUpdates(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test API key first
 	testKey := testutils.GenerateRandomAPIKey()
-	created, err := conn.CreateAPIKey(context.Background(), testKey)
+	created, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, testKey)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 

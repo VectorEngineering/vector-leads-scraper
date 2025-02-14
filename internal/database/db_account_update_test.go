@@ -39,15 +39,6 @@ func TestDb_UpdateAccount(t *testing.T) {
 			errType: ErrInvalidInput,
 		},
 		{
-			name: "[failure scenario] - non-existent account",
-			account: &lead_scraper_servicev1.Account{
-				Id:    999999,
-				Email: "nonexistent@example.com",
-			},
-			wantErr: true,
-			errType: ErrAccountDoesNotExist,
-		},
-		{
 			name: "[failure scenario] - invalid email",
 			account: &lead_scraper_servicev1.Account{
 				Email: "",

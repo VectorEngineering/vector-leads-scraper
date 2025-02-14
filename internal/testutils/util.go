@@ -345,7 +345,7 @@ func GenerateRandomAPIKey() *proto.APIKey {
 		LastSecurityReviewAt:       nil,
 		RequiresClientSecret:       GenerateRandomInt(0, 1) == 1,
 		ClientSecretHash:           fmt.Sprintf("hash_%s", GenerateRandomString(32, true, false)),
-		EnforceHttps:               GenerateRandomInt(0, 1) == 1,
+		EnforceHttps:               true,
 		EnforceSigning:             GenerateRandomInt(0, 1) == 1,
 		AllowedSignatureAlgorithms: []string{"sha256", "sha384", "sha512"},
 		EnforceMutualTls:           GenerateRandomInt(0, 1) == 1,

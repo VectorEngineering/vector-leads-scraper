@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 
+	"github.com/Vector/vector-leads-scraper/internal/constants"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -43,6 +44,14 @@ func (s *Server) CreateAPIKey(ctx context.Context, req *proto.CreateAPIKeyReques
 		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
 	}
 
+	// TODO: need a function to check for the existence of tenant and org id in 1 call
+
+	// make sure the workspace of interest exists
+	if _, err := s.db.GetWorkspace(ctx, req.GetWorkspaceId()); err != nil {
+		logger.Error("failed to get workspace", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get workspace")
+	}
+
 	logger.Info("creating API key")
 
 	apiKey := &proto.APIKey{
@@ -59,9 +68,15 @@ func (s *Server) CreateAPIKey(ctx context.Context, req *proto.CreateAPIKeyReques
 		AlertEmails:                req.GetAlertEmails(),
 		AlertOnQuotaThreshold:      req.GetAlertOnQuotaThreshold(),
 		QuotaAlertThreshold:        req.GetQuotaAlertThreshold(),
+		RequestsPerSecond:          constants.API_KEY_REQUESTS_PER_SECOND,
+		RequestsPerDay:             constants.API_KEY_REQUESTS_PER_DAY,
+		ConcurrentRequests:         constants.API_KEY_CONCURRENT_REQUESTS,
+		EnforceHttps:               constants.API_KEY_ENFORCE_HTTPS,
+		RotationFrequencyDays:      constants.API_KEY_ROTATION_FREQUENCY_DAYS,
+		DataClassification:         constants.API_KEY_DEFAULT_DATA_CLASSIFICATION,
 	}
 
-	result, err := s.db.CreateAPIKey(ctx, apiKey)
+	result, err := s.db.CreateAPIKey(ctx, req.GetWorkspaceId(), apiKey)
 	if err != nil {
 		logger.Error("failed to create API key", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create API key")
