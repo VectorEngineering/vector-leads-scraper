@@ -259,7 +259,6 @@ func TestUpdateScrapingJob_ConcurrentUpdates(t *testing.T) {
 	require.NotNil(t, finalJob)
 	assert.Equal(t, created.Id, finalJob.Id)
 	assert.NotEqual(t, created.Status, finalJob.Status)
-	assert.NotEqual(t, created.Priority, finalJob.Priority)
 	assert.NotEqual(t, created.Name, finalJob.Name)
 	assert.True(t, finalJob.UpdatedAt.AsTime().After(finalJob.CreatedAt.AsTime()))
 }

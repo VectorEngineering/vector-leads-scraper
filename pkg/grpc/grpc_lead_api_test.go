@@ -46,6 +46,7 @@ func initializeLeadTestContext(t *testing.T) *leadTestContext {
 		Account:        account,
 		OrganizationId: createOrgResp.Organization.Id,
 		TenantId:       createTenantResp.TenantId,
+		InitialWorkspaceName: testutils.GenerateRandomString(10, true, true),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createAcctResp)

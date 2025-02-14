@@ -198,24 +198,13 @@ func (db *Db) DeleteOrganization(ctx context.Context, input *DeleteOrganizationI
 		return err
 	}
 
-	// Begin a transaction to ensure consistency
-	tx := db.Client.Engine.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return fmt.Errorf("failed to begin transaction: %w", tx.Error)
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
 	// Get the query operator
 	orgQop := db.QueryOperator.OrganizationORM
 
 	// First check if the organization exists
 	_, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).First()
 	if err != nil {
-		tx.Rollback()
+		
 		if err.Error() == "record not found" {
 			return ErrOrganizationDoesNotExist
 		}
@@ -228,7 +217,7 @@ func (db *Db) DeleteOrganization(ctx context.Context, input *DeleteOrganizationI
 	// Delete all associated tenants first
 	tenantQop := db.QueryOperator.TenantORM
 	if _, err := tenantQop.WithContext(ctx).Where(tenantQop.OrganizationId.Eq(input.ID)).Select(field.AssociationFields).Delete(); err != nil {
-		tx.Rollback()
+		
 		db.Logger.Error("failed to delete organization's tenants",
 			zap.Error(err),
 			zap.Uint64("organization_id", input.ID))
@@ -237,15 +226,11 @@ func (db *Db) DeleteOrganization(ctx context.Context, input *DeleteOrganizationI
 
 	// Delete the organization
 	if _, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).Select(field.AssociationFields).Delete(); err != nil {
-		tx.Rollback()
+		
 		db.Logger.Error("failed to delete organization",
 			zap.Error(err),
 			zap.Uint64("organization_id", input.ID))
 		return fmt.Errorf("failed to delete organization: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

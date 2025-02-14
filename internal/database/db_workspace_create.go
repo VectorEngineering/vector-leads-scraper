@@ -52,21 +52,9 @@ func (db *Db) CreateWorkspace(ctx context.Context, input *CreateWorkspaceInput) 
 	accountQop := db.QueryOperator.AccountORM
 	workspaceQop := db.QueryOperator.WorkspaceORM
 
-	// Begin a transaction
-	tx := db.Client.Engine.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
 	// Check if organization exists
 	_, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.OrganizationID)).First()
 	if err != nil {
-		tx.Rollback()
 		if err.Error() == "record not found" {
 			return nil, ErrOrganizationDoesNotExist
 		}
@@ -76,7 +64,6 @@ func (db *Db) CreateWorkspace(ctx context.Context, input *CreateWorkspaceInput) 
 	// Check if tenant exists and belongs to the organization
 	tenant, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.TenantID)).First()
 	if err != nil {
-		tx.Rollback()
 		if err.Error() == "record not found" {
 			return nil, ErrTenantDoesNotExist
 		}
@@ -85,14 +72,12 @@ func (db *Db) CreateWorkspace(ctx context.Context, input *CreateWorkspaceInput) 
 
 	// Verify tenant belongs to the organization
 	if tenant.OrganizationId == nil || *tenant.OrganizationId != input.OrganizationID {
-		tx.Rollback()
 		return nil, fmt.Errorf("tenant does not belong to the specified organization")
 	}
 
 	// Check if account exists and belongs to the tenant
 	account, err := accountQop.WithContext(ctx).Where(accountQop.Id.Eq(input.AccountID)).First()
 	if err != nil {
-		tx.Rollback()
 		if err.Error() == "record not found" {
 			return nil, ErrAccountDoesNotExist
 		}
@@ -101,32 +86,27 @@ func (db *Db) CreateWorkspace(ctx context.Context, input *CreateWorkspaceInput) 
 
 	// Verify account belongs to the tenant
 	if account.TenantId == nil || *account.TenantId != input.TenantID {
-		tx.Rollback()
 		return nil, fmt.Errorf("account does not belong to the specified tenant")
 	}
 
 	// Convert workspace to ORM
 	workspaceORM, err := input.Workspace.ToORM(ctx)
 	if err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to convert workspace to ORM: %w", err)
 	}
 
 	// Create the workspace
 	if err := workspaceQop.WithContext(ctx).Create(&workspaceORM); err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
 
 	// Append workspace to account's workspaces
 	if err := accountQop.Workspaces.WithContext(ctx).Model(account).Append(&workspaceORM); err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to append workspace to account: %w", err)
 	}
 
 	// Update the account
 	if _, err := accountQop.WithContext(ctx).Where(accountQop.Id.Eq(input.AccountID)).Updates(account); err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to update account: %w", err)
 	}
 
@@ -137,15 +117,9 @@ func (db *Db) CreateWorkspace(ctx context.Context, input *CreateWorkspaceInput) 
 		Where(workspaceQop.Id.Eq(workspaceORM.Id)).
 		First()
 	if err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to get created workspace: %w", err)
 	}
-
-	// Commit the transaction
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
+	
 	// Convert to protobuf
 	workspacePb, err := createdWorkspace.ToPB(ctx)
 	if err != nil {

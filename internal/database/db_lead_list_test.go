@@ -14,33 +14,35 @@ import (
 
 func TestListLeads(t *testing.T) {
 	ctx := context.Background()
+	table := lead_scraper_servicev1.LeadORM{}.TableName()
+	tableJobs := lead_scraper_servicev1.ScrapingJobORM{}.TableName()
 
 	// Clean up any existing data
 	cleanup := func() {
 		// Check counts before cleanup
 		var beforeCount int64
-		result := conn.Client.Engine.Table("leads").Count(&beforeCount)
+		result := conn.Client.Engine.Table(table).Count(&beforeCount)
 		require.NoError(t, result.Error)
 		t.Logf("Before cleanup: %d leads", beforeCount)
 
 		var beforeUnscopedCount int64
-		result = conn.Client.Engine.Unscoped().Table("leads").Count(&beforeUnscopedCount)
+		result = conn.Client.Engine.Unscoped().Table(table).Count(&beforeUnscopedCount)
 		require.NoError(t, result.Error)
 		t.Logf("Before cleanup (unscoped): %d leads", beforeUnscopedCount)
 
-		result = conn.Client.Engine.Unscoped().Exec("DELETE FROM leads")
+		result = conn.Client.Engine.Unscoped().Exec(fmt.Sprintf("DELETE FROM %s", table))
 		require.NoError(t, result.Error)
-		result = conn.Client.Engine.Unscoped().Exec("DELETE FROM gmaps_jobs")
+		result = conn.Client.Engine.Unscoped().Exec(fmt.Sprintf("DELETE FROM %s", tableJobs))
 		require.NoError(t, result.Error)
 
 		// Verify cleanup worked
 		var afterCount int64
-		result = conn.Client.Engine.Table("leads").Count(&afterCount)
+		result = conn.Client.Engine.Table(table).Count(&afterCount)
 		require.NoError(t, result.Error)
 		require.Equal(t, int64(0), afterCount, "Should have no leads after cleanup")
 
 		var afterUnscopedCount int64
-		result = conn.Client.Engine.Unscoped().Table("leads").Count(&afterUnscopedCount)
+		result = conn.Client.Engine.Unscoped().Table(table).Count(&afterUnscopedCount)
 		require.NoError(t, result.Error)
 		require.Equal(t, int64(0), afterUnscopedCount, "Should have no leads after cleanup (unscoped)")
 	}
@@ -108,20 +110,20 @@ func TestListLeads(t *testing.T) {
 
 		// Check count after each creation
 		var currentCount int64
-		result := conn.Client.Engine.Table("leads").Count(&currentCount)
+		result := conn.Client.Engine.Table(table).Count(&currentCount)
 		require.NoError(t, result.Error)
 		t.Logf("After creating lead %d: %d leads in database", i+1, currentCount)
 	}
 
 	// Verify we have exactly the number of leads we expect
 	var count int64
-	result := conn.Client.Engine.Table("leads").Count(&count)
+	result := conn.Client.Engine.Table(table).Count(&count)
 	require.NoError(t, result.Error)
 	require.Equal(t, int64(numLeads), count, "Should have exactly %d leads in the database", numLeads)
 
 	// Also check unscoped count
 	var unscopedCount int64
-	result = conn.Client.Engine.Unscoped().Table("leads").Count(&unscopedCount)
+	result = conn.Client.Engine.Unscoped().Table(table).Count(&unscopedCount)
 	require.NoError(t, result.Error)
 	require.Equal(t, int64(numLeads), unscopedCount, "Should have exactly %d leads in the database (unscoped)", numLeads)
 
@@ -260,11 +262,14 @@ func TestListLeads(t *testing.T) {
 }
 
 func TestListLeads_EmptyDatabase(t *testing.T) {
+	table := lead_scraper_servicev1.LeadORM{}.TableName()
+	tableJobs := lead_scraper_servicev1.ScrapingJobORM{}.TableName()
+
 	// Clean up any existing data
 	cleanup := func() {
-		result := conn.Client.Engine.Unscoped().Exec("DELETE FROM leads")
+		result := conn.Client.Engine.Unscoped().Exec(fmt.Sprintf("DELETE FROM %s", table))
 		require.NoError(t, result.Error)
-		result = conn.Client.Engine.Unscoped().Exec("DELETE FROM gmaps_jobs")
+		result = conn.Client.Engine.Unscoped().Exec(fmt.Sprintf("DELETE FROM %s", tableJobs))
 		require.NoError(t, result.Error)
 	}
 	cleanup()

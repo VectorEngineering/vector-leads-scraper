@@ -43,15 +43,14 @@ func initializeAPIKeyTestContext(t *testing.T) *apiKeyTestContext {
 		Account:        account,
 		OrganizationId: createOrgResp.Organization.Id,
 		TenantId:       createTenantResp.TenantId,
+		InitialWorkspaceName: testutils.GenerateRandomString(10, true, true),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createAcctResp)
 	require.NotNil(t, createAcctResp.Account)
 
 	// Create workspace
-	workspace := &proto.Workspace{
-		Name: testutils.GenerateRandomString(10, true, true),
-	}
+	workspace := testutils.GenerateRandomWorkspace()
 	createWorkspaceResp, err := MockServer.CreateWorkspace(context.Background(), &proto.CreateWorkspaceRequest{
 		Workspace:      workspace,
 		AccountId:      createAcctResp.Account.Id,

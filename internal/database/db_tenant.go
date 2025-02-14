@@ -47,21 +47,10 @@ func (db *Db) CreateTenant(ctx context.Context, input *CreateTenantInput) (*lead
 	orgQop := db.QueryOperator.OrganizationORM
 	tenantQop := db.QueryOperator.TenantORM
 
-	// Begin a transaction
-	tx := db.Client.Engine.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
 
 	// query for the organization and check if it exists
 	org, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.OrganizationID)).First()
 	if err != nil {
-		tx.Rollback()
 		if err.Error() == "record not found" {
 			return nil, ErrOrganizationDoesNotExist
 		}
@@ -73,19 +62,16 @@ func (db *Db) CreateTenant(ctx context.Context, input *CreateTenantInput) (*lead
 
 	// Create the tenant
 	if err := tenantQop.WithContext(ctx).Create(&tenantORM); err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to create tenant: %w", err)
 	}
 
 	// Append tenant to organization's tenants
 	if err := orgQop.Tenants.WithContext(ctx).Model(org).Append(&tenantORM); err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to append tenant to organization: %w", err)
 	}
 
 	// Update the organization
 	if _, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.OrganizationID)).Updates(org); err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to update organization: %w", err)
 	}
 
@@ -94,13 +80,7 @@ func (db *Db) CreateTenant(ctx context.Context, input *CreateTenantInput) (*lead
 		Where(tenantQop.Id.Eq(tenantORM.Id)).
 		First()
 	if err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to get created tenant: %w", err)
-	}
-
-	// Commit the transaction
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// Convert to protobuf
@@ -201,33 +181,20 @@ func (db *Db) UpdateTenant(ctx context.Context, input *UpdateTenantInput) (*lead
 	// Get the query operator
 	tenantQop := db.QueryOperator.TenantORM
 
-	// Begin a transaction
-	tx := db.Client.Engine.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
 
 	// Get the existing tenant
 	existingTenant, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.ID)).First()
 	if err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
 
 	if existingTenant == nil {
-		tx.Rollback()
 		return nil, ErrTenantDoesNotExist
 	}
 
 	// Update tenant fields from input
 	updatedTenant, err := input.Tenant.ToORM(ctx)
 	if err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to convert tenant to ORM: %w", err)
 	}
 
@@ -236,20 +203,13 @@ func (db *Db) UpdateTenant(ctx context.Context, input *UpdateTenantInput) (*lead
 
 	// Update the tenant
 	if _, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.ID)).Updates(&updatedTenant); err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to update tenant: %w", err)
 	}
 
 	// Get the updated tenant
 	updatedTenantRecord, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.ID)).First()
 	if err != nil {
-		tx.Rollback()
 		return nil, fmt.Errorf("failed to get updated tenant: %w", err)
-	}
-
-	// Commit the transaction
-	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	// Convert updated tenant to protobuf
@@ -301,28 +261,12 @@ func (db *Db) DeleteTenant(ctx context.Context, input *DeleteTenantInput) error 
 		return fmt.Errorf("failed to get tenant: %w", err)
 	}
 
-	// Begin a transaction to ensure consistency
-	tx := db.Client.Engine.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return fmt.Errorf("failed to begin transaction: %w", tx.Error)
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
 	// Delete the tenant
 	if _, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.ID)).Delete(); err != nil {
-		tx.Rollback()
 		db.Logger.Error("failed to delete tenant",
 			zap.Error(err),
 			zap.Uint64("tenant_id", input.ID))
 		return fmt.Errorf("failed to delete tenant: %w", err)
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

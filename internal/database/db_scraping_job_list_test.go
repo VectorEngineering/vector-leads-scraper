@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -14,9 +15,10 @@ import (
 func TestListScrapingJobs(t *testing.T) {
 	tc := setupAccountTestContext(t)
 	defer tc.Cleanup()
+	table := lead_scraper_servicev1.ScrapingJobORM{}.TableName()
 
 	// Clean up any existing jobs first
-	result := conn.Client.Engine.Exec("DELETE FROM gmaps_jobs")
+	result := conn.Client.Engine.Exec(fmt.Sprintf("DELETE FROM %s", table))
 	require.NoError(t, result.Error)
 
 	// Create multiple test jobs
@@ -153,8 +155,9 @@ func TestListScrapingJobs(t *testing.T) {
 }
 
 func TestListScrapingJobs_EmptyDatabase(t *testing.T) {
+	table := lead_scraper_servicev1.ScrapingJobORM{}.TableName()
 	// Clean up any existing jobs first
-	result := conn.Client.Engine.Exec("DELETE FROM gmaps_jobs")
+	result := conn.Client.Engine.Exec(fmt.Sprintf("DELETE FROM %s", table))
 	require.NoError(t, result.Error)
 
 	results, err := conn.ListScrapingJobs(context.Background(), 10, 0)
@@ -163,12 +166,13 @@ func TestListScrapingJobs_EmptyDatabase(t *testing.T) {
 }
 
 func TestDb_ListScrapingJobsByStatus(t *testing.T) {
+	table := lead_scraper_servicev1.ScrapingJobORM{}.TableName()
 	// Initialize test context
 	tc := setupAccountTestContext(t)
 	defer tc.Cleanup()
 
 	// Clean up any existing jobs first
-	result := conn.Client.Engine.Exec("DELETE FROM gmaps_jobs")
+	result := conn.Client.Engine.Exec(fmt.Sprintf("DELETE FROM %s", table))
 	require.NoError(t, result.Error)
 
 	// Create test jobs with different statuses
