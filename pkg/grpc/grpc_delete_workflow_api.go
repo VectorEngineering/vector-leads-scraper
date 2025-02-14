@@ -60,4 +60,4 @@ func (s *Server) DeleteWorkflow(ctx context.Context, req *proto.DeleteWorkflowRe
 	}
 
 	return &proto.DeleteWorkflowResponse{}, nil
-} 
+}

@@ -81,4 +81,4 @@ func (s *Server) CreateTenant(ctx context.Context, req *proto.CreateTenantReques
 	return &proto.CreateTenantResponse{
 		TenantId: result.GetId(),
 	}, nil
-} 
+}

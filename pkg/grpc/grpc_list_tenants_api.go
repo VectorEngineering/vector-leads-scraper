@@ -94,4 +94,4 @@ func (s *Server) ListTenants(ctx context.Context, req *proto.ListTenantsRequest)
 		Tenants:        results,
 		NextPageNumber: nextPageNumber,
 	}, nil
-} 
+}

@@ -64,7 +64,7 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *proto.UpdateWorkflowRe
 		return nil, status.Error(codes.InvalidArgument, "invalid cron expression")
 	}
 
-	logger.Info("updating workflow", 
+	logger.Info("updating workflow",
 		zap.Uint64("workflow_id", workflow.Id),
 		zap.String("name", workflow.Name))
 
@@ -81,4 +81,4 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *proto.UpdateWorkflowRe
 	return &proto.UpdateWorkflowResponse{
 		Workflow: result,
 	}, nil
-} 
+}

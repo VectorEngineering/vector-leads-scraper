@@ -47,7 +47,6 @@ func (db *Db) CreateTenant(ctx context.Context, input *CreateTenantInput) (*lead
 	orgQop := db.QueryOperator.OrganizationORM
 	tenantQop := db.QueryOperator.TenantORM
 
-
 	// query for the organization and check if it exists
 	org, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.OrganizationID)).First()
 	if err != nil {
@@ -180,7 +179,6 @@ func (db *Db) UpdateTenant(ctx context.Context, input *UpdateTenantInput) (*lead
 
 	// Get the query operator
 	tenantQop := db.QueryOperator.TenantORM
-
 
 	// Get the existing tenant
 	existingTenant, err := tenantQop.WithContext(ctx).Where(tenantQop.Id.Eq(input.ID)).First()

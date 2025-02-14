@@ -76,4 +76,4 @@ func (s *Server) ListWorkspaces(ctx context.Context, req *proto.ListWorkspacesRe
 		Workspaces:     workspaces,
 		NextPageNumber: int32(pageSize + 1),
 	}, nil
-} 
+}

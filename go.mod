@@ -7,7 +7,7 @@ require (
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.2.2
 	github.com/PuerkitoBio/goquery v1.10.0
 	github.com/SolomonAIEngineering/backend-core-library v1.30.0
-	github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250214010210-d8ecaf5a56bd
+	github.com/VectorEngineering/vector-protobuf-definitions/api-definitions v0.0.0-20250214172703-24df183b6ce8
 	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/aws-sdk-go-v2 v1.32.6
 	github.com/aws/aws-sdk-go-v2/config v1.28.6
@@ -76,7 +76,6 @@ require (
 	github.com/Noooste/utls v1.2.12 // indirect
 	github.com/Noooste/websocket v1.0.3 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.0 // indirect
-	github.com/VectorEngineering/vector-protobuf-definitions v1.11.11 // indirect
 	github.com/adhocore/gronx v1.19.5 // indirect
 	github.com/alecthomas/go-check-sumtype v0.1.4 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.4 // indirect

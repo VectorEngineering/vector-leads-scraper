@@ -56,4 +56,4 @@ func (s *Server) DeleteWorkspace(ctx context.Context, req *proto.DeleteWorkspace
 	}
 
 	return &proto.DeleteWorkspaceResponse{}, nil
-} 
+}

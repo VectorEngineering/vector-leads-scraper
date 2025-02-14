@@ -81,4 +81,4 @@ func (s *Server) UpdateTenant(ctx context.Context, req *proto.UpdateTenantReques
 	return &proto.UpdateTenantResponse{
 		Tenant: result,
 	}, nil
-} 
+}

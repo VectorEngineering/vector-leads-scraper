@@ -286,7 +286,7 @@ func TestServer_UpdateWorkspace(t *testing.T) {
 		OrganizationId: testCtx.Organization.Id,
 		TenantId:       testCtx.TenantId,
 	}
-	
+
 	// Create a test workspace first
 	createResp, err := MockServer.CreateWorkspace(context.Background(), req)
 	require.NoError(t, err)

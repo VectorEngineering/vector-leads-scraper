@@ -88,4 +88,4 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRe
 func isValidCronExpression(expr string) bool {
 	_, err := cron.ParseStandard(expr)
 	return err == nil
-} 
+}

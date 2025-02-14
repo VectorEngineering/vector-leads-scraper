@@ -76,4 +76,4 @@ func (s *Server) GetTenant(ctx context.Context, req *proto.GetTenantRequest) (*p
 	return &proto.GetTenantResponse{
 		Tenant: result,
 	}, nil
-} 
+}

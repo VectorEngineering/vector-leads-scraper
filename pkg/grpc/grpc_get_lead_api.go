@@ -65,4 +65,4 @@ func (s *Server) GetLead(ctx context.Context, req *proto.GetLeadRequest) (*proto
 	return &proto.GetLeadResponse{
 		Lead: lead,
 	}, nil
-} 
+}

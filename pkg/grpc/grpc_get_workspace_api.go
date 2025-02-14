@@ -57,4 +57,4 @@ func (s *Server) GetWorkspace(ctx context.Context, req *proto.GetWorkspaceReques
 	return &proto.GetWorkspaceResponse{
 		Workspace: workspace,
 	}, nil
-} 
+}

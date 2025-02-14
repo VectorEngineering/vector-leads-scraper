@@ -66,4 +66,4 @@ func (s *Server) UpdateAPIKey(ctx context.Context, req *proto.UpdateAPIKeyReques
 	return &proto.UpdateAPIKeyResponse{
 		ApiKey: result,
 	}, nil
-} 
+}

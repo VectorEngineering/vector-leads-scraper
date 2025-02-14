@@ -59,8 +59,8 @@ func (s *Server) ListLeads(ctx context.Context, req *proto.ListLeadsRequest) (*p
 	}
 	offset := pageSize * (int(pageNumber) - 1) // Subtract 1 since page numbers start at 1
 
-	logger.Info("listing leads", 
-		zap.Int("page_size", pageSize), 
+	logger.Info("listing leads",
+		zap.Int("page_size", pageSize),
 		zap.Int32("page_number", pageNumber))
 
 	// Get the leads using the database client
@@ -77,7 +77,7 @@ func (s *Server) ListLeads(ctx context.Context, req *proto.ListLeadsRequest) (*p
 	}
 
 	return &proto.ListLeadsResponse{
-		Leads:         leads,
+		Leads:          leads,
 		NextPageNumber: nextPageNumber,
 	}, nil
-} 
+}

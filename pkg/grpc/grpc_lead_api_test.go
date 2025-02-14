@@ -43,9 +43,9 @@ func initializeLeadTestContext(t *testing.T) *leadTestContext {
 	// Create account
 	account := testutils.GenerateRandomizedAccount()
 	createAcctResp, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
-		Account:        account,
-		OrganizationId: createOrgResp.Organization.Id,
-		TenantId:       createTenantResp.TenantId,
+		Account:              account,
+		OrganizationId:       createOrgResp.Organization.Id,
+		TenantId:             createTenantResp.TenantId,
 		InitialWorkspaceName: testutils.GenerateRandomString(10, true, true),
 	})
 	require.NoError(t, err)
@@ -266,4 +266,4 @@ func TestServer_GetLead(t *testing.T) {
 			}
 		})
 	}
-} 
+}

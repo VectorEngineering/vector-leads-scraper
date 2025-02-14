@@ -74,4 +74,4 @@ func TestGetAPIKey_NotFound(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, codes.NotFound, st.Code())
 	assert.Nil(t, resp)
-} 
+}

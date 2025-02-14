@@ -17,9 +17,15 @@ func TestCreateAPIKey_Success(t *testing.T) {
 
 	// Test successful API key creation
 	req := &proto.CreateAPIKeyRequest{
-		Name:        "Test API Key",
-		WorkspaceId: testCtx.Workspace.Id,
-		Scopes:      []string{"read:leads", "write:leads"},
+		Name:           "Test API Key",
+		Description:    "Test API Key Description",
+		WorkspaceId:    testCtx.Workspace.Id,
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
+		Scopes:         []string{"read:leads", "write:leads"},
+		MaxUses:        1000,
+		RateLimit:      100,
 	}
 
 	resp, err := MockServer.CreateAPIKey(context.Background(), req)
@@ -28,7 +34,10 @@ func TestCreateAPIKey_Success(t *testing.T) {
 	require.NotNil(t, resp.ApiKey)
 	assert.NotEmpty(t, resp.ApiKey.Id)
 	assert.Equal(t, "Test API Key", resp.ApiKey.Name)
+	assert.Equal(t, "Test API Key Description", resp.ApiKey.Description)
 	assert.Equal(t, []string{"read:leads", "write:leads"}, resp.ApiKey.Scopes)
+	assert.Equal(t, int32(1000), resp.ApiKey.MaxUses)
+	assert.Equal(t, int32(100), resp.ApiKey.RateLimit)
 }
 
 func TestCreateAPIKey_NilRequest(t *testing.T) {
@@ -78,4 +87,4 @@ func TestCreateAPIKey_MissingScopes(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, codes.InvalidArgument, st.Code())
 	assert.Nil(t, resp)
-} 
+}

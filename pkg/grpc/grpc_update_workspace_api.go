@@ -54,7 +54,7 @@ func (s *Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspace
 		return nil, status.Error(codes.InvalidArgument, "workspace is required")
 	}
 
-	logger.Info("updating workspace", 
+	logger.Info("updating workspace",
 		zap.Uint64("workspace_id", workspace.Id),
 		zap.String("name", workspace.Name))
 
@@ -71,4 +71,4 @@ func (s *Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspace
 	return &proto.UpdateWorkspaceResponse{
 		Workspace: result,
 	}, nil
-} 
+}

@@ -83,4 +83,4 @@ func (s *Server) UpdateAccount(ctx context.Context, req *proto.UpdateAccountRequ
 	return &proto.UpdateAccountResponse{
 		Account: result,
 	}, nil
-} 
+}

@@ -97,9 +97,8 @@ func validateTenantAndOrg(tenantID, orgID string) error {
 		}
 	}
 
-
 	// ensure we can convert the tenantID and orgID to uint64
-	 _, err := strconv.ParseUint(tenantID, 10, 64)
+	_, err := strconv.ParseUint(tenantID, 10, 64)
 	if err != nil {
 		return &AuthenticationError{
 			Code:    codes.InvalidArgument,
@@ -136,7 +135,6 @@ func GetOrgID(ctx context.Context) (uint64, error) {
 	return strconv.ParseUint(orgID, 10, 64)
 }
 
-
 type AuthInfo struct {
 	TenantID uint64
 	OrgID    uint64
@@ -161,6 +159,6 @@ func GetAuthInfo(ctx context.Context) (*AuthInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &AuthInfo{TenantID: tenantID, OrgID: orgID}, nil
 }

@@ -68,7 +68,7 @@ func (s *Server) ListAPIKeys(ctx context.Context, req *proto.ListAPIKeysRequest)
 	}
 
 	return &proto.ListAPIKeysResponse{
-		ApiKeys:       apiKeys,
+		ApiKeys:        apiKeys,
 		NextPageNumber: nextPageNumber,
 	}, nil
-} 
+}

@@ -61,4 +61,4 @@ func (s *Server) GetWebhook(ctx context.Context, req *proto.GetWebhookRequest) (
 	return &proto.GetWebhookResponse{
 		Webhook: webhook,
 	}, nil
-} 
+}

@@ -119,7 +119,7 @@ func (db *Db) CreateWorkspace(ctx context.Context, input *CreateWorkspaceInput) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get created workspace: %w", err)
 	}
-	
+
 	// Convert to protobuf
 	workspacePb, err := createdWorkspace.ToPB(ctx)
 	if err != nil {

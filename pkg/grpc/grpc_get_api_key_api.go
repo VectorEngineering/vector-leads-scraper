@@ -57,4 +57,4 @@ func (s *Server) GetAPIKey(ctx context.Context, req *proto.GetAPIKeyRequest) (*p
 	return &proto.GetAPIKeyResponse{
 		ApiKey: result,
 	}, nil
-} 
+}

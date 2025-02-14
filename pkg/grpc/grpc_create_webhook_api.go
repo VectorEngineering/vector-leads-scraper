@@ -76,4 +76,4 @@ func (s *Server) CreateWebhook(ctx context.Context, req *proto.CreateWebhookRequ
 	return &proto.CreateWebhookResponse{
 		Webhook: result,
 	}, nil
-} 
+}

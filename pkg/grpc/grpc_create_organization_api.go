@@ -73,4 +73,4 @@ func (s *Server) CreateOrganization(ctx context.Context, req *proto.CreateOrgani
 	return &proto.CreateOrganizationResponse{
 		Organization: organization,
 	}, nil
-} 
+}

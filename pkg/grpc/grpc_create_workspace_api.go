@@ -57,7 +57,7 @@ func (s *Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspace
 		return nil, status.Error(codes.InvalidArgument, "workspace is required")
 	}
 
-	logger.Info("creating workspace", 
+	logger.Info("creating workspace",
 		zap.String("name", workspace.Name),
 		zap.Uint64("account_id", req.AccountId),
 		zap.Uint64("tenant_id", req.TenantId),
@@ -66,7 +66,7 @@ func (s *Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspace
 	// Create the workspace using the database client
 	result, err := s.db.CreateWorkspace(ctx, &database.CreateWorkspaceInput{
 		AccountID:      req.AccountId,
-		TenantID:      req.TenantId,
+		TenantID:       req.TenantId,
 		OrganizationID: req.OrganizationId,
 		Workspace:      workspace,
 	})
@@ -81,4 +81,4 @@ func (s *Server) CreateWorkspace(ctx context.Context, req *proto.CreateWorkspace
 	return &proto.CreateWorkspaceResponse{
 		Workspace: result,
 	}, nil
-} 
+}

@@ -78,4 +78,4 @@ func (s *Server) ListWebhooks(ctx context.Context, req *proto.ListWebhooksReques
 	return &proto.ListWebhooksResponse{
 		Webhooks: webhooks,
 	}, nil
-} 
+}

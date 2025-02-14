@@ -61,4 +61,4 @@ func (s *Server) GetWorkflow(ctx context.Context, req *proto.GetWorkflowRequest)
 	return &proto.GetWorkflowResponse{
 		Workflow: workflow,
 	}, nil
-} 
+}

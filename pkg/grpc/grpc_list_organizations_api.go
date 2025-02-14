@@ -88,4 +88,4 @@ func (s *Server) ListOrganizations(ctx context.Context, req *proto.ListOrganizat
 		Organizations:  organizations,
 		NextPageNumber: nextPageNumber,
 	}, nil
-} 
+}

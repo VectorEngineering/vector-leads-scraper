@@ -74,4 +74,4 @@ func (s *Server) DeleteOrganization(ctx context.Context, req *proto.DeleteOrgani
 	return &proto.DeleteOrganizationResponse{
 		Success: true,
 	}, nil
-} 
+}

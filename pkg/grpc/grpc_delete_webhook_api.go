@@ -60,4 +60,4 @@ func (s *Server) DeleteWebhook(ctx context.Context, req *proto.DeleteWebhookRequ
 	}
 
 	return &proto.DeleteWebhookResponse{}, nil
-} 
+}

@@ -40,9 +40,9 @@ func initializeAPIKeyTestContext(t *testing.T) *apiKeyTestContext {
 	// Create account
 	account := testutils.GenerateRandomizedAccount()
 	createAcctResp, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
-		Account:        account,
-		OrganizationId: createOrgResp.Organization.Id,
-		TenantId:       createTenantResp.TenantId,
+		Account:              account,
+		OrganizationId:       createOrgResp.Organization.Id,
+		TenantId:             createTenantResp.TenantId,
 		InitialWorkspaceName: testutils.GenerateRandomString(10, true, true),
 	})
 	require.NoError(t, err)
@@ -70,15 +70,64 @@ func initializeAPIKeyTestContext(t *testing.T) *apiKeyTestContext {
 		Cleanup: func() {
 			ctx := context.Background()
 
-			// Delete workspace
-			_, err := MockServer.DeleteWorkspace(ctx, &proto.DeleteWorkspaceRequest{
+			// Delete in reverse order of dependencies
+			// First delete API keys as they depend on workspaces
+			apiKeysResp, err := MockServer.ListAPIKeys(ctx, &proto.ListAPIKeysRequest{
+				WorkspaceId:    createWorkspaceResp.Workspace.Id,
+				OrganizationId: createOrgResp.Organization.Id,
+				TenantId:       createTenantResp.TenantId,
+				AccountId:      createAcctResp.Account.Id,
+				PageSize:       100,
+				PageNumber:     1,
+			})
+			if err == nil && apiKeysResp != nil && len(apiKeysResp.ApiKeys) > 0 {
+				for _, apiKey := range apiKeysResp.ApiKeys {
+					_, err = MockServer.DeleteAPIKey(ctx, &proto.DeleteAPIKeyRequest{
+						KeyId:          apiKey.Id,
+						WorkspaceId:    createWorkspaceResp.Workspace.Id,
+						OrganizationId: createOrgResp.Organization.Id,
+						TenantId:       createTenantResp.TenantId,
+						AccountId:      createAcctResp.Account.Id,
+					})
+					if err != nil {
+						t.Logf("Failed to cleanup test API key %d: %v", apiKey.Id, err)
+					}
+				}
+			}
+
+			// Then delete webhooks as they depend on workspaces
+			webhooksResp, err := MockServer.ListWebhooks(ctx, &proto.ListWebhooksRequest{
+				WorkspaceId:    createWorkspaceResp.Workspace.Id,
+				OrganizationId: createOrgResp.Organization.Id,
+				TenantId:       createTenantResp.TenantId,
+				AccountId:      createAcctResp.Account.Id,
+				PageSize:       100,
+				PageNumber:     1,
+			})
+			if err == nil && webhooksResp != nil && len(webhooksResp.Webhooks) > 0 {
+				for _, webhook := range webhooksResp.Webhooks {
+					_, err = MockServer.DeleteWebhook(ctx, &proto.DeleteWebhookRequest{
+						WebhookId:      webhook.Id,
+						WorkspaceId:    createWorkspaceResp.Workspace.Id,
+						OrganizationId: createOrgResp.Organization.Id,
+						TenantId:       createTenantResp.TenantId,
+						AccountId:      createAcctResp.Account.Id,
+					})
+					if err != nil {
+						t.Logf("Failed to cleanup test webhook %d: %v", webhook.Id, err)
+					}
+				}
+			}
+
+			// Then delete workspaces as they depend on accounts
+			_, err = MockServer.DeleteWorkspace(ctx, &proto.DeleteWorkspaceRequest{
 				Id: createWorkspaceResp.Workspace.Id,
 			})
 			if err != nil {
 				t.Logf("Failed to cleanup test workspace: %v", err)
 			}
 
-			// Delete account
+			// Then delete accounts as they depend on tenants
 			_, err = MockServer.DeleteAccount(ctx, &proto.DeleteAccountRequest{
 				Id:             createAcctResp.Account.Id,
 				OrganizationId: createOrgResp.Organization.Id,
@@ -88,7 +137,7 @@ func initializeAPIKeyTestContext(t *testing.T) *apiKeyTestContext {
 				t.Logf("Failed to cleanup test account: %v", err)
 			}
 
-			// Delete tenant
+			// Then delete tenants as they depend on organizations
 			_, err = MockServer.DeleteTenant(ctx, &proto.DeleteTenantRequest{
 				TenantId:       createTenantResp.TenantId,
 				OrganizationId: createOrgResp.Organization.Id,
@@ -97,7 +146,7 @@ func initializeAPIKeyTestContext(t *testing.T) *apiKeyTestContext {
 				t.Logf("Failed to cleanup test tenant: %v", err)
 			}
 
-			// Delete organization
+			// Finally delete organization as it's the root resource
 			_, err = MockServer.DeleteOrganization(ctx, &proto.DeleteOrganizationRequest{
 				Id: createOrgResp.Organization.Id,
 			})
@@ -106,4 +155,4 @@ func initializeAPIKeyTestContext(t *testing.T) *apiKeyTestContext {
 			}
 		},
 	}
-} 
+}

@@ -77,4 +77,4 @@ func (s *Server) DeleteTenant(ctx context.Context, req *proto.DeleteTenantReques
 	return &proto.DeleteTenantResponse{
 		Success: true,
 	}, nil
-} 
+}

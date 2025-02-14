@@ -75,4 +75,4 @@ func (s *Server) CreateAccount(ctx context.Context, req *proto.CreateAccountRequ
 	return &proto.CreateAccountResponse{
 		Account: result,
 	}, nil
-} 
+}

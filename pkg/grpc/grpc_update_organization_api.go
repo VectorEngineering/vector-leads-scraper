@@ -78,4 +78,4 @@ func (s *Server) UpdateOrganization(ctx context.Context, req *proto.UpdateOrgani
 	return &proto.UpdateOrganizationResponse{
 		Organization: organization,
 	}, nil
-} 
+}

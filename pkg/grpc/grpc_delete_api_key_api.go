@@ -45,7 +45,7 @@ func (s *Server) DeleteAPIKey(ctx context.Context, req *proto.DeleteAPIKeyReques
 
 	logger.Info("deleting API key", zap.Uint64("key_id", req.GetKeyId()))
 
-	err := s.db.DeleteAPIKey(ctx, req.GetWorkspaceId())
+	err := s.db.DeleteAPIKey(ctx, req.GetKeyId())
 	if err != nil {
 		logger.Error("failed to delete API key", zap.Error(err))
 		if err == database.ErrNotFound {
@@ -55,4 +55,4 @@ func (s *Server) DeleteAPIKey(ctx context.Context, req *proto.DeleteAPIKeyReques
 	}
 
 	return &proto.DeleteAPIKeyResponse{}, nil
-} 
+}

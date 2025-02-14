@@ -68,4 +68,4 @@ func (s *Server) DeleteAccount(ctx context.Context, req *proto.DeleteAccountRequ
 	return &proto.DeleteAccountResponse{
 		Success: true,
 	}, nil
-} 
+}

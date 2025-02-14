@@ -58,7 +58,7 @@ func (s *Server) PauseWorkflow(ctx context.Context, req *proto.PauseWorkflowRequ
 
 	// set the status to paused
 	scrapingWorkflow.Status = proto.WorkflowStatus_WORKFLOW_STATUS_PAUSED
-	
+
 	// Pause the workflow using the database client
 	updatedScrapingWorkflow, err := s.db.UpdateScrapingWorkflow(ctx, scrapingWorkflow)
 	if err != nil {
@@ -72,4 +72,4 @@ func (s *Server) PauseWorkflow(ctx context.Context, req *proto.PauseWorkflowRequ
 	return &proto.PauseWorkflowResponse{
 		Workflow: updatedScrapingWorkflow,
 	}, nil
-} 
+}

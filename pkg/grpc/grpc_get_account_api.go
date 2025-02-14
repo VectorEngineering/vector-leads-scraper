@@ -68,4 +68,4 @@ func (s *Server) GetAccount(ctx context.Context, req *proto.GetAccountRequest) (
 	return &proto.GetAccountResponse{
 		Account: account,
 	}, nil
-} 
+}

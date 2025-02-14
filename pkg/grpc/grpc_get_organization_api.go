@@ -71,4 +71,4 @@ func (s *Server) GetOrganization(ctx context.Context, req *proto.GetOrganization
 	return &proto.GetOrganizationResponse{
 		Organization: organization,
 	}, nil
-} 
+}
