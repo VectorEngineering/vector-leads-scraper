@@ -46,9 +46,19 @@ func (s *Server) CreateAPIKey(ctx context.Context, req *proto.CreateAPIKeyReques
 	logger.Info("creating API key")
 
 	apiKey := &proto.APIKey{
-		WorkspaceId: req.GetWorkspaceId(),
 		Name:       req.GetName(),
+		Description: req.GetDescription(),
 		Scopes:     req.GetScopes(),
+		ExpiresAt:  req.GetExpiresAt(),
+		MaxUses:    req.GetMaxUses(),
+		AllowedIps: req.GetAllowedIps(),
+		RateLimit:  req.GetRateLimit(),
+		EnforceSigning: req.GetEnforceSigning(),
+		AllowedSignatureAlgorithms: req.GetAllowedSignatureAlgorithms(),
+		EnforceMutualTls:          req.GetEnforceMutualTls(),
+		AlertEmails:                req.GetAlertEmails(),
+		AlertOnQuotaThreshold:     req.GetAlertOnQuotaThreshold(),
+		QuotaAlertThreshold:       req.GetQuotaAlertThreshold(),
 	}
 
 	result, err := s.db.CreateAPIKey(ctx, apiKey)

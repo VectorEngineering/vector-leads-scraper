@@ -203,3 +203,73 @@ func TestGetOrgID(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAuthInfo(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupContext  func() context.Context
+		expectedError bool
+		expectedAuth  *AuthInfo
+	}{
+		{
+			name: "missing both IDs",
+			setupContext: func() context.Context {
+				return context.Background()
+			},
+			expectedError: true,
+		},
+		{
+			name: "missing org ID",
+			setupContext: func() context.Context {
+				return context.WithValue(context.Background(), tenantIDKey, "123")
+			},
+			expectedError: true,
+		},
+		{
+			name: "missing tenant ID",
+			setupContext: func() context.Context {
+				return context.WithValue(context.Background(), orgIDKey, "123")
+			},
+			expectedError: true,
+		},
+		{
+			name: "valid auth info",
+			setupContext: func() context.Context {
+				ctx := context.WithValue(context.Background(), tenantIDKey, "123")
+				return context.WithValue(ctx, orgIDKey, "456")
+			},
+			expectedError: false,
+			expectedAuth: &AuthInfo{
+				TenantID: 123,
+				OrgID:    456,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := tt.setupContext()
+			authInfo, err := GetAuthInfo(ctx)
+
+			if tt.expectedError {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if authInfo.TenantID != tt.expectedAuth.TenantID {
+				t.Errorf("expected tenant ID %d, got %d", tt.expectedAuth.TenantID, authInfo.TenantID)
+			}
+
+			if authInfo.OrgID != tt.expectedAuth.OrgID {
+				t.Errorf("expected org ID %d, got %d", tt.expectedAuth.OrgID, authInfo.OrgID)
+			}
+		})
+	}
+}

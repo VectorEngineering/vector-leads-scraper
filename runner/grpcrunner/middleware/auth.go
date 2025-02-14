@@ -135,3 +135,32 @@ func GetOrgID(ctx context.Context) (uint64, error) {
 	}
 	return strconv.ParseUint(orgID, 10, 64)
 }
+
+
+type AuthInfo struct {
+	TenantID uint64
+	OrgID    uint64
+}
+
+func (a *AuthInfo) GetTenantID() uint64 {
+	return a.TenantID
+}
+
+func (a *AuthInfo) GetOrgID() uint64 {
+	return a.OrgID
+}
+
+// GetAuthInfo retrieves the tenant and organization IDs from context
+func GetAuthInfo(ctx context.Context) (*AuthInfo, error) {
+	tenantID, err := GetTenantID(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	orgID, err := GetOrgID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &AuthInfo{TenantID: tenantID, OrgID: orgID}, nil
+}

@@ -109,17 +109,8 @@ func (db *Db) UpdateWebhookConfig(ctx context.Context, workspaceId uint64, webho
 		return nil, ErrNotFound
 	}
 
-	// Get the updated record
-	updated, err := wQop.WithContext(ctx).Where(
-		wQop.WorkspaceId.Eq(workspaceId),
-		wQop.Id.Eq(webhook.Id),
-	).First()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get updated webhook config: %w", err)
-	}
-
 	// Convert back to protobuf
-	pbResult, err := updated.ToPB(ctx)
+	pbResult, err := webhookORM.ToPB(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to protobuf: %w", err)
 	}
