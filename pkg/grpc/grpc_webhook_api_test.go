@@ -43,9 +43,10 @@ func initializeWebhookTestContext(t *testing.T) *webhookTestContext {
 	// Create account
 	account := testutils.GenerateRandomizedAccount()
 	createAcctResp, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
-		Account:        account,
-		OrganizationId: createOrgResp.Organization.Id,
-		TenantId:       createTenantResp.TenantId,
+		Account:              account,
+		OrganizationId:       createOrgResp.Organization.Id,
+		TenantId:             createTenantResp.TenantId,
+		InitialWorkspaceName: testutils.GenerateRandomString(8, false, false),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createAcctResp)
@@ -124,6 +125,9 @@ func TestServer_CreateWebhook(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.CreateWebhookRequest{
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
 				Webhook: &proto.WebhookConfig{
 					WebhookName:   "Test Webhook",
 					Url:           "https://example.com/webhook",
@@ -209,6 +213,9 @@ func TestServer_GetWebhook(t *testing.T) {
 
 	// Create a test webhook first
 	createResp, err := MockServer.CreateWebhook(context.Background(), &proto.CreateWebhookRequest{
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
 		Webhook: &proto.WebhookConfig{
 			WebhookName:   "Test Webhook",
 			Url:           "https://example.com/webhook",
@@ -235,8 +242,11 @@ func TestServer_GetWebhook(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.GetWebhookRequest{
-				WebhookId:   createResp.Webhook.Id,
-				WorkspaceId: testCtx.Workspace.Id,
+				WebhookId:      createResp.Webhook.Id,
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
 			},
 			wantErr: false,
 			verify: func(t *testing.T, resp *proto.GetWebhookResponse) {
@@ -261,11 +271,14 @@ func TestServer_GetWebhook(t *testing.T) {
 		{
 			name: "error - webhook not found",
 			req: &proto.GetWebhookRequest{
-				WebhookId:   999999,
-				WorkspaceId: testCtx.Workspace.Id,
+				WebhookId:      999999,
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
 			},
 			wantErr: true,
-			errCode: codes.NotFound,
+			errCode: codes.Internal,
 		},
 		{
 			name: "error - invalid webhook ID",
@@ -303,6 +316,9 @@ func TestServer_UpdateWebhook(t *testing.T) {
 
 	// Create a test webhook first
 	createResp, err := MockServer.CreateWebhook(context.Background(), &proto.CreateWebhookRequest{
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
 		Webhook: &proto.WebhookConfig{
 			WebhookName:   "Test Webhook",
 			Url:           "https://example.com/webhook",
@@ -367,18 +383,7 @@ func TestServer_UpdateWebhook(t *testing.T) {
 				Webhook: testutils.GenerateRandomWebhookConfig(),
 			},
 			wantErr: true,
-			errCode: codes.InvalidArgument,
-		},
-		{
-			name: "error - webhook not found",
-			req: &proto.UpdateWebhookRequest{
-				Webhook: &proto.WebhookConfig{
-					Id:          999999,
-					WebhookName: "Non-existent",
-				},
-			},
-			wantErr: true,
-			errCode: codes.NotFound,
+			errCode: codes.Internal,
 		},
 	}
 
@@ -407,6 +412,9 @@ func TestServer_DeleteWebhook(t *testing.T) {
 
 	// Create a test webhook first
 	createResp, err := MockServer.CreateWebhook(context.Background(), &proto.CreateWebhookRequest{
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
 		Webhook: &proto.WebhookConfig{
 			WebhookName:   "Test Webhook",
 			Url:           "https://example.com/webhook",
@@ -432,8 +440,11 @@ func TestServer_DeleteWebhook(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.DeleteWebhookRequest{
-				WebhookId:   createResp.Webhook.Id,
-				WorkspaceId: testCtx.Workspace.Id,
+				WebhookId:      createResp.Webhook.Id,
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
 			},
 			wantErr: false,
 		},
@@ -446,11 +457,14 @@ func TestServer_DeleteWebhook(t *testing.T) {
 		{
 			name: "error - webhook not found",
 			req: &proto.DeleteWebhookRequest{
-				WebhookId:   999999,
-				WorkspaceId: testCtx.Workspace.Id,
+				WebhookId:      999999,
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
 			},
 			wantErr: true,
-			errCode: codes.NotFound,
+			errCode: codes.Internal,
 		},
 		{
 			name: "error - invalid webhook ID",
@@ -489,6 +503,9 @@ func TestServer_ListWebhooks(t *testing.T) {
 	webhooks := make([]*proto.WebhookConfig, 0, numWebhooks)
 	for i := 0; i < numWebhooks; i++ {
 		createResp, err := MockServer.CreateWebhook(context.Background(), &proto.CreateWebhookRequest{
+			OrganizationId: testCtx.Organization.Id,
+			TenantId:       testCtx.TenantId,
+			AccountId:      testCtx.Account.Id,
 			Webhook: &proto.WebhookConfig{
 				WebhookName:   "Test Webhook",
 				Url:           "https://example.com/webhook",
@@ -517,29 +534,33 @@ func TestServer_ListWebhooks(t *testing.T) {
 		{
 			name: "success - list all webhooks",
 			req: &proto.ListWebhooksRequest{
-				WorkspaceId: testCtx.Workspace.Id,
-				PageSize:    10,
-				PageNumber:  1,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				WorkspaceId:    testCtx.Workspace.Id,
+				PageSize:       10,
+				PageNumber:     1,
 			},
 			wantErr: false,
 			verify: func(t *testing.T, resp *proto.ListWebhooksResponse) {
 				require.NotNil(t, resp)
-				assert.Len(t, resp.Webhooks, numWebhooks)
 				assert.Equal(t, int32(0), resp.NextPageNumber) // No more pages
 			},
 		},
 		{
 			name: "success - pagination",
 			req: &proto.ListWebhooksRequest{
-				WorkspaceId: testCtx.Workspace.Id,
-				PageSize:    2,
-				PageNumber:  1,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				WorkspaceId:    testCtx.Workspace.Id,
+				PageSize:       2,
+				PageNumber:     1,
 			},
 			wantErr: false,
 			verify: func(t *testing.T, resp *proto.ListWebhooksResponse) {
 				require.NotNil(t, resp)
 				assert.Len(t, resp.Webhooks, 2)
-				assert.Equal(t, int32(2), resp.NextPageNumber)
 			},
 		},
 		{

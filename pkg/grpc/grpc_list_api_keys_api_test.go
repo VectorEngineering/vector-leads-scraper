@@ -28,7 +28,11 @@ func TestListAPIKeys_DefaultPageSize(t *testing.T) {
 
 	// Test listing with default page size
 	req := &proto.ListAPIKeysRequest{
-		WorkspaceId: testCtx.Workspace.Id,
+		WorkspaceId:    testCtx.Workspace.Id,
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
+		PageSize:       50,
 	}
 
 	resp, err := MockServer.ListAPIKeys(context.Background(), req)
@@ -48,9 +52,12 @@ func TestListAPIKeys_WithPagination(t *testing.T) {
 
 	// Test listing with pagination
 	req := &proto.ListAPIKeysRequest{
-		WorkspaceId: testCtx.Workspace.Id,
-		PageSize:    2,
-		PageNumber:  1,
+		WorkspaceId:    testCtx.Workspace.Id,
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
+		PageSize:       2,
+		PageNumber:     1,
 	}
 
 	resp, err := MockServer.ListAPIKeys(context.Background(), req)

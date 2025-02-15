@@ -279,7 +279,6 @@ func setupPreconditions() (*grpc.ClientConn, proto.LeadScraperServiceClient) {
 	return conn, c
 }
 
-
 type apiKeyTestContext struct {
 	Organization *proto.Organization
 	TenantId     uint64

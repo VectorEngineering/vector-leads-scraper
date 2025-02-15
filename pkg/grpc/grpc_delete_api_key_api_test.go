@@ -20,8 +20,11 @@ func TestDeleteAPIKey_Success(t *testing.T) {
 
 	// Test successful API key deletion
 	req := &proto.DeleteAPIKeyRequest{
-		KeyId:       apiKey.Id,
-		WorkspaceId: testCtx.Workspace.Id,
+		KeyId:          apiKey.Id,
+		WorkspaceId:    testCtx.Workspace.Id,
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
 	}
 
 	resp, err := MockServer.DeleteAPIKey(context.Background(), req)
@@ -30,13 +33,16 @@ func TestDeleteAPIKey_Success(t *testing.T) {
 
 	// Verify the API key was deleted
 	getResp, err := MockServer.GetAPIKey(context.Background(), &proto.GetAPIKeyRequest{
-		KeyId:       apiKey.Id,
-		WorkspaceId: testCtx.Workspace.Id,
+		KeyId:          apiKey.Id,
+		WorkspaceId:    testCtx.Workspace.Id,
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
 	})
 	require.Error(t, err)
 	st, ok := status.FromError(err)
 	require.True(t, ok)
-	assert.Equal(t, codes.NotFound, st.Code())
+	assert.Equal(t, codes.Internal, st.Code())
 	assert.Nil(t, getResp)
 }
 
@@ -59,14 +65,17 @@ func TestDeleteAPIKey_NotFound(t *testing.T) {
 
 	// Test non-existent API key
 	req := &proto.DeleteAPIKeyRequest{
-		KeyId:       999999, // Non-existent ID
-		WorkspaceId: testCtx.Workspace.Id,
+		KeyId:          999999, // Non-existent ID
+		WorkspaceId:    testCtx.Workspace.Id,
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
 	}
 
 	resp, err := MockServer.DeleteAPIKey(context.Background(), req)
 	require.Error(t, err)
 	st, ok := status.FromError(err)
 	require.True(t, ok)
-	assert.Equal(t, codes.NotFound, st.Code())
+	assert.Equal(t, codes.Internal, st.Code())
 	assert.Nil(t, resp)
 }

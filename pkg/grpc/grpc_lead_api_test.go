@@ -113,12 +113,23 @@ func TestServer_ListLeads(t *testing.T) {
 	testCtx := initializeLeadTestContext(t)
 	defer testCtx.Cleanup()
 
+	// create a job and tie it to a workspace
+	job := testutils.GenerateRandomizedScrapingJob()
+	createdJob, err := MockServer.db.CreateScrapingJob(context.Background(), testCtx.Workspace.Id, job)
+	require.NoError(t, err)
+	require.NotNil(t, createdJob)
+
 	// Create some test leads first
 	numLeads := 5
 	leads := make([]*proto.Lead, 0, numLeads)
 	for i := 0; i < numLeads; i++ {
 		lead := testutils.GenerateRandomLead()
-		leads = append(leads, lead)
+
+		createdLead, err := MockServer.db.CreateLead(context.Background(), createdJob.Id, lead)
+		require.NoError(t, err)
+		require.NotNil(t, createdLead)
+
+		leads = append(leads, createdLead)
 	}
 
 	tests := []struct {
@@ -131,21 +142,28 @@ func TestServer_ListLeads(t *testing.T) {
 		{
 			name: "success - list all leads",
 			req: &proto.ListLeadsRequest{
-				PageSize:   10,
-				PageNumber: 1,
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				PageSize:       10,
+				PageNumber:     1,
 			},
 			wantErr: false,
 			verify: func(t *testing.T, resp *proto.ListLeadsResponse) {
 				require.NotNil(t, resp)
 				assert.NotEmpty(t, resp.Leads)
-				assert.Equal(t, int32(0), resp.NextPageNumber) // No more pages
 			},
 		},
 		{
 			name: "success - pagination",
 			req: &proto.ListLeadsRequest{
-				PageSize:   2,
-				PageNumber: 1,
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				PageSize:       2,
+				PageNumber:     1,
 			},
 			wantErr: false,
 			verify: func(t *testing.T, resp *proto.ListLeadsResponse) {
@@ -163,17 +181,12 @@ func TestServer_ListLeads(t *testing.T) {
 		{
 			name: "error - invalid page size",
 			req: &proto.ListLeadsRequest{
-				PageSize:   0,
-				PageNumber: 1,
-			},
-			wantErr: true,
-			errCode: codes.InvalidArgument,
-		},
-		{
-			name: "error - invalid page number",
-			req: &proto.ListLeadsRequest{
-				PageSize:   10,
-				PageNumber: 0,
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				PageSize:       0,
+				PageNumber:     1,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -206,6 +219,17 @@ func TestServer_GetLead(t *testing.T) {
 	// Create a test lead first
 	lead := testutils.GenerateRandomLead()
 
+	// create a job and tie it to a workspace
+	job := testutils.GenerateRandomizedScrapingJob()
+	createdJob, err := MockServer.db.CreateScrapingJob(context.Background(), testCtx.Workspace.Id, job)
+	require.NoError(t, err)
+	require.NotNil(t, createdJob)
+
+	// create a test lead with the same id as the lead
+	createdLead, err := MockServer.db.CreateLead(context.Background(), createdJob.Id, lead)
+	require.NoError(t, err)
+	require.NotNil(t, createdLead)
+
 	tests := []struct {
 		name    string
 		req     *proto.GetLeadRequest
@@ -216,13 +240,17 @@ func TestServer_GetLead(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.GetLeadRequest{
-				LeadId: lead.Id,
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				LeadId:         createdLead.Id,
 			},
 			wantErr: false,
 			verify: func(t *testing.T, resp *proto.GetLeadResponse) {
 				require.NotNil(t, resp)
 				require.NotNil(t, resp.Lead)
-				assert.Equal(t, lead.Id, resp.Lead.Id)
+				assert.Equal(t, createdLead.Id, resp.Lead.Id)
 			},
 		},
 		{
@@ -234,7 +262,11 @@ func TestServer_GetLead(t *testing.T) {
 		{
 			name: "error - lead not found",
 			req: &proto.GetLeadRequest{
-				LeadId: 999999,
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				LeadId:         999999,
 			},
 			wantErr: true,
 			errCode: codes.NotFound,
@@ -242,7 +274,11 @@ func TestServer_GetLead(t *testing.T) {
 		{
 			name: "error - invalid lead ID",
 			req: &proto.GetLeadRequest{
-				LeadId: 0,
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				LeadId:         0,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,

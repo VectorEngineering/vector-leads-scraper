@@ -158,6 +158,8 @@ type DatabaseOperations interface {
 	UpdateTenantApiKey(ctx context.Context, tenantId uint64, apiKey *lead_scraper_servicev1.TenantAPIKey) (*lead_scraper_servicev1.TenantAPIKey, error)
 	DeleteTenantApiKey(ctx context.Context, tenantId uint64, apiKeyId uint64, deletionType DeletionType) error
 	ListTenantApiKeys(ctx context.Context, tenantId uint64, limit int, offset int) ([]*lead_scraper_servicev1.TenantAPIKey, error)
+
+	RotateAPIKey(ctx context.Context, workspaceId uint64, keyId uint64, newKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error)
 }
 
 // Db implements DatabaseOperations and provides connection handling for PostgreSQL.

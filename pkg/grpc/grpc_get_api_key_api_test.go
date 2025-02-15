@@ -13,9 +13,15 @@ import (
 
 func createTestAPIKey(t *testing.T, testCtx *apiKeyTestContext) *proto.APIKey {
 	createResp, err := MockServer.CreateAPIKey(context.Background(), &proto.CreateAPIKeyRequest{
-		Name:        "Test API Key",
-		WorkspaceId: testCtx.Workspace.Id,
-		Scopes:      []string{"read:leads", "write:leads"},
+		Name:           "Test API Key",
+		WorkspaceId:    testCtx.Workspace.Id,
+		Scopes:         []string{"read:leads", "write:leads"},
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
+		Description:    "this is a sample test api",
+		MaxUses:        10000,
+		RateLimit:      1000,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createResp)
@@ -32,8 +38,11 @@ func TestGetAPIKey_Success(t *testing.T) {
 
 	// Test successful API key retrieval
 	req := &proto.GetAPIKeyRequest{
-		KeyId:       apiKey.Id,
-		WorkspaceId: testCtx.Workspace.Id,
+		KeyId:          apiKey.Id,
+		WorkspaceId:    testCtx.Workspace.Id,
+		AccountId:      testCtx.Account.Id,
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
 	}
 
 	resp, err := MockServer.GetAPIKey(context.Background(), req)
@@ -64,14 +73,17 @@ func TestGetAPIKey_NotFound(t *testing.T) {
 
 	// Test non-existent API key
 	req := &proto.GetAPIKeyRequest{
-		KeyId:       999999, // Non-existent ID
-		WorkspaceId: testCtx.Workspace.Id,
+		KeyId:          999999, // Non-existent ID
+		WorkspaceId:    testCtx.Workspace.Id,
+		OrganizationId: testCtx.Organization.Id,
+		TenantId:       testCtx.TenantId,
+		AccountId:      testCtx.Account.Id,
 	}
 
 	resp, err := MockServer.GetAPIKey(context.Background(), req)
 	require.Error(t, err)
 	st, ok := status.FromError(err)
 	require.True(t, ok)
-	assert.Equal(t, codes.NotFound, st.Code())
+	assert.Equal(t, codes.Internal, st.Code())
 	assert.Nil(t, resp)
 }

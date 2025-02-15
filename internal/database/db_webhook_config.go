@@ -78,7 +78,7 @@ func (db *Db) GetWebhookConfig(ctx context.Context, workspaceId uint64, webhookI
 	return &pbResult, nil
 }
 
-func (db *Db) UpdateWebhookConfig(ctx context.Context, workspaceId uint64, webhook *lead_scraper_servicev1.WebhookConfig) (*lead_scraper_servicev1.WebhookConfig, error) {
+func (db *Db) UpdateWebhookConfig(ctx context.Context, webhookId uint64, webhook *lead_scraper_servicev1.WebhookConfig) (*lead_scraper_servicev1.WebhookConfig, error) {
 	var (
 		wQop = db.QueryOperator.WebhookConfigORM
 	)
@@ -86,8 +86,17 @@ func (db *Db) UpdateWebhookConfig(ctx context.Context, workspaceId uint64, webho
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
-	if workspaceId == 0 || webhook == nil || webhook.Id == 0 {
+	if webhookId == 0 || webhook == nil || webhook.Id == 0 {
 		return nil, ErrInvalidInput
+	}
+
+	if webhook == nil {
+		return nil, ErrInvalidInput
+	}
+
+	// validate this webhook
+	if err := webhook.ValidateAll(); err != nil {
+		return nil, err
 	}
 
 	// Convert to ORM model
@@ -98,7 +107,7 @@ func (db *Db) UpdateWebhookConfig(ctx context.Context, workspaceId uint64, webho
 
 	// Update the webhook
 	result, err := wQop.WithContext(ctx).Where(
-		wQop.WorkspaceId.Eq(workspaceId),
+		wQop.Id.Eq(webhookId),
 		wQop.Id.Eq(webhook.Id),
 	).Updates(&webhookORM)
 	if err != nil {

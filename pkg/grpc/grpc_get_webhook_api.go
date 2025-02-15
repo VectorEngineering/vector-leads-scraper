@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 
-	"github.com/Vector/vector-leads-scraper/internal/database"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -52,9 +51,6 @@ func (s *Server) GetWebhook(ctx context.Context, req *proto.GetWebhookRequest) (
 	webhook, err := s.db.GetWebhookConfig(ctx, req.WorkspaceId, req.WebhookId)
 	if err != nil {
 		logger.Error("failed to get webhook", zap.Error(err))
-		if err == database.ErrInvalidInput {
-			return nil, status.Error(codes.InvalidArgument, "invalid input")
-		}
 		return nil, status.Error(codes.Internal, "failed to get webhook")
 	}
 

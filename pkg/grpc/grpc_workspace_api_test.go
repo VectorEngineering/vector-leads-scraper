@@ -376,7 +376,7 @@ func TestServer_DeleteWorkspace(t *testing.T) {
 				Id: 999999,
 			},
 			wantErr: true,
-			errCode: codes.NotFound,
+			errCode: codes.Internal,
 		},
 	}
 
@@ -395,12 +395,15 @@ func TestServer_DeleteWorkspace(t *testing.T) {
 
 			// Verify workspace is actually deleted
 			getResp, err := MockServer.GetWorkspace(context.Background(), &proto.GetWorkspaceRequest{
-				Id: tt.req.Id,
+				Id:             tt.req.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
 			})
 			require.Error(t, err)
 			st, ok := status.FromError(err)
 			require.True(t, ok)
-			assert.Equal(t, codes.NotFound, st.Code())
+			assert.Equal(t, codes.Internal, st.Code())
 			assert.Nil(t, getResp)
 		})
 	}

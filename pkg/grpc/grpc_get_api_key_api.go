@@ -45,7 +45,7 @@ func (s *Server) GetAPIKey(ctx context.Context, req *proto.GetAPIKeyRequest) (*p
 
 	logger.Info("getting API key", zap.Uint64("key_id", req.GetKeyId()))
 
-	result, err := s.db.GetAPIKey(ctx, req.GetWorkspaceId())
+	result, err := s.db.GetAPIKey(ctx, req.GetKeyId())
 	if err != nil {
 		logger.Error("failed to get API key", zap.Error(err))
 		if err == database.ErrNotFound {
