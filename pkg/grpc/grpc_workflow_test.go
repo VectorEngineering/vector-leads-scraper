@@ -497,8 +497,15 @@ func TestServer_DeleteWorkflow(t *testing.T) {
 		},
 		{
 			name:    "workflow_not_found",
-			req:     &proto.DeleteWorkflowRequest{Id: 999999},
+			req:     &proto.DeleteWorkflowRequest{
+				Id:          999999,
+				WorkspaceId: testCtx.Workspace.Id,
+				OrgId:       testCtx.Organization.Id,
+				TenantId:    testCtx.TenantId,
+				AccountId:   testCtx.Account.Id,
+			},
 			wantErr: true,
+			errCode: codes.NotFound,
 		},
 		{
 			name:    "nil request",
