@@ -4,9 +4,17 @@
 package grpc
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"google.golang.org/grpc"
@@ -94,4 +102,50 @@ func run(m *testing.M) (code int, err error) {
 	code = m.Run()
 
 	return code, nil
+}
+
+func TestGetIpAndUserAgent(t *testing.T) {
+	logger := zap.NewExample()
+	server := &Server{logger: logger}
+
+	t.Run("with x-forwarded-for and grpcgateway-user-agent", func(t *testing.T) {
+		// Create metadata with forwarded IP and gateway user agent
+		md := metadata.New(map[string]string{
+			"x-forwarded-for":        "192.168.1.1, 10.0.0.1",
+			"grpcgateway-user-agent": "test-agent-1",
+			"x-forwarded-host":       "test-host-1",
+		})
+		ctx := metadata.NewIncomingContext(context.Background(), md)
+
+		ip, ua, err := server.getIpAndUserAgent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "192.168.1.1", ip)
+		assert.Equal(t, "test-agent-1", ua)
+	})
+
+	t.Run("with peer info and direct user-agent", func(t *testing.T) {
+		// Create context with peer info
+		addr := &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 12345}
+		ctx := peer.NewContext(context.Background(), &peer.Peer{Addr: addr})
+
+		// Add user agent via metadata
+		md := metadata.New(map[string]string{
+			"user-agent": "test-agent-2",
+		})
+		ctx = metadata.NewIncomingContext(ctx, md)
+
+		ip, ua, err := server.getIpAndUserAgent(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "127.0.0.1:12345", ip)
+		assert.Equal(t, "test-agent-2", ua)
+	})
+
+	t.Run("with no metadata", func(t *testing.T) {
+		ctx := context.Background()
+
+		ip, ua, err := server.getIpAndUserAgent(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, ip)
+		assert.Empty(t, ua)
+	})
 }
