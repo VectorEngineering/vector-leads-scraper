@@ -36,6 +36,49 @@ import (
 //	        Features: []string{"sso", "audit_logs"},
 //	    },
 //	})
+//
+// TODO: Enhancement Areas
+// 1. Add tenant provisioning workflow:
+//    - Set up dedicated database schema
+//    - Initialize storage buckets
+//    - Configure networking (VPC, subnets)
+//    - Set up monitoring and logging
+//
+// 2. Implement tenant isolation:
+//    - Resource quotas and limits
+//    - Network segmentation
+//    - Data access controls
+//    - Audit logging boundaries
+//
+// 3. Add security enhancements:
+//    - Tenant-specific encryption keys
+//    - SSL/TLS certificate provisioning
+//    - IP allowlist management
+//    - Authentication provider setup
+//
+// 4. Improve validation:
+//    - Domain name verification
+//    - Billing information validation
+//    - Compliance requirements check
+//    - Feature flag compatibility
+//
+// 5. Add tenant bootstrapping:
+//    - Default role creation
+//    - Template workspace setup
+//    - Sample workflow creation
+//    - Documentation generation
+//
+// 6. Implement billing integration:
+//    - Payment method verification
+//    - Usage tracking setup
+//    - Invoice configuration
+//    - Tax calculation rules
+//
+// 7. Add compliance features:
+//    - Data residency enforcement
+//    - GDPR/CCPA compliance checks
+//    - Audit trail initialization
+//    - Privacy policy verification
 func (s *Server) CreateTenant(ctx context.Context, req *proto.CreateTenantRequest) (*proto.CreateTenantResponse, error) {
 	var (
 		err error
@@ -68,6 +111,12 @@ func (s *Server) CreateTenant(ctx context.Context, req *proto.CreateTenantReques
 		return nil, status.Error(codes.InvalidArgument, "tenant is required")
 	}
 
+	// TODO: Add pre-creation validation
+	// - Check domain availability
+	// - Validate billing information
+	// - Verify compliance requirements
+	// - Check resource availability
+
 	// Create the tenant using the database client
 	result, err := s.db.CreateTenant(ctx, &database.CreateTenantInput{
 		Tenant:         tenant,
@@ -77,6 +126,12 @@ func (s *Server) CreateTenant(ctx context.Context, req *proto.CreateTenantReques
 		s.logger.Error("failed to create tenant", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create tenant")
 	}
+
+	// TODO: Add post-creation setup
+	// - Initialize tenant resources
+	// - Set up monitoring
+	// - Configure backups
+	// - Send welcome notifications
 
 	return &proto.CreateTenantResponse{
 		TenantId: result.GetId(),

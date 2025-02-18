@@ -37,6 +37,49 @@ import (
 //	    },
 //	    WorkspaceId: 123,
 //	})
+//
+// TODO: Enhancement Areas
+// 1. Add webhook validation:
+//    - URL reachability check
+//    - SSL certificate validation
+//    - Authentication verification
+//    - Rate limit configuration
+//
+// 2. Implement security features:
+//    - Payload signing
+//    - IP allowlisting
+//    - Request throttling
+//    - Secret rotation
+//
+// 3. Add reliability features:
+//    - Retry policies
+//    - Circuit breakers
+//    - Dead letter queues
+//    - Event persistence
+//
+// 4. Improve monitoring:
+//    - Delivery tracking
+//    - Response timing
+//    - Error rate monitoring
+//    - Health checks
+//
+// 5. Add payload management:
+//    - Schema validation
+//    - Payload versioning
+//    - Transformation rules
+//    - Size limits
+//
+// 6. Implement event filtering:
+//    - Event type filtering
+//    - Payload filtering
+//    - Rate-based filtering
+//    - Priority levels
+//
+// 7. Add compliance features:
+//    - Data privacy rules
+//    - Audit logging
+//    - Compliance headers
+//    - Data residency
 func (s *Server) CreateWebhook(ctx context.Context, req *proto.CreateWebhookRequest) (*proto.CreateWebhookResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "create-webhook")
@@ -47,6 +90,12 @@ func (s *Server) CreateWebhook(ctx context.Context, req *proto.CreateWebhookRequ
 		logger.Error("request is nil")
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
+
+	// TODO: Add pre-creation validation
+	// - Validate URL format and reachability
+	// - Check authentication credentials
+	// - Verify SSL certificates
+	// - Test webhook endpoint
 
 	// Validate the request
 	if err := req.ValidateAll(); err != nil {
@@ -61,7 +110,19 @@ func (s *Server) CreateWebhook(ctx context.Context, req *proto.CreateWebhookRequ
 		return nil, status.Error(codes.InvalidArgument, "webhook is required")
 	}
 
-	logger.Info("creating webhook", zap.String("webhook_name", webhook.WebhookName))
+	// TODO: Add security setup
+	// - Generate signing keys
+	// - Configure IP allowlist
+	// - Set up rate limiting
+	// - Initialize secret storage
+
+	logger.Info("creating webhook", zap.String("name", webhook.WebhookName))
+
+	// TODO: Add reliability configuration
+	// - Configure retry policy
+	// - Set up circuit breaker
+	// - Initialize event queue
+	// - Set up dead letter handling
 
 	// Create the webhook using the database client
 	result, err := s.db.CreateWebhookConfig(ctx, req.WorkspaceId, webhook)
@@ -73,7 +134,26 @@ func (s *Server) CreateWebhook(ctx context.Context, req *proto.CreateWebhookRequ
 		return nil, status.Errorf(codes.Internal, "failed to create webhook: %s", err.Error())
 	}
 
+	// TODO: Add post-creation setup
+	// - Initialize monitoring
+	// - Set up alerting
+	// - Configure health checks
+	// - Send test event
+
+	// TODO: Add event handling setup
+	// - Configure event filtering
+	// - Set up transformations
+	// - Initialize event buffer
+	// - Configure batch settings
+
 	return &proto.CreateWebhookResponse{
 		Webhook: result,
 	}, nil
 }
+
+// TODO: Add helper functions
+// - validateWebhookEndpoint()
+// - setupSecurityFeatures()
+// - configureReliability()
+// - initializeMonitoring()
+// - setupEventHandling()

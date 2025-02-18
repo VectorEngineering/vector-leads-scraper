@@ -36,6 +36,49 @@ import (
 //	    },
 //	    WorkspaceId: 123,
 //	})
+//
+// TODO: Enhancement Areas
+// 1. Add workflow validation:
+//    - Validate dependencies between steps
+//    - Check resource requirements
+//    - Verify schedule conflicts
+//    - Validate data schema compatibility
+//
+// 2. Implement workflow optimization:
+//    - Analyze step execution order
+//    - Identify parallel execution opportunities
+//    - Calculate resource utilization
+//    - Optimize data flow between steps
+//
+// 3. Add error handling and recovery:
+//    - Step-level retry policies
+//    - Failure recovery strategies
+//    - Checkpoint/resume capabilities
+//    - Data consistency guarantees
+//
+// 4. Improve scheduling:
+//    - Time zone handling
+//    - Holiday calendar support
+//    - Resource-aware scheduling
+//    - Priority queue management
+//
+// 5. Add monitoring and alerting:
+//    - Step-level metrics collection
+//    - Performance monitoring
+//    - Resource usage tracking
+//    - SLA compliance checking
+//
+// 6. Implement data quality:
+//    - Input data validation
+//    - Output data verification
+//    - Schema evolution handling
+//    - Data lineage tracking
+//
+// 7. Add compliance features:
+//    - Data privacy enforcement
+//    - Audit logging
+//    - Access control per step
+//    - Regulatory compliance checks
 func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRequest) (*proto.CreateWorkflowResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "create-workflow")
@@ -46,6 +89,12 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRe
 		logger.Error("request is nil")
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
+
+	// TODO: Add pre-creation validation
+	// - Validate workflow dependencies
+	// - Check resource availability
+	// - Verify schedule conflicts
+	// - Validate data schemas
 
 	// Validate the request
 	if err := req.ValidateAll(); err != nil {
@@ -60,6 +109,12 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRe
 		return nil, status.Error(codes.InvalidArgument, "workflow is required")
 	}
 
+	// TODO: Add workflow optimization
+	// - Analyze execution order
+	// - Identify parallel steps
+	// - Calculate resource needs
+	// - Optimize data flow
+
 	// Validate schedule if provided
 	if workflow.CronExpression != "" && !isValidCronExpression(workflow.CronExpression) {
 		logger.Error("invalid cron expression", zap.String("schedule", workflow.CronExpression))
@@ -67,6 +122,12 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRe
 	}
 
 	logger.Info("creating workflow", zap.String("name", workflow.Name))
+
+	// TODO: Add resource allocation
+	// - Reserve compute resources
+	// - Allocate storage
+	// - Set up monitoring
+	// - Configure logging
 
 	// Create the workflow using the database client
 	result, err := s.db.CreateScrapingWorkflow(ctx, req.WorkspaceId, workflow)
@@ -81,7 +142,19 @@ func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRe
 		return nil, status.Errorf(codes.Internal, "failed to create workflow: %s", err.Error())
 	}
 
+	// TODO: Add post-creation setup
+	// - Initialize monitoring
+	// - Set up alerting
+	// - Configure backups
+	// - Schedule first run
+
 	// NOTE: if the scraping workflow is enabled, then we create a scraping job and schedule it immediately
+
+	// TODO: Add workflow bootstrapping
+	// - Create initial checkpoints
+	// - Set up error handling
+	// - Initialize metrics
+	// - Configure notifications
 
 	return &proto.CreateWorkflowResponse{
 		Workflow: result,
@@ -93,3 +166,10 @@ func isValidCronExpression(expr string) bool {
 	_, err := cron.ParseStandard(expr)
 	return err == nil
 }
+
+// TODO: Add helper functions
+// - validateWorkflowDependencies()
+// - optimizeExecutionOrder()
+// - calculateResourceRequirements()
+// - setupMonitoring()
+// - configureErrorHandling()
