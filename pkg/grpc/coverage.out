@@ -125,12 +125,12 @@ github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_webhook_api.go:62.2,
 github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:34.127,40.16 3 1
 github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:40.16,43.3 2 1
 github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:46.2,46.42 1 1
-github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:46.42,49.3 2 1
+github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:46.42,49.3 2 0
 github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:51.2,55.16 3 1
-github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:55.16,57.38 2 0
+github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:55.16,57.38 2 1
 github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:57.38,59.4 1 0
-github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:60.3,60.56 1 0
-github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:60.56,62.4 1 0
+github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:60.3,60.56 1 1
+github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:60.56,62.4 1 1
 github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:63.3,63.72 1 0
 github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workflow_api.go:66.2,66.45 1 1
 github.com/Vector/vector-leads-scraper/pkg/grpc/grpc_delete_workspace_api.go:29.130,35.16 3 1

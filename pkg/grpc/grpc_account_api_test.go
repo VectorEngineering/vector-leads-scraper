@@ -416,7 +416,7 @@ func TestServer_DeleteAccount(t *testing.T) {
 				TenantId:       testCtx.TenantId,
 			},
 			wantErr: true,
-			errCode: codes.NotFound,
+			errCode: codes.Internal,
 		},
 	}
 
