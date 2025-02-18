@@ -246,6 +246,7 @@ func TestServer_GetWorkflow(t *testing.T) {
 		req     *proto.GetWorkflowRequest
 		wantErr bool
 		errCode codes.Code
+		verify  func(t *testing.T, resp *proto.GetWorkflowResponse)
 	}{
 		{
 			name: "success",
@@ -254,11 +255,42 @@ func TestServer_GetWorkflow(t *testing.T) {
 				Id:          createResp.Workflow.Id,
 			},
 			wantErr: false,
+			verify: func(t *testing.T, resp *proto.GetWorkflowResponse) {
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Workflow)
+				assert.Equal(t, createResp.Workflow.Id, resp.Workflow.Id)
+				assert.Equal(t, createResp.Workflow.CronExpression, resp.Workflow.CronExpression)
+				assert.Equal(t, createResp.Workflow.Status, resp.Workflow.Status)
+				assert.Equal(t, createResp.Workflow.MaxRetries, resp.Workflow.MaxRetries)
+				assert.Equal(t, createResp.Workflow.AlertEmails, resp.Workflow.AlertEmails)
+				assert.Equal(t, createResp.Workflow.GeoFencingRadius, resp.Workflow.GeoFencingRadius)
+				assert.Equal(t, createResp.Workflow.GeoFencingLat, resp.Workflow.GeoFencingLat)
+				assert.Equal(t, createResp.Workflow.GeoFencingLon, resp.Workflow.GeoFencingLon)
+				assert.Equal(t, createResp.Workflow.GeoFencingZoomMin, resp.Workflow.GeoFencingZoomMin)
+				assert.Equal(t, createResp.Workflow.GeoFencingZoomMax, resp.Workflow.GeoFencingZoomMax)
+				assert.Equal(t, createResp.Workflow.IncludeReviews, resp.Workflow.IncludeReviews)
+				assert.Equal(t, createResp.Workflow.IncludePhotos, resp.Workflow.IncludePhotos)
+				assert.Equal(t, createResp.Workflow.IncludeBusinessHours, resp.Workflow.IncludeBusinessHours)
+				assert.Equal(t, createResp.Workflow.MaxReviewsPerBusiness, resp.Workflow.MaxReviewsPerBusiness)
+				assert.Equal(t, createResp.Workflow.OutputFormat, resp.Workflow.OutputFormat)
+				assert.Equal(t, createResp.Workflow.OutputDestination, resp.Workflow.OutputDestination)
+				assert.Equal(t, createResp.Workflow.AnonymizePii, resp.Workflow.AnonymizePii)
+				assert.Equal(t, createResp.Workflow.NotificationSlackChannel, resp.Workflow.NotificationSlackChannel)
+				assert.Equal(t, createResp.Workflow.NotificationEmailGroup, resp.Workflow.NotificationEmailGroup)
+				assert.Equal(t, createResp.Workflow.QosMaxConcurrentRequests, resp.Workflow.QosMaxConcurrentRequests)
+				assert.Equal(t, createResp.Workflow.QosMaxRetries, resp.Workflow.QosMaxRetries)
+				assert.Equal(t, createResp.Workflow.RespectRobotsTxt, resp.Workflow.RespectRobotsTxt)
+				assert.Equal(t, createResp.Workflow.AcceptTermsOfService, resp.Workflow.AcceptTermsOfService)
+			},
 		},
 		{
-			name:    "workflow_not_found",
-			req:     &proto.GetWorkflowRequest{Id: 999999},
+			name: "workflow_not_found",
+			req: &proto.GetWorkflowRequest{
+				Id:          999999,
+				WorkspaceId: testCtx.Workspace.Id,
+			},
 			wantErr: true,
+			errCode: codes.NotFound,
 		},
 		{
 			name: "empty workflow id",
@@ -275,6 +307,23 @@ func TestServer_GetWorkflow(t *testing.T) {
 			wantErr: true,
 			errCode: codes.InvalidArgument,
 		},
+		{
+			name: "missing workspace id",
+			req: &proto.GetWorkflowRequest{
+				Id: createResp.Workflow.Id,
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "invalid workspace id",
+			req: &proto.GetWorkflowRequest{
+				Id:          createResp.Workflow.Id,
+				WorkspaceId: 0,
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
 	}
 
 	for _, tt := range tests {
@@ -282,14 +331,15 @@ func TestServer_GetWorkflow(t *testing.T) {
 			resp, err := MockServer.GetWorkflow(context.Background(), tt.req)
 			if tt.wantErr {
 				require.Error(t, err)
+				st, ok := status.FromError(err)
+				require.True(t, ok)
+				assert.Equal(t, tt.errCode, st.Code())
 				return
 			}
 			require.NoError(t, err)
-			require.NotNil(t, resp)
-			require.NotNil(t, resp.Workflow)
-			assert.Equal(t, createResp.Workflow.Id, resp.Workflow.Id)
-			assert.Equal(t, createResp.Workflow.CronExpression, resp.Workflow.CronExpression)
-			assert.Equal(t, createResp.Workflow.Status, resp.Workflow.Status)
+			if tt.verify != nil {
+				tt.verify(t, resp)
+			}
 		})
 	}
 }
