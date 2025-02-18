@@ -332,3 +332,37 @@ start-all: ## Start all components (database, redis, migrations, and gRPC servic
 	@sleep 5
 	@echo "All components started successfully!"
 	@echo "You can now run: make test-grpc-api"
+
+run-grpc-dev: docker-dev build ## Run the service in gRPC mode with development dependencies
+	@echo "Starting service in gRPC mode with development dependencies..."
+	@echo "Waiting for dependencies to be ready..."
+	@sleep 5
+	SERVICE_NAME=vector-leads-scraper \
+	VERSION=$(VERSION) \
+	GIT_COMMIT=$(GIT_COMMIT) \
+	BUILD_TIME=$(BUILD_TIME) \
+	GO_VERSION=$(GO_VERSION) \
+	PLATFORM=$(PLATFORM) \
+	GRPC_PORT=50051 \
+	RK_BOOT_CONFIG_PATH=./boot.yaml \
+	./bin/$(APP_NAME) --enable-grpc \
+		--grpc-port=50051 \
+		--addr=:50051 \
+		--service-name=vector-leads-scraper \
+		--environment=development \
+		--redis-enabled=true \
+		--redis-host=localhost \
+		--redis-port=6379 \
+		--redis-password=redispass \
+		--redis-workers=10 \
+		--redis-retry-interval=5s \
+		--redis-max-retries=3 \
+		--redis-retention-days=7 \
+		--newrelic-key=2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL \
+		--db-url="postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+
+deploy-local-grpc: check-docker clean-local ## Deploy to local kind cluster with gRPC enabled
+	@echo "Deploying service to local kind cluster with gRPC enabled..."
+	./scripts/deploy-local.sh --enable-grpc $(if $(ENABLE_TESTS),--enable-tests)
+
+.PHONY: run-grpc-dev deploy-local-grpc

@@ -34,6 +34,15 @@ spec:
       serviceAccountName: {{ include "leads-scraper-service.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if eq .Values.config.grpc.environment "development" }}
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - until nc -z -w1 {{ .Values.config.redis.host }} {{ .Values.config.redis.port }}; do echo waiting for Redis; sleep 2; done;
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}-grpc
           securityContext:
@@ -67,6 +76,7 @@ spec:
             - "--redis-retry-interval={{ .Values.config.redis.retryInterval }}"
             - "--redis-max-retries={{ .Values.config.redis.maxRetries }}"
             - "--redis-retention-days={{ .Values.config.redis.retentionDays }}"
+            - "--redis-url={{ .Values.config.redis.dsn }}"
             {{- end }}
             # Monitoring and logging
             {{- if .Values.config.newrelic.enabled }}

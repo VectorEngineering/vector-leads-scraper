@@ -200,7 +200,7 @@ func ParseConfig() *Config {
 
 	// database configuration
 	flag.StringVar(&cfg.DatabaseURL, "db-url", "", "database connection string")
-	flag.IntVar(&cfg.MaxIdleConnections, "db-max-idel-connections", 10, "maximum number of idle connections to the database")
+	flag.IntVar(&cfg.MaxIdleConnections, "db-max-idle-connections", 10, "maximum number of idle connections to the database")
 	flag.IntVar(&cfg.MaxOpenConnections, "db-max-open-connections", 100, "maximum number of open connections to the database")
 	flag.DurationVar(&cfg.MaxConnectionLifetime, "db-max-connection-lifetime", 10*time.Minute, "maximum amount of time a connection may be reused")
 	flag.DurationVar(&cfg.MaxConnectionRetryTimeout, "db-max-connection-retry-timeout", 10*time.Second, "maximum amount of time to wait for a connection to be established")
@@ -210,6 +210,70 @@ func ParseConfig() *Config {
 
 	flag.Parse()
 
+	// Set default values and validate required configurations
+	if cfg.DatabaseURL == "" {
+		cfg.DatabaseURL = os.Getenv("DATABASE_URL")
+	}
+
+	if cfg.RedisEnabled {
+		if cfg.RedisURL == "" {
+			// Build Redis URL from individual components if not provided
+			if cfg.RedisPassword != "" {
+				cfg.RedisURL = fmt.Sprintf("redis://:%s@%s:%d/%d", 
+					cfg.RedisPassword, cfg.RedisHost, cfg.RedisPort, cfg.RedisDB)
+			} else {
+				cfg.RedisURL = fmt.Sprintf("redis://%s:%d/%d", 
+					cfg.RedisHost, cfg.RedisPort, cfg.RedisDB)
+			}
+		}
+	}
+
+	// Validate gRPC configuration when enabled
+	if cfg.GRPCEnabled {
+		if cfg.ServiceName == "" {
+			cfg.ServiceName = "vector-leads-scraper"
+		}
+		if cfg.Environment == "" {
+			cfg.Environment = "development"
+		}
+		if cfg.GRPCPort == 0 {
+			cfg.GRPCPort = 50051
+		}
+		if cfg.GRPCDeadline == 0 {
+			cfg.GRPCDeadline = 5 * time.Second
+		}
+		if cfg.GRPCRetries == 0 {
+			cfg.GRPCRetries = 3
+		}
+		if cfg.GRPCRetryDelay == 0 {
+			cfg.GRPCRetryDelay = time.Second
+		}
+	}
+
+	// Validate database configuration
+	if cfg.MaxIdleConnections <= 0 {
+		cfg.MaxIdleConnections = 10
+	}
+	if cfg.MaxOpenConnections <= 0 {
+		cfg.MaxOpenConnections = 100
+	}
+	if cfg.MaxConnectionLifetime == 0 {
+		cfg.MaxConnectionLifetime = 10 * time.Minute
+	}
+	if cfg.MaxConnectionRetryTimeout == 0 {
+		cfg.MaxConnectionRetryTimeout = 10 * time.Second
+	}
+	if cfg.RetrySleep == 0 {
+		cfg.RetrySleep = time.Second
+	}
+	if cfg.QueryTimeout == 0 {
+		cfg.QueryTimeout = 10 * time.Second
+	}
+	if cfg.MaxConnectionRetries <= 0 {
+		cfg.MaxConnectionRetries = 3
+	}
+
+	// AWS Configuration
 	if cfg.AwsAccessKey == "" {
 		cfg.AwsAccessKey = os.Getenv("MY_AWS_ACCESS_KEY")
 	}

@@ -35,11 +35,13 @@ IMAGE_NAME="${DOCKER_IMAGE:-feelguuds/leads-scraper-service}"
 IMAGE_TAG="${DOCKER_TAG:-latest}"
 ENABLE_TESTS="false"
 REDIS_PASSWORD="redis-local-dev"
+ENABLE_GRPC="false"
 
 # Parse arguments
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --enable-tests) ENABLE_TESTS="true"; shift ;;
+        --enable-grpc) ENABLE_GRPC="true"; shift ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
 done
@@ -121,13 +123,49 @@ image:
 
 service:
   type: ClusterIP
-  port: 8080
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: grpc
+      port: 50051
+      targetPort: 50051
 
 config:
+  grpc:
+    enabled: ${ENABLE_GRPC}
+    port: 50051
+    serviceName: "vector-leads-scraper"
+    environment: "development"
+
+  database:
+    dsn: "postgres://postgres:postgres@${RELEASE_NAME}-postgresql:5432/leads_scraper?sslmode=disable"
+    maxIdleConnections: 10
+    maxOpenConnections: 100
+    maxConnectionLifetime: "10m"
+    maxConnectionRetryTimeout: "10s"
+    retrySleep: "1s"
+    queryTimeout: "10s"
+    maxConnectionRetries: 3
+
   redis:
     enabled: true
+    host: "${RELEASE_NAME}-redis-master"
+    port: 6379
+    password: "${REDIS_PASSWORD}"
     dsn: "redis://:${REDIS_PASSWORD}@${RELEASE_NAME}-redis-master:6379/0"
     workers: 10
+    retryInterval: "5s"
+    maxRetries: 3
+    retentionDays: 7
+
+  newrelic:
+    enabled: true
+    key: "2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL"
+
+  logging:
+    level: "info"
+
   scraper:
     webServer: true
     concurrency: 11
@@ -148,10 +186,9 @@ tests:
 postgresql:
   enabled: true  # Enable PostgreSQL by default for local development
   auth:
-    username: postgres
-    password: postgres
-    database: leads_scraper
-    # PostgreSQL password will be stored in a secret
+    username: "postgres"
+    password: "postgres"
+    database: "leads_scraper"
     existingSecret: ""
   primary:
     persistence:
@@ -167,12 +204,13 @@ postgresql:
     service:
       ports:
         postgresql: 5432
-    # PostgreSQL configuration
     extraEnvVars:
       - name: POSTGRESQL_MAX_CONNECTIONS
         value: "100"
       - name: POSTGRESQL_SHARED_BUFFERS
         value: "128MB"
+      - name: POSTGRESQL_PASSWORD
+        value: "postgres"
 
 redis:
   enabled: true
@@ -191,6 +229,11 @@ redis:
       limits:
         cpu: 500m
         memory: 256Mi
+    service:
+      annotations:
+        service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+      ports:
+        redis: 6379
 EOF
 
     echo "Generated values.local.yaml:"

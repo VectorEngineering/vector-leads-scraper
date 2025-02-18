@@ -30,6 +30,15 @@ spec:
       serviceAccountName: {{ include "leads-scraper-service.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if eq .Values.config.grpc.environment "development" }}
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - until nc -z -w1 {{ .Values.config.redis.host }} {{ .Values.config.redis.port }}; do echo waiting for Redis; sleep 2; done;
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -38,6 +47,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             # Enable gRPC mode
+            {{- if .Values.config.grpc.enabled }}
             - "--grpc"
             # gRPC configuration
             - "--grpc-port={{ .Values.config.grpc.port }}"
@@ -46,6 +56,7 @@ spec:
             - "--grpc-retry-delay={{ .Values.config.grpc.retryDelay }}"
             - "--service-name={{ .Values.config.grpc.serviceName }}"
             - "--environment={{ .Values.config.grpc.environment }}"
+            {{- end }}
             # Database configuration
             - "--db-url={{ include "leads-scraper-service.postgresql.dsn" . }}"
             - "--db-max-idle-connections={{ .Values.config.database.maxIdleConnections }}"
@@ -118,10 +129,17 @@ spec:
             - name: grpc
               containerPort: {{ .Values.config.grpc.port }}
               protocol: TCP
+          {{- if .Values.config.grpc.enabled }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe.grpc | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe.grpc | nindent 12 }}
+          {{- else }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe.http | nindent 12 }}
           readinessProbe:
             {{- toYaml .Values.readinessProbe.http | nindent 12 }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}
