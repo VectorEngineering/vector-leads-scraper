@@ -44,29 +44,30 @@ func (s *Server) ListWorkflows(ctx context.Context, req *proto.ListWorkflowsRequ
 
 	// Validate the request
 	if err := req.ValidateAll(); err != nil {
-		logger.Error("invalid request", zap.Error(err))
-		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+		// If the error is due to page size being 0, we'll handle it as default
+		if req.PageSize == 0 {
+			req.PageSize = 50 // Set default page size
+		} else {
+			logger.Error("invalid request", zap.Error(err))
+			return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+		}
 	}
 
 	logger.Info("listing workflows",
 		zap.Int32("page_size", req.PageSize),
 		zap.Int32("page_number", req.PageNumber))
 
-	// Use default page size if not specified
-	pageSize := int(req.PageSize)
-	if pageSize <= 0 {
-		pageSize = 50 // Default page size
-	}
-
-	// Calculate offset based on page number
+	// Validate page number
 	pageNumber := req.PageNumber
 	if pageNumber < 1 {
-		pageNumber = 1
+		return nil, status.Error(codes.InvalidArgument, "page number must be greater than 0")
 	}
-	offset := (pageNumber - 1) * int32(pageSize)
+
+	// Calculate offset
+	offset := int((pageNumber - 1) * int32(req.PageSize))
 
 	// List workflows using the database client
-	workflows, err := s.db.ListScrapingWorkflows(ctx, pageSize, int(offset))
+	workflows, err := s.db.ListScrapingWorkflows(ctx, int(req.PageSize), offset)
 	if err != nil {
 		logger.Error("failed to list workflows", zap.Error(err))
 		if err == database.ErrInvalidInput {
@@ -75,7 +76,14 @@ func (s *Server) ListWorkflows(ctx context.Context, req *proto.ListWorkflowsRequ
 		return nil, status.Error(codes.Internal, "failed to list workflows")
 	}
 
+	// Calculate next page number
+	nextPage := pageNumber + 1
+	if len(workflows) < int(req.PageSize) {
+		nextPage = 0 // No more pages
+	}
+
 	return &proto.ListWorkflowsResponse{
-		Workflows: workflows,
+		Workflows:     workflows,
+		NextPageNumber: nextPage,
 	}, nil
 }

@@ -543,6 +543,30 @@ func TestServer_ListWorkflows(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "success - with default page size",
+			req: &proto.ListWorkflowsRequest{
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				PageSize:       0,
+				PageNumber:     1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - second page",
+			req: &proto.ListWorkflowsRequest{
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				PageSize:       2,
+				PageNumber:     2,
+			},
+			wantErr: false,
+		},
+		{
 			name: "invalid page size",
 			req: &proto.ListWorkflowsRequest{
 				WorkspaceId:    testCtx.Workspace.Id,
@@ -550,6 +574,73 @@ func TestServer_ListWorkflows(t *testing.T) {
 				TenantId:       testCtx.TenantId,
 				AccountId:      testCtx.Account.Id,
 				PageSize:       -1,
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "invalid page number",
+			req: &proto.ListWorkflowsRequest{
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				PageSize:       10,
+				PageNumber:     -1,
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name:    "nil request",
+			req:     nil,
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "missing workspace ID",
+			req: &proto.ListWorkflowsRequest{
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				AccountId:      testCtx.Account.Id,
+				PageSize:       10,
+				PageNumber:     1,
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "missing organization ID",
+			req: &proto.ListWorkflowsRequest{
+				WorkspaceId: testCtx.Workspace.Id,
+				TenantId:    testCtx.TenantId,
+				AccountId:   testCtx.Account.Id,
+				PageSize:    10,
+				PageNumber:  1,
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "missing tenant ID",
+			req: &proto.ListWorkflowsRequest{
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				AccountId:      testCtx.Account.Id,
+				PageSize:       10,
+				PageNumber:     1,
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "missing account ID",
+			req: &proto.ListWorkflowsRequest{
+				WorkspaceId:    testCtx.Workspace.Id,
+				OrganizationId: testCtx.Organization.Id,
+				TenantId:       testCtx.TenantId,
+				PageSize:       10,
+				PageNumber:     1,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -572,6 +663,14 @@ func TestServer_ListWorkflows(t *testing.T) {
 
 			if tt.req.PageSize > 0 {
 				assert.LessOrEqual(t, len(resp.Workflows), int(tt.req.PageSize))
+			} else {
+				// For default page size
+				assert.LessOrEqual(t, len(resp.Workflows), 50)
+			}
+
+			// Verify pagination
+			if tt.req.PageNumber > 1 {
+				assert.Equal(t, tt.req.PageNumber+1, resp.NextPageNumber)
 			}
 		})
 	}
