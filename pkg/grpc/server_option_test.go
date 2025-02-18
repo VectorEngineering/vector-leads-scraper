@@ -20,4 +20,4 @@ func TestWithLogger(t *testing.T) {
 
 	// Verify that the logger was set correctly
 	assert.Equal(t, logger, server.logger, "Logger should be set correctly on the server")
-} 
+}

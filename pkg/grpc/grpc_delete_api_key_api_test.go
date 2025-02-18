@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
@@ -78,4 +79,32 @@ func TestDeleteAPIKey_NotFound(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, codes.Internal, st.Code())
 	assert.Nil(t, resp)
+}
+
+func TestServer_DeleteAPIKey(t *testing.T) {
+	type args struct {
+		ctx context.Context
+		req *proto.DeleteAPIKeyRequest
+	}
+	tests := []struct {
+		name    string
+		s       *Server
+		args    args
+		want    *proto.DeleteAPIKeyResponse
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.s.DeleteAPIKey(tt.args.ctx, tt.args.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Server.DeleteAPIKey() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Server.DeleteAPIKey() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

@@ -83,7 +83,7 @@ func (s *Server) ListWorkflows(ctx context.Context, req *proto.ListWorkflowsRequ
 	}
 
 	return &proto.ListWorkflowsResponse{
-		Workflows:     workflows,
+		Workflows:      workflows,
 		NextPageNumber: nextPage,
 	}, nil
 }

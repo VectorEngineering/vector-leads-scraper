@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
@@ -115,4 +116,32 @@ func TestListAPIKeys_InvalidPageNumber(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, codes.InvalidArgument, st.Code())
 	assert.Nil(t, resp)
+}
+
+func TestServer_ListAPIKeys(t *testing.T) {
+	type args struct {
+		ctx context.Context
+		req *proto.ListAPIKeysRequest
+	}
+	tests := []struct {
+		name    string
+		s       *Server
+		args    args
+		want    *proto.ListAPIKeysResponse
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.s.ListAPIKeys(tt.args.ctx, tt.args.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Server.ListAPIKeys() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Server.ListAPIKeys() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

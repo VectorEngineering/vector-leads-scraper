@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/Vector/vector-leads-scraper/internal/testutils"
@@ -269,4 +270,32 @@ func TestListWorkspaces_InvalidRequest(t *testing.T) {
 		assert.Equal(t, codes.InvalidArgument, st.Code())
 		assert.Nil(t, resp)
 	})
-} 
+}
+
+func TestServer_ListWorkspaces(t *testing.T) {
+	type args struct {
+		ctx context.Context
+		req *proto.ListWorkspacesRequest
+	}
+	tests := []struct {
+		name    string
+		s       *Server
+		args    args
+		want    *proto.ListWorkspacesResponse
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.s.ListWorkspaces(tt.args.ctx, tt.args.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Server.ListWorkspaces() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Server.ListWorkspaces() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

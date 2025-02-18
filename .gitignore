@@ -4,3 +4,4 @@ bin
 webdata/
 */*.csv
 gen_test.db
+coverage.out

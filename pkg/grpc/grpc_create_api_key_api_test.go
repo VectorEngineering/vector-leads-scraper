@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
@@ -87,4 +88,32 @@ func TestCreateAPIKey_MissingScopes(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, codes.InvalidArgument, st.Code())
 	assert.Nil(t, resp)
+}
+
+func TestServer_CreateAPIKey(t *testing.T) {
+	type args struct {
+		ctx context.Context
+		req *proto.CreateAPIKeyRequest
+	}
+	tests := []struct {
+		name    string
+		s       *Server
+		args    args
+		want    *proto.CreateAPIKeyResponse
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.s.CreateAPIKey(tt.args.ctx, tt.args.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Server.CreateAPIKey() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Server.CreateAPIKey() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
