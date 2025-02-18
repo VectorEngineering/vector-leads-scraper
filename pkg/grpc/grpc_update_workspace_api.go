@@ -65,6 +65,9 @@ func (s *Server) UpdateWorkspace(ctx context.Context, req *proto.UpdateWorkspace
 		if err == database.ErrInvalidInput {
 			return nil, status.Error(codes.InvalidArgument, "invalid input")
 		}
+		if err == database.ErrWorkspaceDoesNotExist || err.Error() == "failed to get workspace: workspace does not exist" {
+			return nil, status.Error(codes.NotFound, "workspace not found")
+		}
 		return nil, status.Error(codes.Internal, "failed to update workspace")
 	}
 

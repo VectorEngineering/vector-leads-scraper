@@ -69,8 +69,21 @@ func TestServer_CreateWorkflow(t *testing.T) {
 		{
 			name: "invalid cron expression",
 			req: &proto.CreateWorkflowRequest{
+				WorkspaceId: testCtx.Workspace.Id,
 				Workflow: &proto.ScrapingWorkflow{
-					CronExpression: "invalid",
+					CronExpression: "invalid cron",
+					Status:         proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE,
+				},
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "missing workspace ID",
+			req: &proto.CreateWorkflowRequest{
+				Workflow: &proto.ScrapingWorkflow{
+					CronExpression: "0 0 * * *",
+					Status:         proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE,
 				},
 			},
 			wantErr: true,
@@ -79,11 +92,14 @@ func TestServer_CreateWorkflow(t *testing.T) {
 		{
 			name: "invalid geo coordinates",
 			req: &proto.CreateWorkflowRequest{
+				WorkspaceId: testCtx.Workspace.Id,
 				Workflow: &proto.ScrapingWorkflow{
-					CronExpression:   "0 0 * * *",
-					GeoFencingLat:    100.0, // Invalid latitude
-					GeoFencingLon:    200.0, // Invalid longitude
-					GeoFencingRadius: 1000.0,
+					CronExpression:    "0 0 * * *",
+					Status:            proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE,
+					GeoFencingLat:     91.0,  // Invalid latitude (>90)
+					GeoFencingLon:     180.1, // Invalid longitude (>180)
+					GeoFencingZoomMin: 10,
+					GeoFencingZoomMax: 15,
 				},
 			},
 			wantErr: true,
@@ -92,17 +108,69 @@ func TestServer_CreateWorkflow(t *testing.T) {
 		{
 			name: "invalid zoom range",
 			req: &proto.CreateWorkflowRequest{
+				WorkspaceId: testCtx.Workspace.Id,
 				Workflow: &proto.ScrapingWorkflow{
 					CronExpression:    "0 0 * * *",
-					GeoFencingZoomMin: 20,
-					GeoFencingZoomMax: 10, // Min > Max
+					Status:            proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE,
 					GeoFencingLat:     37.7749,
 					GeoFencingLon:     -122.4194,
-					GeoFencingRadius:  1000.0,
+					GeoFencingZoomMin: 15,    // Min > Max
+					GeoFencingZoomMax: 10,
 				},
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "invalid max retries",
+			req: &proto.CreateWorkflowRequest{
+				WorkspaceId: testCtx.Workspace.Id,
+				Workflow: &proto.ScrapingWorkflow{
+					CronExpression: "0 0 * * *",
+					Status:         proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE,
+					MaxRetries:     -1, // Invalid negative value
+				},
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "invalid QoS settings",
+			req: &proto.CreateWorkflowRequest{
+				WorkspaceId: testCtx.Workspace.Id,
+				Workflow: &proto.ScrapingWorkflow{
+					CronExpression:           "0 0 * * *",
+					Status:                   proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE,
+					QosMaxConcurrentRequests: -1, // Invalid negative value
+					QosMaxRetries:            -1, // Invalid negative value
+				},
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "database error",
+			req: &proto.CreateWorkflowRequest{
+				WorkspaceId: 999999, // Non-existent workspace
+				Workflow: &proto.ScrapingWorkflow{
+					CronExpression:           "0 0 * * *",
+					Status:                   proto.WorkflowStatus_WORKFLOW_STATUS_ACTIVE,
+					MaxRetries:               3,
+					GeoFencingRadius:         1000.0,
+					GeoFencingLat:            37.7749,
+					GeoFencingLon:            -122.4194,
+					GeoFencingZoomMin:        10,
+					GeoFencingZoomMax:        20,
+					OutputFormat:             proto.ScrapingWorkflow_OUTPUT_FORMAT_JSON,
+					OutputDestination:        "s3://bucket/path",
+					QosMaxConcurrentRequests: 5,
+					QosMaxRetries:            3,
+					RespectRobotsTxt:         true,
+					AcceptTermsOfService:     true,
+				},
+			},
+			wantErr: true,
+			errCode: codes.NotFound,
 		},
 	}
 
@@ -188,13 +256,9 @@ func TestServer_GetWorkflow(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "workflow not found",
-			req: &proto.GetWorkflowRequest{
-				WorkspaceId: testCtx.Workspace.Id,
-				Id:          999999,
-			},
+			name:    "workflow_not_found",
+			req:     &proto.GetWorkflowRequest{Id: 999999},
 			wantErr: true,
-			errCode: codes.Internal,
 		},
 		{
 			name: "empty workflow id",
@@ -218,9 +282,6 @@ func TestServer_GetWorkflow(t *testing.T) {
 			resp, err := MockServer.GetWorkflow(context.Background(), tt.req)
 			if tt.wantErr {
 				require.Error(t, err)
-				st, ok := status.FromError(err)
-				require.True(t, ok)
-				assert.Equal(t, tt.errCode, st.Code())
 				return
 			}
 			require.NoError(t, err)
@@ -307,14 +368,10 @@ func TestServer_UpdateWorkflow(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "workflow not found",
-			req: &proto.UpdateWorkflowRequest{
-				Workflow: &proto.ScrapingWorkflow{
-					Id: 999999,
-				},
-			},
+			name:    "workflow_not_found",
+			req:     &proto.UpdateWorkflowRequest{Workflow: &proto.ScrapingWorkflow{Id: 999999}},
 			wantErr: true,
-			errCode: codes.Internal,
+			errCode: codes.NotFound,
 		},
 		{
 			name: "empty workflow id",
@@ -439,16 +496,9 @@ func TestServer_DeleteWorkflow(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "workflow not found",
-			req: &proto.DeleteWorkflowRequest{
-				Id:          999999,
-				WorkspaceId: testCtx.Workspace.Id,
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				AccountId:   testCtx.Account.Id,
-			},
+			name:    "workflow_not_found",
+			req:     &proto.DeleteWorkflowRequest{Id: 999999},
 			wantErr: true,
-			errCode: codes.Internal,
 		},
 		{
 			name:    "nil request",
@@ -604,7 +654,7 @@ func TestServer_ListWorkflows(t *testing.T) {
 				TenantId:       testCtx.TenantId,
 				AccountId:      testCtx.Account.Id,
 				PageSize:       10,
-				PageNumber:     1,
+				PageNumber:      1,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,

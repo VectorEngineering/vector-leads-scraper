@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Vector/vector-leads-scraper/internal/database"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
@@ -54,6 +55,9 @@ func (s *Server) GetWorkflow(ctx context.Context, req *proto.GetWorkflowRequest)
 		logger.Error("failed to get workflow", zap.Error(err))
 		if err == database.ErrInvalidInput {
 			return nil, status.Error(codes.InvalidArgument, "invalid input")
+		}
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, status.Error(codes.NotFound, "workflow not found")
 		}
 		return nil, status.Error(codes.Internal, "failed to get workflow")
 	}
