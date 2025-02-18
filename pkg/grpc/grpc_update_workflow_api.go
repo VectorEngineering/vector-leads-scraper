@@ -46,17 +46,27 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *proto.UpdateWorkflowRe
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
-	// Validate the request
-	if err := req.ValidateAll(); err != nil {
-		logger.Error("invalid request", zap.Error(err))
-		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
-	}
-
 	// Extract workflow details
 	workflow := req.GetWorkflow()
 	if workflow == nil {
 		logger.Error("workflow is nil")
 		return nil, status.Error(codes.InvalidArgument, "workflow is required")
+	}
+
+	// First check if the workflow exists
+	_, err := s.db.GetScrapingWorkflow(ctx, workflow.Id)
+	if err != nil {
+		logger.Error("failed to get workflow", zap.Error(err))
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, status.Error(codes.NotFound, "workflow not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to get workflow")
+	}
+
+	// Now validate the request fields
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
 	}
 
 	// Validate schedule if provided
@@ -75,9 +85,6 @@ func (s *Server) UpdateWorkflow(ctx context.Context, req *proto.UpdateWorkflowRe
 		logger.Error("failed to update workflow", zap.Error(err))
 		if err == database.ErrInvalidInput {
 			return nil, status.Error(codes.InvalidArgument, "invalid input")
-		}
-		if strings.Contains(err.Error(), "record not found") {
-			return nil, status.Error(codes.NotFound, "workflow not found")
 		}
 		return nil, status.Error(codes.Internal, "failed to update workflow")
 	}
