@@ -55,15 +55,15 @@ func (s *Server) ListWorkspaces(ctx context.Context, req *proto.ListWorkspacesRe
 		pageSize = 50 // Default page size
 	}
 
-	// Calculate offset based on page number
+	// Validate page number
 	pageNumber := req.PageNumber
 	if pageNumber < 1 {
-		pageNumber = 1
+		return nil, status.Error(codes.InvalidArgument, "page number must be greater than 0")
 	}
-	offset := (pageNumber - 1) * int32(pageSize)
+	offset := int((pageNumber - 1) * int32(pageSize))
 
 	// List workspaces using the database client
-	workspaces, err := s.db.ListWorkspaces(ctx, req.AccountId, int(offset), pageSize)
+	workspaces, err := s.db.ListWorkspaces(ctx, req.AccountId, pageSize, offset)
 	if err != nil {
 		logger.Error("failed to list workspaces", zap.Error(err))
 		if err == database.ErrInvalidInput {
@@ -74,6 +74,6 @@ func (s *Server) ListWorkspaces(ctx context.Context, req *proto.ListWorkspacesRe
 
 	return &proto.ListWorkspacesResponse{
 		Workspaces:     workspaces,
-		NextPageNumber: int32(pageSize + 1),
+		NextPageNumber: pageNumber + 1,
 	}, nil
 }
