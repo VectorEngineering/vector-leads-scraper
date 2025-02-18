@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"strings"
 
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"go.uber.org/zap"
@@ -52,6 +53,9 @@ func (s *Server) TriggerWorkflow(ctx context.Context, req *proto.TriggerWorkflow
 	workflow, err := s.db.GetScrapingWorkflow(ctx, req.GetId())
 	if err != nil {
 		logger.Error("failed to get workflow", zap.Error(err))
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, status.Error(codes.NotFound, "workflow not found")
+		}
 		return nil, status.Error(codes.Internal, "failed to get workflow")
 	}
 
