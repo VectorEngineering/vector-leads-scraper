@@ -72,6 +72,40 @@ func (s *Server) CreateAccount(ctx context.Context, req *proto.CreateAccountRequ
 		return nil, status.Errorf(codes.Internal, "failed to create account: %s", err.Error())
 	}
 
+	// Create initial workspace if name is provided
+	if req.GetInitialWorkspaceName() != "" {
+		workspace := &proto.Workspace{
+			Name:              req.GetInitialWorkspaceName(),
+			GdprCompliant:     false,
+			HipaaCompliant:    false,
+			Soc2Compliant:     false,
+			StorageQuota:      1000000, // 1MB default
+			WorkspaceJobLimit: 100,     // Default job limit
+			DailyJobQuota:     10,      // Default daily quota
+		}
+
+		workspaceResult, err := s.db.CreateWorkspace(ctx, &database.CreateWorkspaceInput{
+			Workspace:      workspace,
+			AccountID:      result.Id,
+			OrganizationID: req.GetOrganizationId(),
+			TenantID:       req.GetTenantId(),
+		})
+		if err != nil {
+			logger.Error("failed to create initial workspace", zap.Error(err))
+			// Clean up the account since workspace creation failed
+			if err := s.db.DeleteAccount(ctx, &database.DeleteAccountParams{
+				ID:           result.Id,
+				DeletionType: database.DeletionTypeSoft,
+			}); err != nil {
+				logger.Error("failed to clean up account after workspace creation failure", zap.Error(err))
+			}
+			return nil, status.Errorf(codes.Internal, "failed to create initial workspace: %s", err.Error())
+		}
+
+		// Add the workspace to the account response
+		result.Workspaces = append(result.Workspaces, workspaceResult)
+	}
+
 	return &proto.CreateAccountResponse{
 		Account: result,
 	}, nil

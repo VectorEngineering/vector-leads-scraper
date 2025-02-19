@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/Vector/vector-leads-scraper/internal/database"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
@@ -103,6 +104,43 @@ func (s *Server) CreateScrapingJob(ctx context.Context, req *proto.CreateScrapin
 		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
 	}
 
+	// Validate tenant ID
+	if req.TenantId == 0 {
+		logger.Error("tenant ID is required")
+		return nil, status.Error(codes.InvalidArgument, "tenant ID is required")
+	}
+
+	// Validate coordinates if provided
+	if req.Lat != "" || req.Lon != "" {
+		// Both coordinates must be provided if one is provided
+		if req.Lat == "" || req.Lon == "" {
+			logger.Error("both latitude and longitude must be provided")
+			return nil, status.Error(codes.InvalidArgument, "both latitude and longitude must be provided")
+		}
+
+		// Parse and validate coordinates
+		lat, err := strconv.ParseFloat(req.Lat, 64)
+		if err != nil {
+			logger.Error("invalid latitude", zap.Error(err))
+			return nil, status.Error(codes.InvalidArgument, "invalid latitude")
+		}
+		lon, err := strconv.ParseFloat(req.Lon, 64)
+		if err != nil {
+			logger.Error("invalid longitude", zap.Error(err))
+			return nil, status.Error(codes.InvalidArgument, "invalid longitude")
+		}
+
+		// Validate coordinate ranges
+		if lat < -90 || lat > 90 {
+			logger.Error("latitude out of range", zap.Float64("lat", lat))
+			return nil, status.Error(codes.InvalidArgument, "latitude must be between -90 and 90")
+		}
+		if lon < -180 || lon > 180 {
+			logger.Error("longitude out of range", zap.Float64("lon", lon))
+			return nil, status.Error(codes.InvalidArgument, "longitude must be between -180 and 180")
+		}
+	}
+
 	// Extract job details
 	name := req.Name
 	if name == "" {
@@ -114,12 +152,6 @@ func (s *Server) CreateScrapingJob(ctx context.Context, req *proto.CreateScrapin
 	if req.OrgId == 0 {
 		logger.Error("organization ID is required")
 		return nil, status.Error(codes.InvalidArgument, "organization ID is required")
-	}
-
-	// Validate tenant ID
-	if req.TenantId == 0 {
-		logger.Error("tenant ID is required")
-		return nil, status.Error(codes.InvalidArgument, "tenant ID is required")
 	}
 
 	logger.Info("creating scraping job",
@@ -183,7 +215,7 @@ func (s *Server) CreateScrapingJob(ctx context.Context, req *proto.CreateScrapin
 	}
 
 	// Create the job using the database client
-	result, err := s.db.CreateScrapingJob(ctx, req.OrgId, job)
+	result, err := s.db.CreateScrapingJob(ctx, req.WorkspaceId, job)
 	if err != nil {
 		logger.Error("failed to create scraping job", zap.Error(err))
 		if err == database.ErrInvalidInput {
