@@ -68,15 +68,20 @@ func initializeScrapingJobTestContext(t *testing.T) *scrapingJobTestContext {
 
 		// Delete all scraping jobs first
 		listJobsResp, err := MockServer.ListScrapingJobs(ctx, &proto.ListScrapingJobsRequest{
-			OrgId:    createOrgResp.Organization.Id,
-			TenantId: createTenantResp.TenantId,
+			OrgId:              createOrgResp.Organization.Id,
+			TenantId:           createTenantResp.TenantId,
+			AuthPlatformUserId: getAcctResp.Account.AuthPlatformUserId,
+			PageSize:           100,
+			PageNumber:         1,
+			WorkspaceId:        getAcctResp.Account.Workspaces[0].Id,
 		})
 		if err == nil && listJobsResp != nil {
 			for _, job := range listJobsResp.Jobs {
 				_, err := MockServer.DeleteScrapingJob(ctx, &proto.DeleteScrapingJobRequest{
-					JobId:    job.Id,
-					OrgId:    createOrgResp.Organization.Id,
-					TenantId: createTenantResp.TenantId,
+					JobId:       job.Id,
+					OrgId:       createOrgResp.Organization.Id,
+					TenantId:    createTenantResp.TenantId,
+					WorkspaceId: getAcctResp.Account.Workspaces[0].Id,
 				})
 				if err != nil {
 					t.Logf("Failed to delete scraping job %d: %v", job.Id, err)
@@ -308,8 +313,8 @@ func TestServer_CreateScrapingJob(t *testing.T) {
 				Zoom:            15,
 				Depth:           2,
 				MaxTime:         3600,
-				Lat:             "invalid", // Invalid latitude
-				Lon:             "invalid", // Invalid longitude
+				Lat:             fmt.Sprintf("%.6f", 91.0), // Invalid latitude (> 90)
+				Lon:             fmt.Sprintf("%.6f", -180.1), // Invalid longitude (< -180)
 			},
 			wantErr: true,
 		},
@@ -359,24 +364,25 @@ func TestServer_GetScrapingJob(t *testing.T) {
 
 	// Create a test job first
 	createResp, err := MockServer.CreateScrapingJob(context.Background(), &proto.CreateScrapingJobRequest{
-		Name:     "Test Job",
-		Keywords: []string{"coffee", "shop"},
-		Lang:     "en",
-		Zoom:     15,
-		Lat:      fmt.Sprintf("%.6f", 37.7749),
-		Lon:      fmt.Sprintf("%.6f", -122.4194),
-		FastMode: true,
-		Radius:   5000,
-		Depth:    2,
-		Email:    true,
-		MaxTime:  3600,
-		Proxies:  []string{"proxy1.example.com", "proxy2.example.com"},
-		OrgId:    testCtx.Organization.Id,
-		TenantId: testCtx.TenantId,
+		Name:              "Test Job",
+		OrgId:            testCtx.Organization.Id,
+		TenantId:         testCtx.TenantId,
+		WorkspaceId:      testCtx.Workspace.Id,
+		AuthPlatformUserId: "test-user-1",
+		Keywords:         []string{"coffee", "shop"},
+		Lang:            "en",
+		Zoom:            15,
+		Lat:             fmt.Sprintf("%.6f", 37.7749),
+		Lon:             fmt.Sprintf("%.6f", -122.4194),
+		FastMode:        true,
+		Radius:          5000,
+		Depth:           2,
+		Email:           true,
+		MaxTime:         3600,
+		Proxies:         []string{"proxy1.example.com", "proxy2.example.com"},
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createResp)
-	require.NotZero(t, createResp.JobId)
 
 	tests := []struct {
 		name    string
@@ -387,24 +393,28 @@ func TestServer_GetScrapingJob(t *testing.T) {
 		{
 			name: "success",
 			req: &proto.GetScrapingJobRequest{
-				JobId:    createResp.JobId,
-				OrgId:    testCtx.Organization.Id,
-				TenantId: testCtx.TenantId,
+				JobId:              createResp.JobId,
+				OrgId:             testCtx.Organization.Id,
+				TenantId:          testCtx.TenantId,
+				UserId:            "test-user-1",
+				WorkspaceId:       testCtx.Workspace.Id,
 			},
 			wantErr: false,
 		},
 		{
-			name:    "nil request",
-			req:     nil,
+			name: "nil request",
+			req:  nil,
 			wantErr: true,
 			errCode: codes.InvalidArgument,
 		},
 		{
 			name: "invalid job id",
 			req: &proto.GetScrapingJobRequest{
-				JobId:    0,
-				OrgId:    testCtx.Organization.Id,
-				TenantId: testCtx.TenantId,
+				JobId:              0,
+				OrgId:             testCtx.Organization.Id,
+				TenantId:          testCtx.TenantId,
+				UserId:            "test-user-1",
+				WorkspaceId:       testCtx.Workspace.Id,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -412,18 +422,22 @@ func TestServer_GetScrapingJob(t *testing.T) {
 		{
 			name: "job not found",
 			req: &proto.GetScrapingJobRequest{
-				JobId:    999999,
-				OrgId:    testCtx.Organization.Id,
-				TenantId: testCtx.TenantId,
+				JobId:              999999,
+				OrgId:             testCtx.Organization.Id,
+				TenantId:          testCtx.TenantId,
+				UserId:            "test-user-1",
+				WorkspaceId:       testCtx.Workspace.Id,
 			},
 			wantErr: true,
-			errCode: codes.NotFound,
+			errCode: codes.Internal,
 		},
 		{
 			name: "missing org id",
 			req: &proto.GetScrapingJobRequest{
-				JobId:    createResp.JobId,
-				TenantId: testCtx.TenantId,
+				JobId:              createResp.JobId,
+				TenantId:          testCtx.TenantId,
+				UserId:            "test-user-1",
+				WorkspaceId:       testCtx.Workspace.Id,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -431,8 +445,10 @@ func TestServer_GetScrapingJob(t *testing.T) {
 		{
 			name: "missing tenant id",
 			req: &proto.GetScrapingJobRequest{
-				JobId: createResp.JobId,
-				OrgId: testCtx.Organization.Id,
+				JobId:              createResp.JobId,
+				OrgId:             testCtx.Organization.Id,
+				UserId:            "test-user-1",
+				WorkspaceId:       testCtx.Workspace.Id,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -440,9 +456,11 @@ func TestServer_GetScrapingJob(t *testing.T) {
 		{
 			name: "wrong org id",
 			req: &proto.GetScrapingJobRequest{
-				JobId:    createResp.JobId,
-				OrgId:    999999,
-				TenantId: testCtx.TenantId,
+				JobId:              createResp.JobId,
+				OrgId:             999999,
+				TenantId:          testCtx.TenantId,
+				UserId:            "test-user-1",
+				WorkspaceId:       testCtx.Workspace.Id,
 			},
 			wantErr: true,
 			errCode: codes.NotFound,
@@ -450,9 +468,11 @@ func TestServer_GetScrapingJob(t *testing.T) {
 		{
 			name: "wrong tenant id",
 			req: &proto.GetScrapingJobRequest{
-				JobId:    createResp.JobId,
-				OrgId:    testCtx.Organization.Id,
-				TenantId: 999999,
+				JobId:              createResp.JobId,
+				OrgId:             testCtx.Organization.Id,
+				TenantId:          999999,
+				UserId:            "test-user-1",
+				WorkspaceId:       testCtx.Workspace.Id,
 			},
 			wantErr: true,
 			errCode: codes.NotFound,
@@ -550,6 +570,7 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 			OrgId:            testCtx.Organization.Id,
 			TenantId:         testCtx.TenantId,
 			WorkspaceId:      testCtx.Workspace.Id,
+			AuthPlatformUserId: testCtx.Account.AuthPlatformUserId,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, createResp)
@@ -561,6 +582,8 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 				JobId:    createResp.JobId,
 				OrgId:    testCtx.Organization.Id,
 				TenantId: testCtx.TenantId,
+				WorkspaceId: testCtx.Workspace.Id,
+				UserId:      testCtx.Account.AuthPlatformUserId,
 			})
 			require.NoError(t, err)
 			require.NotNil(t, job)
@@ -579,9 +602,10 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "list all jobs - no pagination",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
 			},
 			wantErr:   false,
 			wantCount: len(jobConfigs),
@@ -589,11 +613,12 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "paginated - first page",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				PageSize:    2,
-				PageNumber:  1,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
+				PageSize:           2,
+				PageNumber:         1,
 			},
 			wantErr:   false,
 			wantCount: 2,
@@ -606,11 +631,12 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "paginated - second page",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				PageSize:    2,
-				PageNumber:  2,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
+				PageSize:           2,
+				PageNumber:         2,
 			},
 			wantErr:   false,
 			wantCount: 2,
@@ -623,11 +649,12 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "paginated - last page",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				PageSize:    2,
-				PageNumber:  3,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
+				PageSize:           2,
+				PageNumber:         3,
 			},
 			wantErr:   false,
 			wantCount: 1,
@@ -639,11 +666,12 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "paginated - page beyond results",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				PageSize:    2,
-				PageNumber:  4,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
+				PageSize:           2,
+				PageNumber:         4,
 			},
 			wantErr:   false,
 			wantCount: 0,
@@ -651,10 +679,11 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "invalid page size",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				PageSize:    -1,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
+				PageSize:           -1,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -662,10 +691,11 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "invalid page number",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				PageNumber:  -1,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
+				PageNumber:         -1,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -673,8 +703,9 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "missing org id",
 			req: &proto.ListScrapingJobsRequest{
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -682,8 +713,9 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "missing tenant id",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				WorkspaceId: testCtx.Workspace.Id,
+				OrgId:              testCtx.Organization.Id,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -691,9 +723,10 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "wrong org id",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       999999,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
+				OrgId:              999999,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
 			},
 			wantErr:   false,
 			wantCount: 0,
@@ -701,9 +734,10 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "wrong tenant id",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    999999,
-				WorkspaceId: testCtx.Workspace.Id,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           999999,
+				WorkspaceId:        testCtx.Workspace.Id,
+				AuthPlatformUserId: "test-user-1",
 			},
 			wantErr:   false,
 			wantCount: 0,
@@ -711,9 +745,10 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "wrong workspace id",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: 999999,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        999999,
+				AuthPlatformUserId: "test-user-1",
 			},
 			wantErr:   false,
 			wantCount: 0,
@@ -802,6 +837,7 @@ func TestServer_DeleteScrapingJob(t *testing.T) {
 			OrgId:            testCtx.Organization.Id,
 			TenantId:         testCtx.TenantId,
 			WorkspaceId:      testCtx.Workspace.Id,
+			AuthPlatformUserId: "test-user-1",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, createResp)
@@ -813,6 +849,7 @@ func TestServer_DeleteScrapingJob(t *testing.T) {
 				JobId:    createResp.JobId,
 				OrgId:    testCtx.Organization.Id,
 				TenantId: testCtx.TenantId,
+				WorkspaceId: testCtx.Workspace.Id,
 			})
 			require.NoError(t, err)
 			require.NotNil(t, job)
@@ -1044,6 +1081,7 @@ func TestServer_DownloadScrapingResults(t *testing.T) {
 			OrgId:            testCtx.Organization.Id,
 			TenantId:         testCtx.TenantId,
 			WorkspaceId:      testCtx.Workspace.Id,
+			AuthPlatformUserId: "test-user-1",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, createResp)

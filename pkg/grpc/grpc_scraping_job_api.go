@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/Vector/vector-leads-scraper/internal/database"
@@ -291,7 +292,7 @@ func (s *Server) GetScrapingJob(ctx context.Context, req *proto.GetScrapingJobRe
 		ID: req.TenantId,
 	}); err != nil {
 		logger.Error("failed to get tenant", zap.Error(err))
-		return nil, status.Error(codes.Internal, "failed to get tenant")
+		return nil, status.Error(codes.NotFound, "tenant does not exist")
 	}
 
 	// get org by org id
@@ -299,7 +300,7 @@ func (s *Server) GetScrapingJob(ctx context.Context, req *proto.GetScrapingJobRe
 		ID: req.OrgId,
 	}); err != nil {
 		logger.Error("failed to get organization", zap.Error(err))
-		return nil, status.Error(codes.Internal, "failed to get organization")
+		return nil, status.Error(codes.NotFound, "organization does not exist")
 	}
 
 	logger.Info("getting scraping job",
@@ -313,9 +314,9 @@ func (s *Server) GetScrapingJob(ctx context.Context, req *proto.GetScrapingJobRe
 	if err != nil {
 		logger.Error("failed to get scraping job", zap.Error(err))
 		if err == database.ErrJobDoesNotExist {
-			return nil, status.Error(codes.NotFound, "job not found")
+			return nil, status.Error(codes.NotFound, "job does not exist")
 		}
-		return nil, status.Error(codes.Internal, "failed to get scraping job")
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get scraping job: %v", err))
 	}
 
 	return &proto.GetScrapingJobResponse{
