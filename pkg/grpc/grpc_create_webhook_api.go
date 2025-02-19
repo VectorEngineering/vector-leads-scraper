@@ -40,46 +40,46 @@ import (
 //
 // TODO: Enhancement Areas
 // 1. Add webhook validation:
-//    - URL reachability check
-//    - SSL certificate validation
-//    - Authentication verification
-//    - Rate limit configuration
+//   - URL reachability check
+//   - SSL certificate validation
+//   - Authentication verification
+//   - Rate limit configuration
 //
 // 2. Implement security features:
-//    - Payload signing
-//    - IP allowlisting
-//    - Request throttling
-//    - Secret rotation
+//   - Payload signing
+//   - IP allowlisting
+//   - Request throttling
+//   - Secret rotation
 //
 // 3. Add reliability features:
-//    - Retry policies
-//    - Circuit breakers
-//    - Dead letter queues
-//    - Event persistence
+//   - Retry policies
+//   - Circuit breakers
+//   - Dead letter queues
+//   - Event persistence
 //
 // 4. Improve monitoring:
-//    - Delivery tracking
-//    - Response timing
-//    - Error rate monitoring
-//    - Health checks
+//   - Delivery tracking
+//   - Response timing
+//   - Error rate monitoring
+//   - Health checks
 //
 // 5. Add payload management:
-//    - Schema validation
-//    - Payload versioning
-//    - Transformation rules
-//    - Size limits
+//   - Schema validation
+//   - Payload versioning
+//   - Transformation rules
+//   - Size limits
 //
 // 6. Implement event filtering:
-//    - Event type filtering
-//    - Payload filtering
-//    - Rate-based filtering
-//    - Priority levels
+//   - Event type filtering
+//   - Payload filtering
+//   - Rate-based filtering
+//   - Priority levels
 //
 // 7. Add compliance features:
-//    - Data privacy rules
-//    - Audit logging
-//    - Compliance headers
-//    - Data residency
+//   - Data privacy rules
+//   - Audit logging
+//   - Compliance headers
+//   - Data residency
 func (s *Server) CreateWebhook(ctx context.Context, req *proto.CreateWebhookRequest) (*proto.CreateWebhookResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "create-webhook")

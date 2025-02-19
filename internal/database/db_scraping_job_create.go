@@ -41,7 +41,7 @@ func (db *Db) CreateScrapingJob(ctx context.Context, workspaceID uint64, job *le
 	}
 
 	// update the workspace
-	res, err := workspaceQop.Where(workspaceQop.Id.Eq(workspaceID)).Updates(workspace)
+	res, err := workspaceQop.Where(workspaceQop.Id.Eq(workspaceID)).Updates(&workspace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update workspace: %w", err)
 	}

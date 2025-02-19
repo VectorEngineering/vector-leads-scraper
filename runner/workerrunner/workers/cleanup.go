@@ -12,8 +12,8 @@ type CleanupWorker struct {
 	db      *database.Db
 	logger  *zap.Logger
 	Cadence struct {
-		OldLeadsCleanup      time.Duration // How often to clean up old leads
-		FailedTasksCleanup   time.Duration // How often to clean up failed tasks
+		OldLeadsCleanup        time.Duration // How often to clean up old leads
+		FailedTasksCleanup     time.Duration // How often to clean up failed tasks
 		ProcessedLeadsArchival time.Duration // How often to archive processed leads
 	}
 }
@@ -24,22 +24,22 @@ func NewCleanupWorker(db *database.Db, logger *zap.Logger) *CleanupWorker {
 		db:     db,
 		logger: logger.Named("cleanup-worker"),
 	}
-	
+
 	// Set default cadences
-	worker.Cadence.OldLeadsCleanup = 24 * time.Hour        // Daily
-	worker.Cadence.FailedTasksCleanup = 12 * time.Hour     // Twice daily
+	worker.Cadence.OldLeadsCleanup = 24 * time.Hour            // Daily
+	worker.Cadence.FailedTasksCleanup = 12 * time.Hour         // Twice daily
 	worker.Cadence.ProcessedLeadsArchival = 7 * 24 * time.Hour // Weekly
-	
+
 	return worker
 }
 
 // // CleanOldLeads removes leads older than the specified retention period
 // func (w *CleanupWorker) CleanOldLeads(ctx context.Context) error {
 // 	w.logger.Info("Starting old leads cleanup")
-	
+
 // 	// Default retention period is 30 days
 // 	cutoffDate := time.Now().AddDate(0, 0, -30)
-	
+
 // 	// Perform the cleanup
 // 	count, err := w.db.DeleteLeadsOlderThan(ctx, cutoffDate)
 // 	if err != nil {
@@ -57,9 +57,9 @@ func NewCleanupWorker(db *database.Db, logger *zap.Logger) *CleanupWorker {
 // // CleanFailedTasks removes failed tasks older than 7 days
 // func (w *CleanupWorker) CleanFailedTasks(ctx context.Context) error {
 // 	w.logger.Info("Starting failed tasks cleanup")
-	
+
 // 	cutoffDate := time.Now().AddDate(0, 0, -7)
-	
+
 // 	count, err := w.db.DeleteFailedTasksOlderThan(ctx, cutoffDate)
 // 	if err != nil {
 // 		return fmt.Errorf("failed to clean failed tasks: %w", err)
@@ -76,9 +76,9 @@ func NewCleanupWorker(db *database.Db, logger *zap.Logger) *CleanupWorker {
 // // ArchiveProcessedLeads moves processed leads to archive storage
 // func (w *CleanupWorker) ArchiveProcessedLeads(ctx context.Context) error {
 // 	w.logger.Info("Starting lead archival process")
-	
+
 // 	archiveDate := time.Now().AddDate(0, -1, 0) // Archive leads older than 1 month
-	
+
 // 	count, err := w.db.ArchiveProcessedLeads(ctx, archiveDate)
 // 	if err != nil {
 // 		return fmt.Errorf("failed to archive processed leads: %w", err)
@@ -90,4 +90,4 @@ func NewCleanupWorker(db *database.Db, logger *zap.Logger) *CleanupWorker {
 // 	)
 
 // 	return nil
-// } 
+// }

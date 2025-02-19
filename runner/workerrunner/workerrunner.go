@@ -176,13 +176,13 @@ type BackgroundOperation struct {
 
 // OperationStatus represents the current status of a background operation
 type OperationStatus struct {
-	Name           string
-	LastRun        time.Time
-	LastError      error
-	SuccessCount   int64
-	ErrorCount     int64
-	IsRunning      bool
-	NextScheduled  time.Time
+	Name            string
+	LastRun         time.Time
+	LastError       error
+	SuccessCount    int64
+	ErrorCount      int64
+	IsRunning       bool
+	NextScheduled   time.Time
 	AverageDuration time.Duration
 }
 
@@ -204,7 +204,7 @@ type WorkerRunner struct {
 	instrumentationClient *instrumentation.Client
 
 	// Background operations management
-	operations     map[string]*BackgroundOperation
+	operations    map[string]*BackgroundOperation
 	opStatus      map[string]*OperationStatus
 	operationLock sync.RWMutex
 }
@@ -296,7 +296,7 @@ func New(cfg *runner.Config) (runner.Runner, error) {
 		dbOperations:          coreDeps.dbOperations,
 		instrumentationClient: coreDeps.instrumentationClient,
 		operations:            make(map[string]*BackgroundOperation),
-		opStatus:            make(map[string]*OperationStatus),
+		opStatus:              make(map[string]*OperationStatus),
 	}, nil
 }
 
@@ -393,7 +393,7 @@ func (w *WorkerRunner) executeWorkerProcess(ctx context.Context) error {
 
 	// Wait for context cancellation
 	<-ctx.Done()
-	
+
 	// Wait for all operations to complete
 	wg.Wait()
 	return nil
@@ -720,4 +720,4 @@ func (w *WorkerRunner) runOperation(ctx context.Context, op *BackgroundOperation
 	} else {
 		status.AverageDuration = (status.AverageDuration + duration) / 2
 	}
-} 
+}

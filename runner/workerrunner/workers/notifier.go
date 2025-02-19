@@ -9,27 +9,27 @@ import (
 
 // NotifierWorker handles system notifications and alerts
 type NotifierWorker struct {
-	db         *database.Db
-	logger     *zap.Logger
-	Cadence    struct {
+	db      *database.Db
+	logger  *zap.Logger
+	Cadence struct {
 		FailureNotifications time.Duration // How often to check and send failure notifications
-		PerformanceAlerts   time.Duration // How often to check and send performance alerts
-		DailyReport         time.Duration // How often to generate and send daily reports
+		PerformanceAlerts    time.Duration // How often to check and send performance alerts
+		DailyReport          time.Duration // How often to generate and send daily reports
 	}
 }
 
 // NewNotifierWorker creates a new notifier worker
 func NewNotifierWorker(db *database.Db, logger *zap.Logger) *NotifierWorker {
 	worker := &NotifierWorker{
-		db:       db,
-		logger:   logger.Named("notifier-worker"),
+		db:     db,
+		logger: logger.Named("notifier-worker"),
 	}
-	
+
 	// Set default cadences
-	worker.Cadence.FailureNotifications = 5 * time.Minute     // Every 5 minutes
-	worker.Cadence.PerformanceAlerts = 10 * time.Minute      // Every 10 minutes
-	worker.Cadence.DailyReport = 24 * time.Hour              // Daily
-	
+	worker.Cadence.FailureNotifications = 5 * time.Minute // Every 5 minutes
+	worker.Cadence.PerformanceAlerts = 10 * time.Minute   // Every 10 minutes
+	worker.Cadence.DailyReport = 24 * time.Hour           // Daily
+
 	return worker
 }
 
@@ -145,4 +145,4 @@ func NewNotifierWorker(db *database.Db, logger *zap.Logger) *NotifierWorker {
 
 // 	w.logger.Info("Completed daily report generation and delivery")
 // 	return nil
-// } 
+// }

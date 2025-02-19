@@ -39,46 +39,46 @@ import (
 //
 // TODO: Enhancement Areas
 // 1. Add tenant provisioning workflow:
-//    - Set up dedicated database schema
-//    - Initialize storage buckets
-//    - Configure networking (VPC, subnets)
-//    - Set up monitoring and logging
+//   - Set up dedicated database schema
+//   - Initialize storage buckets
+//   - Configure networking (VPC, subnets)
+//   - Set up monitoring and logging
 //
 // 2. Implement tenant isolation:
-//    - Resource quotas and limits
-//    - Network segmentation
-//    - Data access controls
-//    - Audit logging boundaries
+//   - Resource quotas and limits
+//   - Network segmentation
+//   - Data access controls
+//   - Audit logging boundaries
 //
 // 3. Add security enhancements:
-//    - Tenant-specific encryption keys
-//    - SSL/TLS certificate provisioning
-//    - IP allowlist management
-//    - Authentication provider setup
+//   - Tenant-specific encryption keys
+//   - SSL/TLS certificate provisioning
+//   - IP allowlist management
+//   - Authentication provider setup
 //
 // 4. Improve validation:
-//    - Domain name verification
-//    - Billing information validation
-//    - Compliance requirements check
-//    - Feature flag compatibility
+//   - Domain name verification
+//   - Billing information validation
+//   - Compliance requirements check
+//   - Feature flag compatibility
 //
 // 5. Add tenant bootstrapping:
-//    - Default role creation
-//    - Template workspace setup
-//    - Sample workflow creation
-//    - Documentation generation
+//   - Default role creation
+//   - Template workspace setup
+//   - Sample workflow creation
+//   - Documentation generation
 //
 // 6. Implement billing integration:
-//    - Payment method verification
-//    - Usage tracking setup
-//    - Invoice configuration
-//    - Tax calculation rules
+//   - Payment method verification
+//   - Usage tracking setup
+//   - Invoice configuration
+//   - Tax calculation rules
 //
 // 7. Add compliance features:
-//    - Data residency enforcement
-//    - GDPR/CCPA compliance checks
-//    - Audit trail initialization
-//    - Privacy policy verification
+//   - Data residency enforcement
+//   - GDPR/CCPA compliance checks
+//   - Audit trail initialization
+//   - Privacy policy verification
 func (s *Server) CreateTenant(ctx context.Context, req *proto.CreateTenantRequest) (*proto.CreateTenantResponse, error) {
 	var (
 		err error

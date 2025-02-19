@@ -18,7 +18,10 @@ func setupRedisContainer(ctx context.Context) (testcontainers.Container, string,
 	req := testcontainers.ContainerRequest{
 		Image:        "redis:7-alpine",
 		ExposedPorts: []string{"6379/tcp"},
-		WaitingFor:   wait.ForLog("Ready to accept connections"),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Ready to accept connections"),
+			wait.ForListeningPort("6379/tcp"),
+		),
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -29,7 +32,7 @@ func setupRedisContainer(ctx context.Context) (testcontainers.Container, string,
 		return nil, "", fmt.Errorf("failed to start container: %v", err)
 	}
 
-	mappedPort, err := container.MappedPort(ctx, "6379")
+	mappedPort, err := container.MappedPort(ctx, "6379/tcp")
 	if err != nil {
 		container.Terminate(ctx)
 		return nil, "", fmt.Errorf("failed to get container external port: %v", err)

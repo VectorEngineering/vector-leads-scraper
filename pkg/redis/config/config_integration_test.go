@@ -23,7 +23,10 @@ func TestRedisConfigIntegration_WithContainer(t *testing.T) {
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:        "redis:latest",
 			ExposedPorts: []string{"6379/tcp"},
-			WaitingFor:   wait.ForLog("Ready to accept connections"),
+			WaitingFor: wait.ForAll(
+				wait.ForLog("Ready to accept connections"),
+				wait.ForListeningPort("6379/tcp"),
+			),
 		},
 		Started: true,
 	})
@@ -38,7 +41,7 @@ func TestRedisConfigIntegration_WithContainer(t *testing.T) {
 		t.Fatalf("Failed to get container host: %v", err)
 	}
 
-	port, err := redisContainer.MappedPort(ctx, "6379")
+	port, err := redisContainer.MappedPort(ctx, "6379/tcp")
 	if err != nil {
 		t.Fatalf("Failed to get container port: %v", err)
 	}

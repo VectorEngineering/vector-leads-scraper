@@ -14,25 +14,25 @@ type ScraperWorker struct {
 	logger  *zap.Logger
 	client  *asynq.Client
 	Cadence struct {
-		LeadScraping      time.Duration // How often to scrape new leads
-		DataValidation    time.Duration // How often to validate existing leads
-		MetricsUpdate     time.Duration // How often to update scraping metrics
+		LeadScraping   time.Duration // How often to scrape new leads
+		DataValidation time.Duration // How often to validate existing leads
+		MetricsUpdate  time.Duration // How often to update scraping metrics
 	}
 }
 
 // NewScraperWorker creates a new scraper worker
 func NewScraperWorker(db *database.Db, client *asynq.Client, logger *zap.Logger) *ScraperWorker {
 	worker := &ScraperWorker{
-		db:      db,
-		client:  client,
-		logger:  logger.Named("scraper-worker"),
+		db:     db,
+		client: client,
+		logger: logger.Named("scraper-worker"),
 	}
-	
+
 	// Set default cadences
-	worker.Cadence.LeadScraping = 15 * time.Minute    // Every 15 minutes
-	worker.Cadence.DataValidation = time.Hour         // Hourly
-	worker.Cadence.MetricsUpdate = 5 * time.Minute    // Every 5 minutes
-	
+	worker.Cadence.LeadScraping = 15 * time.Minute // Every 15 minutes
+	worker.Cadence.DataValidation = time.Hour      // Hourly
+	worker.Cadence.MetricsUpdate = 5 * time.Minute // Every 5 minutes
+
 	return worker
 }
 
@@ -129,4 +129,4 @@ func NewScraperWorker(db *database.Db, client *asynq.Client, logger *zap.Logger)
 // 	}
 
 // 	return nil
-// } 
+// }

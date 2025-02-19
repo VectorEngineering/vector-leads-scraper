@@ -39,46 +39,46 @@ import (
 //
 // TODO: Enhancement Areas
 // 1. Add workflow validation:
-//    - Validate dependencies between steps
-//    - Check resource requirements
-//    - Verify schedule conflicts
-//    - Validate data schema compatibility
+//   - Validate dependencies between steps
+//   - Check resource requirements
+//   - Verify schedule conflicts
+//   - Validate data schema compatibility
 //
 // 2. Implement workflow optimization:
-//    - Analyze step execution order
-//    - Identify parallel execution opportunities
-//    - Calculate resource utilization
-//    - Optimize data flow between steps
+//   - Analyze step execution order
+//   - Identify parallel execution opportunities
+//   - Calculate resource utilization
+//   - Optimize data flow between steps
 //
 // 3. Add error handling and recovery:
-//    - Step-level retry policies
-//    - Failure recovery strategies
-//    - Checkpoint/resume capabilities
-//    - Data consistency guarantees
+//   - Step-level retry policies
+//   - Failure recovery strategies
+//   - Checkpoint/resume capabilities
+//   - Data consistency guarantees
 //
 // 4. Improve scheduling:
-//    - Time zone handling
-//    - Holiday calendar support
-//    - Resource-aware scheduling
-//    - Priority queue management
+//   - Time zone handling
+//   - Holiday calendar support
+//   - Resource-aware scheduling
+//   - Priority queue management
 //
 // 5. Add monitoring and alerting:
-//    - Step-level metrics collection
-//    - Performance monitoring
-//    - Resource usage tracking
-//    - SLA compliance checking
+//   - Step-level metrics collection
+//   - Performance monitoring
+//   - Resource usage tracking
+//   - SLA compliance checking
 //
 // 6. Implement data quality:
-//    - Input data validation
-//    - Output data verification
-//    - Schema evolution handling
-//    - Data lineage tracking
+//   - Input data validation
+//   - Output data verification
+//   - Schema evolution handling
+//   - Data lineage tracking
 //
 // 7. Add compliance features:
-//    - Data privacy enforcement
-//    - Audit logging
-//    - Access control per step
-//    - Regulatory compliance checks
+//   - Data privacy enforcement
+//   - Audit logging
+//   - Access control per step
+//   - Regulatory compliance checks
 func (s *Server) CreateWorkflow(ctx context.Context, req *proto.CreateWorkflowRequest) (*proto.CreateWorkflowResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "create-workflow")

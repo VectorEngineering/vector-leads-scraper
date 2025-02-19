@@ -40,46 +40,46 @@ import (
 //
 // TODO: Enhancement Areas
 // 1. Add job validation and optimization:
-//    - Validate search parameters
-//    - Check rate limits and quotas
-//    - Optimize search area coverage
-//    - Validate data schema compatibility
+//   - Validate search parameters
+//   - Check rate limits and quotas
+//   - Optimize search area coverage
+//   - Validate data schema compatibility
 //
 // 2. Implement intelligent scheduling:
-//    - Dynamic resource allocation
-//    - Priority-based scheduling
-//    - Load balancing across regions
-//    - Concurrent job management
+//   - Dynamic resource allocation
+//   - Priority-based scheduling
+//   - Load balancing across regions
+//   - Concurrent job management
 //
 // 3. Add error handling and recovery:
-//    - Automatic retry policies
-//    - Partial result handling
-//    - Checkpoint/resume support
-//    - Error classification
+//   - Automatic retry policies
+//   - Partial result handling
+//   - Checkpoint/resume support
+//   - Error classification
 //
 // 4. Improve data quality:
-//    - Duplicate detection
-//    - Data enrichment
-//    - Validation rules
-//    - Schema evolution
+//   - Duplicate detection
+//   - Data enrichment
+//   - Validation rules
+//   - Schema evolution
 //
 // 5. Add monitoring and alerting:
-//    - Progress tracking
-//    - Resource utilization
-//    - Error rate monitoring
-//    - SLA compliance
+//   - Progress tracking
+//   - Resource utilization
+//   - Error rate monitoring
+//   - SLA compliance
 //
 // 6. Implement caching and optimization:
-//    - Result caching
-//    - Query optimization
-//    - Resource pooling
-//    - Data deduplication
+//   - Result caching
+//   - Query optimization
+//   - Resource pooling
+//   - Data deduplication
 //
 // 7. Add compliance features:
-//    - Data privacy rules
-//    - Geographic restrictions
-//    - Rate limit enforcement
-//    - Usage tracking
+//   - Data privacy rules
+//   - Geographic restrictions
+//   - Rate limit enforcement
+//   - Usage tracking
 func (s *Server) CreateScrapingJob(ctx context.Context, req *proto.CreateScrapingJobRequest) (*proto.CreateScrapingJobResponse, error) {
 	// Setup context with timeout, logging, and telemetry trace.
 	ctx, logger, cleanup := s.setupRequest(ctx, "create-scraping-job")
@@ -167,19 +167,19 @@ func (s *Server) CreateScrapingJob(ctx context.Context, req *proto.CreateScrapin
 
 	// Create the scraping job object
 	job := &proto.ScrapingJob{
-		Name:      name,
-		Keywords:  req.Keywords,
-		Lang:      lang,
-		Zoom:      req.Zoom,
-		Lat:       req.Lat,
-		Lon:       req.Lon,
-		FastMode:  req.FastMode,
-		Radius:    req.Radius,
-		Depth:     req.Depth,
-		Email:     req.Email,
-		MaxTime:   req.MaxTime,
-		Proxies:   req.Proxies,
-		Status:    proto.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+		Name:     name,
+		Keywords: req.Keywords,
+		Lang:     lang,
+		Zoom:     req.Zoom,
+		Lat:      req.Lat,
+		Lon:      req.Lon,
+		FastMode: req.FastMode,
+		Radius:   req.Radius,
+		Depth:    req.Depth,
+		Email:    req.Email,
+		MaxTime:  req.MaxTime,
+		Proxies:  req.Proxies,
+		Status:   proto.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
 	}
 
 	// Create the job using the database client
@@ -252,6 +252,22 @@ func (s *Server) GetScrapingJob(ctx context.Context, req *proto.GetScrapingJobRe
 	if req.TenantId == 0 {
 		logger.Error("tenant ID is required")
 		return nil, status.Error(codes.InvalidArgument, "tenant ID is required")
+	}
+
+	// get tenant by tenant by id
+	if _, err := s.db.GetTenant(ctx, &database.GetTenantInput{
+		ID: req.TenantId,
+	}); err != nil {
+		logger.Error("failed to get tenant", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get tenant")
+	}
+
+	// get org by org id
+	if _, err := s.db.GetOrganization(ctx, &database.GetOrganizationInput{
+		ID: req.OrgId,
+	}); err != nil {
+		logger.Error("failed to get organization", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get organization")
 	}
 
 	logger.Info("getting scraping job",
@@ -329,8 +345,43 @@ func (s *Server) ListScrapingJobs(ctx context.Context, req *proto.ListScrapingJo
 		zap.Uint64("tenant_id", req.TenantId),
 	)
 
+	// get the org by org id
+	if _, err := s.db.GetOrganization(ctx, &database.GetOrganizationInput{
+		ID: req.OrgId,
+	}); err != nil {
+		logger.Error("failed to get organization", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get organization")
+	}
+
+	// get the tenant by tenant id
+	if _, err := s.db.GetTenant(ctx, &database.GetTenantInput{
+		ID: req.TenantId,
+	}); err != nil {
+		logger.Error("failed to get tenant", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get tenant")
+	}
+
+	// page number
+	pageNumber := req.PageNumber
+	if pageNumber == 0 {
+		pageNumber = 1
+	}
+
+	pageSize := req.PageSize
+	if pageSize == 0 {
+		pageSize = 10
+	}
+
+	// compute the offset
+	offset := (pageNumber - 1) * pageSize
+
 	// List jobs using the database client
-	jobs, err := s.db.ListScrapingJobs(ctx, req.OrgId, req.TenantId)
+	jobs, err := s.db.ListScrapingJobsByParams(ctx, &database.ListScrapingJobsByWorkspaceInput{
+		WorkspaceID: req.WorkspaceId,
+		WorkflowID:  req.WorkflowId,
+		Limit:       uint64(pageSize),
+		Offset:      uint64(offset),
+	})
 	if err != nil {
 		logger.Error("failed to list scraping jobs", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to list scraping jobs")

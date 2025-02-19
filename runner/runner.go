@@ -32,7 +32,7 @@ const (
 	RunModeAwsLambdaInvoker
 	RunModeRedis
 	RunModeGRPC
-	RunModeWorker 	
+	RunModeWorker
 )
 
 var (
@@ -220,10 +220,10 @@ func ParseConfig() *Config {
 		if cfg.RedisURL == "" {
 			// Build Redis URL from individual components if not provided
 			if cfg.RedisPassword != "" {
-				cfg.RedisURL = fmt.Sprintf("redis://:%s@%s:%d/%d", 
+				cfg.RedisURL = fmt.Sprintf("redis://:%s@%s:%d/%d",
 					cfg.RedisPassword, cfg.RedisHost, cfg.RedisPort, cfg.RedisDB)
 			} else {
-				cfg.RedisURL = fmt.Sprintf("redis://%s:%d/%d", 
+				cfg.RedisURL = fmt.Sprintf("redis://%s:%d/%d",
 					cfg.RedisHost, cfg.RedisPort, cfg.RedisDB)
 			}
 		}

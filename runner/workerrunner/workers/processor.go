@@ -10,29 +10,29 @@ import (
 
 // ProcessorWorker handles lead data processing and enrichment
 type ProcessorWorker struct {
-	db        *database.Db
-	client    *asynq.Client
-	logger    *zap.Logger
-	Cadence   struct {
-		LeadProcessing   time.Duration // How often to process individual leads
-		BatchProcessing  time.Duration // How often to run batch processing
-		MetricsUpdate    time.Duration // How often to update processing metrics
+	db      *database.Db
+	client  *asynq.Client
+	logger  *zap.Logger
+	Cadence struct {
+		LeadProcessing  time.Duration // How often to process individual leads
+		BatchProcessing time.Duration // How often to run batch processing
+		MetricsUpdate   time.Duration // How often to update processing metrics
 	}
 }
 
 // NewProcessorWorker creates a new processor worker
 func NewProcessorWorker(db *database.Db, client *asynq.Client, logger *zap.Logger) *ProcessorWorker {
 	worker := &ProcessorWorker{
-		db:        db,
-		client:    client,
-		logger:    logger.Named("processor-worker"),
+		db:     db,
+		client: client,
+		logger: logger.Named("processor-worker"),
 	}
-	
+
 	// Set default cadences
-	worker.Cadence.LeadProcessing = time.Minute          // Every minute
-	worker.Cadence.BatchProcessing = 10 * time.Minute    // Every 10 minutes
-	worker.Cadence.MetricsUpdate = 5 * time.Minute       // Every 5 minutes
-	
+	worker.Cadence.LeadProcessing = time.Minute       // Every minute
+	worker.Cadence.BatchProcessing = 10 * time.Minute // Every 10 minutes
+	worker.Cadence.MetricsUpdate = 5 * time.Minute    // Every 5 minutes
+
 	return worker
 }
 
@@ -133,4 +133,4 @@ func NewProcessorWorker(db *database.Db, client *asynq.Client, logger *zap.Logge
 // 	)
 
 // 	return nil
-// } 
+// }
