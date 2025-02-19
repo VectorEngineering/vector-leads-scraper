@@ -218,8 +218,8 @@ config:
 # Worker Configuration
 worker:
   enabled: true
-  replicas: 1
-  concurrency: 10
+  replicas: 3
+  concurrency: 1
   depth: 5
   fastMode: true
   emailExtraction: false
