@@ -330,6 +330,8 @@ func ParseConfig() *Config {
 		cfg.RunMode = RunModeAwsLambdaInvoker
 	case cfg.AwsLamdbaRunner:
 		cfg.RunMode = RunModeAwsLambda
+	case cfg.WorkerEnabled:
+		cfg.RunMode = RunModeWorker
 	case cfg.RedisEnabled && (cfg.WebRunner || (cfg.Dsn == "" && cfg.InputFile == "")):
 		cfg.RunMode = RunModeWeb
 	case cfg.Dsn == "":
@@ -338,8 +340,6 @@ func ParseConfig() *Config {
 		cfg.RunMode = RunModeDatabaseProduce
 	case cfg.Dsn != "":
 		cfg.RunMode = RunModeDatabase
-	case cfg.WorkerEnabled:
-		cfg.RunMode = RunModeWorker
 	default:
 		panic("Invalid configuration")
 	}

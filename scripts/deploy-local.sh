@@ -36,12 +36,14 @@ IMAGE_TAG="${DOCKER_TAG:-latest}"
 ENABLE_TESTS="false"
 REDIS_PASSWORD="redis-local-dev"
 ENABLE_GRPC="false"
+WORKER_ONLY="false"
 
 # Parse arguments
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --enable-tests) ENABLE_TESTS="true"; shift ;;
         --enable-grpc) ENABLE_GRPC="true"; shift ;;
+        --worker-only) WORKER_ONLY="true"; shift ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
 done
@@ -123,6 +125,7 @@ image:
 
 service:
   type: ClusterIP
+  enabled: ${WORKER_ONLY:-false}
   ports:
     - name: http
       port: 8080
@@ -130,6 +133,22 @@ service:
     - name: grpc
       port: 50051
       targetPort: 50051
+
+worker:
+  enabled: true
+  replicas: 1
+  concurrency: 10
+  depth: 5
+  fastMode: true
+  emailExtraction: false
+  exitOnInactivity: "1h"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
 config:
   grpc:

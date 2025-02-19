@@ -235,6 +235,41 @@ run-grpc: build ## builds and runs the application in GRPC mode
 		--newrelic-key=2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL \
 		--db-url="postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
+run-worker:
+	SERVICE_NAME=vector-leads-scraper \
+        VERSION=$(VERSION) \
+        GIT_COMMIT=$(GIT_COMMIT) \
+        BUILD_TIME=$(BUILD_TIME) \
+        GO_VERSION=$(GO_VERSION) \
+        PLATFORM=$(PLATFORM) \
+        ./bin/google_maps_scraper --worker \
+                --service-name=vector-leads-scraper \
+                --environment=development \
+                --redis-enabled=true \
+                --redis-host=localhost \
+                --redis-port=6379 \
+                --redis-password=redispass \
+                --redis-workers=10 \
+                --redis-retry-interval=5s \
+                --redis-max-retries=3 \
+                --redis-retention-days=7 \
+                --newrelic-key=2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL \
+                --db-url="postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" \
+                -c=10 \
+                -depth=5 \
+                -lang=en \
+                -fast-mode=true \
+                -radius=10000 \
+                -zoom=15 \
+                --exit-on-inactivity=1h \
+                --log-level=info
+
+run-worker-dev: docker-dev build ## Run the worker with development dependencies
+	@echo "Starting worker with development dependencies..."
+	@echo "Waiting for dependencies to be ready..."
+	@sleep 5
+	$(MAKE) run-worker
+
 docker-run: docker-build ## builds and runs the docker container
 	docker run -p 8080:8080 gosom/google-maps-scraper:$(VERSION)
 
@@ -243,6 +278,10 @@ precommit: check-docker check-required-tools build docker-build format test vet 
 .PHONY: deploy-local
 deploy-local: check-docker clean-local ## Deploy to local kind cluster
 	./scripts/deploy-local.sh $(if $(ENABLE_TESTS),--enable-tests)
+
+.PHONY: deploy-worker
+deploy-worker: check-docker clean-local ## Deploy only the worker component to local kind cluster
+	./scripts/deploy-local.sh --worker-only $(if $(ENABLE_TESTS),--enable-tests)
 
 .PHONY: clean-local
 clean-local: ## Clean up local deployment

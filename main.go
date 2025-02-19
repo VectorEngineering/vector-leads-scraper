@@ -80,12 +80,12 @@ func runnerFactory(cfg *runner.Config) (runner.Runner, error) {
 		return lambdaaws.New(cfg)
 	case runner.RunModeAwsLambdaInvoker:
 		return lambdaaws.NewInvoker(cfg)
+	case runner.RunModeWorker:
+		return workerrunner.New(cfg)
 	case runner.RunModeRedis:
 		return redisrunner.New(cfg)
 	case runner.RunModeGRPC:
 		return grpcrunner.New(cfg)
-	case runner.RunModeWorker:
-		return workerrunner.New(cfg)
 	default:
 		return nil, fmt.Errorf("%w: %d", runner.ErrInvalidRunMode, cfg.RunMode)
 	}
