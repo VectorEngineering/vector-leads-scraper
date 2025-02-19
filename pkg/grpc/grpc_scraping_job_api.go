@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -313,7 +314,7 @@ func (s *Server) GetScrapingJob(ctx context.Context, req *proto.GetScrapingJobRe
 	job, err := s.db.GetScrapingJob(ctx, req.JobId)
 	if err != nil {
 		logger.Error("failed to get scraping job", zap.Error(err))
-		if err == database.ErrJobDoesNotExist {
+		if errors.Is(err, database.ErrJobDoesNotExist) {
 			return nil, status.Error(codes.NotFound, "job does not exist")
 		}
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get scraping job: %v", err))
