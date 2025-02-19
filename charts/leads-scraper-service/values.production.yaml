@@ -161,11 +161,24 @@ config:
 
   # Redis Configuration
   redis:
+    # -- Enable Redis task handler
     enabled: true
-    # -- Redis connection string
-    dsn: ""
+    # -- Redis host
+    host: "gmaps-scraper-leads-scraper-service-redis-master.default.svc.cluster.local"
+    # -- Redis port
+    port: 6379
+    # -- Redis password
+    password: "redispass"
+    # -- Redis DSN (connection string)
+    dsn: "redis://:redispass@gmaps-scraper-leads-scraper-service-redis-master.default.svc.cluster.local:6379/0"
     # -- Redis workers
     workers: 10
+    # -- Retry interval for failed tasks
+    retryInterval: "5s"
+    # -- Maximum number of retries
+    maxRetries: 3
+    # -- Number of days to retain task history
+    retentionDays: 7
   # Database Configuration (Required)
   database:
     # Database connection string (Required)
@@ -201,6 +214,23 @@ config:
     fastMode: true
     exitOnInactivity: ""
     proxies: ""
+
+# Worker Configuration
+worker:
+  enabled: true
+  replicas: 1
+  concurrency: 10
+  depth: 5
+  fastMode: true
+  emailExtraction: false
+  exitOnInactivity: "1h"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
 # PostgreSQL subchart configuration
 postgresql:
