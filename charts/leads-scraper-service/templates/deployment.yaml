@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "leads-scraper-service.labels" . | nindent 8 }}
+        {{- include "leads-scraper-service.selectorLabels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -126,19 +126,45 @@ spec:
             - "-s3-bucket={{ .Values.config.aws.s3.bucket }}"
             {{- end }}
           ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+            {{- if .Values.config.grpc.enabled }}
             - name: grpc
               containerPort: {{ .Values.config.grpc.port }}
               protocol: TCP
-          {{- if .Values.config.grpc.enabled }}
+            {{- end }}
+          {{- if .Values.web.livenessProbe }}
           livenessProbe:
-            {{- toYaml .Values.livenessProbe.grpc | nindent 12 }}
+            {{- if .Values.web.livenessProbe.http }}
+            httpGet:
+              path: {{ .Values.web.livenessProbe.http.path }}
+              port: {{ .Values.web.livenessProbe.http.port }}
+            initialDelaySeconds: {{ .Values.web.livenessProbe.http.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.livenessProbe.http.periodSeconds }}
+            {{- end }}
+            {{- if and .Values.config.grpc.enabled .Values.web.livenessProbe.grpc }}
+            tcpSocket:
+              port: {{ .Values.web.livenessProbe.grpc.tcpSocket.port }}
+            initialDelaySeconds: {{ .Values.web.livenessProbe.grpc.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.livenessProbe.grpc.periodSeconds }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.web.readinessProbe }}
           readinessProbe:
-            {{- toYaml .Values.readinessProbe.grpc | nindent 12 }}
-          {{- else }}
-          livenessProbe:
-            {{- toYaml .Values.livenessProbe.http | nindent 12 }}
-          readinessProbe:
-            {{- toYaml .Values.readinessProbe.http | nindent 12 }}
+            {{- if .Values.web.readinessProbe.http }}
+            httpGet:
+              path: {{ .Values.web.readinessProbe.http.path }}
+              port: {{ .Values.web.readinessProbe.http.port }}
+            initialDelaySeconds: {{ .Values.web.readinessProbe.http.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.readinessProbe.http.periodSeconds }}
+            {{- end }}
+            {{- if and .Values.config.grpc.enabled .Values.web.readinessProbe.grpc }}
+            tcpSocket:
+              port: {{ .Values.web.readinessProbe.grpc.tcpSocket.port }}
+            initialDelaySeconds: {{ .Values.web.readinessProbe.grpc.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.readinessProbe.grpc.periodSeconds }}
+            {{- end }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

@@ -85,29 +85,30 @@ resources:
     memory: 512Mi
 
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-livenessProbe:
-  http:
-    path: /health
-    port: http
-    initialDelaySeconds: 5
-    periodSeconds: 10
-  grpc:
-    tcpSocket:
-      port: grpc
-    initialDelaySeconds: 10
-    periodSeconds: 15
+web:
+  livenessProbe:
+    http:
+      path: /health
+      port: http
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    grpc:
+      tcpSocket:
+        port: grpc
+      initialDelaySeconds: 10
+      periodSeconds: 15
 
-readinessProbe:
-  http:
-    path: /health
-    port: http
-    initialDelaySeconds: 5
-    periodSeconds: 10
-  grpc:
-    tcpSocket:
-      port: grpc
-    initialDelaySeconds: 5
-    periodSeconds: 10
+  readinessProbe:
+    http:
+      path: /health
+      port: http
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    grpc:
+      tcpSocket:
+        port: grpc
+      initialDelaySeconds: 5
+      periodSeconds: 10
 
 # This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
@@ -264,29 +265,19 @@ config:
 
 # Worker Configuration
 worker:
-  # -- Enable worker mode
-  enabled: false
-  # -- Number of worker replicas
+  enabled: true
   replicas: 1
-  # -- Worker concurrency (number of parallel jobs)
-  concurrency: 8
-  # -- Maximum scroll depth in search results
-  depth: 1
-  # -- Enable email extraction
+  concurrency: 10
+  depth: 5
+  fastMode: true
   emailExtraction: false
-  # -- Enable fast mode for reduced data collection
-  fastMode: false
-  # -- Exit after inactivity duration (e.g., '5m')
-  exitOnInactivity: "5m"
-  # -- Comma separated list of proxies
-  proxies: ""
-  # Worker specific resources
+  exitOnInactivity: "1h"
   resources:
     requests:
-      cpu: 200m
+      cpu: 100m
       memory: 256Mi
     limits:
-      cpu: 2000m
+      cpu: 1000m
       memory: 1Gi
 
 # PostgreSQL subchart configuration

@@ -42,6 +42,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             # Worker mode configuration
+            - "--worker"
             - "-c={{ .Values.worker.concurrency }}"
             - "-depth={{ .Values.worker.depth }}"
             - "-lang={{ .Values.config.scraper.language }}"
