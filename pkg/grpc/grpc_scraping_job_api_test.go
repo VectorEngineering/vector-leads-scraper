@@ -429,7 +429,7 @@ func TestServer_GetScrapingJob(t *testing.T) {
 				WorkspaceId:       testCtx.Workspace.Id,
 			},
 			wantErr: true,
-			errCode: codes.Internal,
+			errCode: codes.NotFound,
 		},
 		{
 			name: "missing org id",
@@ -1130,6 +1130,8 @@ func TestServer_DownloadScrapingResults(t *testing.T) {
 			JobId:    createResp.JobId,
 			OrgId:    testCtx.Organization.Id,
 			TenantId: testCtx.TenantId,
+			WorkspaceId: testCtx.Workspace.Id,
+			UserId: "test-user-1",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, job)
