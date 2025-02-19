@@ -32,6 +32,7 @@ const (
 	RunModeAwsLambdaInvoker
 	RunModeRedis
 	RunModeGRPC
+	RunModeWorker 	
 )
 
 var (
@@ -82,7 +83,7 @@ type Config struct {
 	Addr                     string
 	DisablePageReuse         bool
 	GRPCEnabled              bool
-
+	WorkerEnabled            bool
 	// gRPC-specific configurations
 	GRPCPort       int           `mapstructure:"grpc-port"`
 	GRPCDeadline   time.Duration `mapstructure:"grpc-deadline"`
@@ -168,7 +169,7 @@ func ParseConfig() *Config {
 	flag.StringVar(&cfg.Addr, "addr", ":8080", "address to listen on for web server")
 	flag.BoolVar(&cfg.DisablePageReuse, "disable-page-reuse", false, "disable page reuse in playwright")
 	flag.BoolVar(&cfg.GRPCEnabled, "grpc", false, "enable gRPC server")
-
+	flag.BoolVar(&cfg.WorkerEnabled, "worker", false, "enable worker")
 	// Redis-specific flags
 	flag.BoolVar(&cfg.RedisEnabled, "redis-enabled", false, "enable Redis-backed task processing")
 	flag.StringVar(&cfg.RedisURL, "redis-url", "", "Redis connection string (e.g., redis://:password@localhost:6379/0)")
@@ -337,6 +338,8 @@ func ParseConfig() *Config {
 		cfg.RunMode = RunModeDatabaseProduce
 	case cfg.Dsn != "":
 		cfg.RunMode = RunModeDatabase
+	case cfg.WorkerEnabled:
+		cfg.RunMode = RunModeWorker
 	default:
 		panic("Invalid configuration")
 	}
@@ -461,7 +464,7 @@ func banner(messages []string, width int) string {
 }
 
 func Banner() {
-	message1 := "🌍 Leads Scraper Service"
+	message1 := "🌍 Leads Scraper Microservice"
 	message2 := "⭐ If you find this project useful, please star it on GitHub: https://github.com/Vector/vector-leads-scraper"
 	message3 := "💖 Consider sponsoring to support development: https://github.com/sponsors/gosom"
 

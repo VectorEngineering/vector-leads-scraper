@@ -16,6 +16,7 @@ import (
 	"github.com/Vector/vector-leads-scraper/runner/lambdaaws"
 	"github.com/Vector/vector-leads-scraper/runner/redisrunner"
 	"github.com/Vector/vector-leads-scraper/runner/webrunner"
+	"github.com/Vector/vector-leads-scraper/runner/workerrunner"
 )
 
 func main() {
@@ -83,6 +84,8 @@ func runnerFactory(cfg *runner.Config) (runner.Runner, error) {
 		return redisrunner.New(cfg)
 	case runner.RunModeGRPC:
 		return grpcrunner.New(cfg)
+	case runner.RunModeWorker:
+		return workerrunner.New(cfg)
 	default:
 		return nil, fmt.Errorf("%w: %d", runner.ErrInvalidRunMode, cfg.RunMode)
 	}
