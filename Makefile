@@ -164,6 +164,9 @@ format: ## runs go fmt
 test: ## runs the unit tests
 	go clean -testcache  && go test -v -race -timeout 5m ./...
 
+unittest:
+	go clean -testcache && go test -v -timeout 5m ./...
+
 test-cover: ## outputs the coverage statistics
 	go clean -testcache  && go test -v -race -timeout 5m ./... -coverprofile coverage.out
 	go tool cover -func coverage.out
@@ -273,7 +276,7 @@ run-worker-dev: docker-dev build ## Run the worker with development dependencies
 docker-run: docker-build ## builds and runs the docker container
 	docker run -p 8080:8080 gosom/google-maps-scraper:$(VERSION)
 
-precommit: check-docker check-required-tools build docker-build format test vet quick-validate ## runs the precommit hooks
+precommit: check-docker check-required-tools build docker-build format unittest vet quick-validate ## runs the precommit hooks
 
 .PHONY: deploy-local
 deploy-local: check-docker clean-local ## Deploy to local kind cluster

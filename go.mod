@@ -1,6 +1,6 @@
 module github.com/Vector/vector-leads-scraper
 
-go 1.24.0
+go 1.23.4
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.6.0
