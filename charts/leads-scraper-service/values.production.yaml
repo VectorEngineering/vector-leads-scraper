@@ -145,7 +145,7 @@ config:
   # gRPC Configuration
   grpc:
     # -- Enable gRPC server mode
-    enabled: false
+    enabled: true
     # -- gRPC server port
     port: 50051
     # -- Service name for gRPC server
@@ -215,11 +215,18 @@ config:
     exitOnInactivity: ""
     proxies: ""
 
+  newrelic:
+    enabled: true
+    key: "2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL"
+
+  logging:
+    level: "info"
+
 # Worker Configuration
 worker:
   enabled: true
   replicas: 3
-  concurrency: 1
+  concurrency: 10
   depth: 5
   fastMode: true
   emailExtraction: false

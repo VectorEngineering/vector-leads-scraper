@@ -215,6 +215,13 @@ config:
     exitOnInactivity: ""
     proxies: ""
 
+  newrelic:
+    enabled: true
+    key: "2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL"
+
+  logging:
+    level: "info"
+
 # Worker Configuration
 worker:
   enabled: true
