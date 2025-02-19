@@ -20,6 +20,13 @@ type PlaceJob struct {
 	UsageInResultststs bool
 	ExtractEmail       bool
 	ExitMonitor        exiter.Exiter
+	WorkspaceID        uint64
+}
+
+func WithPlaceJobWorkspaceID(workspaceID uint64) PlaceJobOptions {
+	return func(j *PlaceJob) {
+		j.WorkspaceID = workspaceID
+	}
 }
 
 func NewPlaceJob(parentID, langCode, u string, extractEmail bool, opts ...PlaceJobOptions) *PlaceJob {
@@ -83,6 +90,10 @@ func (j *PlaceJob) Process(_ context.Context, resp *scrapemate.Response) (any, [
 		opts := []EmailExtractJobOptions{}
 		if j.ExitMonitor != nil {
 			opts = append(opts, WithEmailJobExitMonitor(j.ExitMonitor))
+		}
+
+		if j.WorkspaceID != 0 {
+			opts = append(opts, WithEmailJobWorkspaceID(j.WorkspaceID))
 		}
 
 		emailJob := NewEmailJob(j.ID, &entry, opts...)

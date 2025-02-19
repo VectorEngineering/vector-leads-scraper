@@ -16,6 +16,9 @@ func (db *Db) UpdateScrapingWorkflow(ctx context.Context, workflow *lead_scraper
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
+	// Get the query operator
+	workflowQop := db.QueryOperator.ScrapingWorkflowORM
+
 	// convert to ORM model
 	workflowORM, err := workflow.ToORM(ctx)
 	if err != nil {
@@ -23,17 +26,17 @@ func (db *Db) UpdateScrapingWorkflow(ctx context.Context, workflow *lead_scraper
 	}
 
 	// update the workflow
-	result := db.Client.Engine.WithContext(ctx).Where("id = ?", workflow.Id).Updates(&workflowORM)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to update scraping workflow: %w", result.Error)
+	if _, err := workflowQop.WithContext(ctx).Where(workflowQop.Id.Eq(workflow.Id)).Updates(&workflowORM); err != nil {
+		return nil, fmt.Errorf("failed to update scraping workflow: %w", err)
 	}
 
 	// get the updated record
-	if result := db.Client.Engine.WithContext(ctx).Where("id = ?", workflow.Id).First(&workflowORM); result.Error != nil {
-		return nil, fmt.Errorf("failed to get updated scraping workflow: %w", result.Error)
+	updatedWorkflow, err := workflowQop.WithContext(ctx).Where(workflowQop.Id.Eq(workflow.Id)).First()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated scraping workflow: %w", err)
 	}
 
-	pbResult, err := workflowORM.ToPB(ctx)
+	pbResult, err := updatedWorkflow.ToPB(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to protobuf: %w", err)
 	}

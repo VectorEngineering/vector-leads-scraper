@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -78,10 +79,14 @@ type RedisContainer struct {
 //	}
 //	defer container.Terminate(ctx)
 func NewRedisContainer(ctx context.Context) (*RedisContainer, error) {
+	portWithProtocol := nat.Port(defaultRedisPort + "/tcp")
 	req := testcontainers.ContainerRequest{
 		Image:        "redis:latest",
-		ExposedPorts: []string{defaultRedisPort + "/tcp"},
-		WaitingFor:   wait.ForLog("Ready to accept connections"),
+		ExposedPorts: []string{string(portWithProtocol)},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Ready to accept connections"),
+			wait.ForListeningPort(portWithProtocol),
+		),
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -94,16 +99,19 @@ func NewRedisContainer(ctx context.Context) (*RedisContainer, error) {
 
 	host, err := container.Host(ctx)
 	if err != nil {
+		container.Terminate(ctx)
 		return nil, fmt.Errorf("failed to get container host: %w", err)
 	}
 
-	mappedPort, err := container.MappedPort(ctx, defaultRedisPort)
+	mappedPort, err := container.MappedPort(ctx, portWithProtocol)
 	if err != nil {
+		container.Terminate(ctx)
 		return nil, fmt.Errorf("failed to get container port: %w", err)
 	}
 
 	port, err := strconv.Atoi(mappedPort.Port())
 	if err != nil {
+		container.Terminate(ctx)
 		return nil, fmt.Errorf("failed to parse port: %w", err)
 	}
 

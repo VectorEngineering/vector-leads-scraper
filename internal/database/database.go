@@ -85,34 +85,50 @@ var (
 // Thread Safety:
 // All methods should be safe for concurrent use by multiple goroutines.
 type DatabaseOperations interface {
+	// Organization operations
+	CreateOrganization(ctx context.Context, input *CreateOrganizationInput) (*lead_scraper_servicev1.Organization, error)
+	GetOrganization(context.Context, *GetOrganizationInput) (*lead_scraper_servicev1.Organization, error)
+	UpdateOrganization(context.Context, *UpdateOrganizationInput) (*lead_scraper_servicev1.Organization, error)
+	DeleteOrganization(context.Context, *DeleteOrganizationInput) error
+	ListOrganizations(context.Context, *ListOrganizationsInput) ([]*lead_scraper_servicev1.Organization, error)
+
+	// Tenant operations
+	CreateTenant(ctx context.Context, input *CreateTenantInput) (*lead_scraper_servicev1.Tenant, error)
+	GetTenant(context.Context, *GetTenantInput) (*lead_scraper_servicev1.Tenant, error)
+	UpdateTenant(context.Context, *UpdateTenantInput) (*lead_scraper_servicev1.Tenant, error)
+	DeleteTenant(context.Context, *DeleteTenantInput) error
+	ListTenants(context.Context, *ListTenantsInput) ([]*lead_scraper_servicev1.Tenant, error)
+
 	// Account operations
 	CreateAccount(ctx context.Context, input *CreateAccountInput) (*lead_scraper_servicev1.Account, error)
 	GetAccount(context.Context, *GetAccountInput) (*lead_scraper_servicev1.Account, error)
-	UpdateAccount(ctx context.Context, account *lead_scraper_servicev1.Account) (*lead_scraper_servicev1.Account, error)
+	UpdateAccount(ctx context.Context, orgId, tenantId uint64, account *lead_scraper_servicev1.Account) (*lead_scraper_servicev1.Account, error)
 	DeleteAccount(context.Context, *DeleteAccountParams) error
 	ListAccounts(ctx context.Context, input *ListAccountsInput) ([]*lead_scraper_servicev1.Account, error)
 
 	// Workspace operations
-	CreateWorkspace(ctx context.Context, workspace *lead_scraper_servicev1.Workspace) (*lead_scraper_servicev1.Workspace, error)
+	CreateWorkspace(ctx context.Context, input *CreateWorkspaceInput) (*lead_scraper_servicev1.Workspace, error)
 	GetWorkspace(ctx context.Context, id uint64) (*lead_scraper_servicev1.Workspace, error)
 	UpdateWorkspace(ctx context.Context, workspace *lead_scraper_servicev1.Workspace) (*lead_scraper_servicev1.Workspace, error)
 	DeleteWorkspace(ctx context.Context, id uint64) error
-	ListWorkspaces(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.Workspace, error)
+	ListWorkspaces(ctx context.Context, accountId uint64, limit, offset int) ([]*lead_scraper_servicev1.Workspace, error)
 
 	// ScrapingJob operations
-	CreateScrapingJob(ctx context.Context, job *lead_scraper_servicev1.ScrapingJob) (*lead_scraper_servicev1.ScrapingJob, error)
+	CreateScrapingJob(context.Context, uint64, *lead_scraper_servicev1.ScrapingJob) (*lead_scraper_servicev1.ScrapingJob, error)
 	GetScrapingJob(ctx context.Context, id uint64) (*lead_scraper_servicev1.ScrapingJob, error)
 	UpdateScrapingJob(ctx context.Context, job *lead_scraper_servicev1.ScrapingJob) (*lead_scraper_servicev1.ScrapingJob, error)
-	BatchUpdateScrapingJobs(ctx context.Context, jobs []*lead_scraper_servicev1.ScrapingJob) ([]*lead_scraper_servicev1.ScrapingJob, error)
+	BatchUpdateScrapingJobs(context.Context, uint64, []*lead_scraper_servicev1.ScrapingJob) ([]*lead_scraper_servicev1.ScrapingJob, error)
 	DeleteScrapingJob(ctx context.Context, id uint64) error
 	ListScrapingJobs(ctx context.Context, limit, offset uint64) ([]*lead_scraper_servicev1.ScrapingJob, error)
 
 	// ScrapingWorkflow operations
-	CreateScrapingWorkflow(ctx context.Context, workflow *lead_scraper_servicev1.ScrapingWorkflow) (*lead_scraper_servicev1.ScrapingWorkflow, error)
+	CreateScrapingWorkflow(context.Context, uint64, *lead_scraper_servicev1.ScrapingWorkflow) (*lead_scraper_servicev1.ScrapingWorkflow, error)
 	GetScrapingWorkflow(ctx context.Context, id uint64) (*lead_scraper_servicev1.ScrapingWorkflow, error)
 	UpdateScrapingWorkflow(ctx context.Context, workflow *lead_scraper_servicev1.ScrapingWorkflow) (*lead_scraper_servicev1.ScrapingWorkflow, error)
 	DeleteScrapingWorkflow(ctx context.Context, id uint64) error
 	ListScrapingWorkflows(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.ScrapingWorkflow, error)
+	BatchCreateScrapingWorkflows(ctx context.Context, workspaceID uint64, workflows []*lead_scraper_servicev1.ScrapingWorkflow) ([]*lead_scraper_servicev1.ScrapingWorkflow, error)
+	BatchDeleteScrapingWorkflows(ctx context.Context, ids []uint64) error
 
 	// Lead operations
 	CreateLead(ctx context.Context, jobID uint64, lead *lead_scraper_servicev1.Lead) (*lead_scraper_servicev1.Lead, error)
@@ -123,11 +139,28 @@ type DatabaseOperations interface {
 	ListLeads(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.Lead, error)
 
 	// APIKey operations
-	CreateAPIKey(ctx context.Context, apiKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error)
+	CreateAPIKey(ctx context.Context, workspaceId uint64, apiKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error)
 	GetAPIKey(ctx context.Context, id uint64) (*lead_scraper_servicev1.APIKey, error)
 	UpdateAPIKey(ctx context.Context, apiKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error)
 	DeleteAPIKey(ctx context.Context, id uint64) error
 	ListAPIKeys(ctx context.Context, limit, offset int) ([]*lead_scraper_servicev1.APIKey, error)
+
+	// WebhookConfig operations
+	CreateWebhookConfig(ctx context.Context, workspaceId uint64, webhook *lead_scraper_servicev1.WebhookConfig) (*lead_scraper_servicev1.WebhookConfig, error)
+	GetWebhookConfig(ctx context.Context, workspaceId uint64, webhookId uint64) (*lead_scraper_servicev1.WebhookConfig, error)
+	UpdateWebhookConfig(ctx context.Context, workspaceId uint64, webhook *lead_scraper_servicev1.WebhookConfig) (*lead_scraper_servicev1.WebhookConfig, error)
+	DeleteWebhookConfig(ctx context.Context, workspaceId uint64, webhookId uint64, deletionType DeletionType) error
+	ListWebhookConfigs(ctx context.Context, workspaceId uint64, limit int, offset int) ([]*lead_scraper_servicev1.WebhookConfig, error)
+
+	// TenantAPIKey operations
+	CreateTenantApiKey(ctx context.Context, tenantId uint64, apiKey *lead_scraper_servicev1.TenantAPIKey) (*lead_scraper_servicev1.TenantAPIKey, error)
+	GetTenantApiKey(ctx context.Context, tenantId uint64, apiKeyId uint64) (*lead_scraper_servicev1.TenantAPIKey, error)
+	UpdateTenantApiKey(ctx context.Context, tenantId uint64, apiKey *lead_scraper_servicev1.TenantAPIKey) (*lead_scraper_servicev1.TenantAPIKey, error)
+	DeleteTenantApiKey(ctx context.Context, tenantId uint64, apiKeyId uint64, deletionType DeletionType) error
+	ListTenantApiKeys(ctx context.Context, tenantId uint64, limit int, offset int) ([]*lead_scraper_servicev1.TenantAPIKey, error)
+
+	RotateAPIKey(ctx context.Context, workspaceId uint64, keyId uint64, newKey *lead_scraper_servicev1.APIKey) (*lead_scraper_servicev1.APIKey, error)
+	ListScrapingJobsByParams(ctx context.Context, input *ListScrapingJobsByWorkspaceInput) ([]*lead_scraper_servicev1.ScrapingJob, error)
 }
 
 // Db implements DatabaseOperations and provides connection handling for PostgreSQL.

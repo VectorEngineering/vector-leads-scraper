@@ -25,8 +25,23 @@ type GmapJob struct {
 	LangCode     string
 	ExtractEmail bool
 
-	Deduper     deduper.Deduper
-	ExitMonitor exiter.Exiter
+	Deduper       deduper.Deduper
+	ExitMonitor   exiter.Exiter
+	WorkspaceID   uint64
+	ScrapingJobID uint64
+	Zoom          int
+}
+
+func WithWorkspaceID(workspaceID uint64) GmapJobOptions {
+	return func(j *GmapJob) {
+		j.WorkspaceID = workspaceID
+	}
+}
+
+func WithScrapingJobID(scrapingJobID uint64) GmapJobOptions {
+	return func(j *GmapJob) {
+		j.ScrapingJobID = scrapingJobID
+	}
 }
 
 func NewGmapJob(
@@ -68,6 +83,7 @@ func NewGmapJob(
 		MaxDepth:     maxDepth,
 		LangCode:     langCode,
 		ExtractEmail: extractEmail,
+		Zoom:         zoom,
 	}
 
 	for _, opt := range opts {
@@ -114,6 +130,10 @@ func (j *GmapJob) Process(ctx context.Context, resp *scrapemate.Response) (any, 
 			jopts = append(jopts, WithPlaceJobExitMonitor(j.ExitMonitor))
 		}
 
+		if j.WorkspaceID != 0 {
+			jopts = append(jopts, WithPlaceJobWorkspaceID(j.WorkspaceID))
+		}
+
 		placeJob := NewPlaceJob(j.ID, j.LangCode, resp.URL, j.ExtractEmail, jopts...)
 
 		next = append(next, placeJob)
@@ -123,6 +143,10 @@ func (j *GmapJob) Process(ctx context.Context, resp *scrapemate.Response) (any, 
 				jopts := []PlaceJobOptions{}
 				if j.ExitMonitor != nil {
 					jopts = append(jopts, WithPlaceJobExitMonitor(j.ExitMonitor))
+				}
+
+				if j.WorkspaceID != 0 {
+					jopts = append(jopts, WithPlaceJobWorkspaceID(j.WorkspaceID))
 				}
 
 				nextJob := NewPlaceJob(j.ID, j.LangCode, href, j.ExtractEmail, jopts...)

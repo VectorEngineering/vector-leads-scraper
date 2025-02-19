@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "leads-scraper-service.labels" . | nindent 8 }}
+        {{- include "leads-scraper-service.selectorLabels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -30,6 +30,15 @@ spec:
       serviceAccountName: {{ include "leads-scraper-service.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if eq .Values.config.grpc.environment "development" }}
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - until nc -z -w1 {{ .Values.config.redis.host }} {{ .Values.config.redis.port }}; do echo waiting for Redis; sleep 2; done;
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -37,9 +46,40 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
-            # Required flags for web server mode
-            - "-web"
-            - "-dsn={{ include "leads-scraper-service.postgresql.dsn" . }}"
+            # Enable gRPC mode
+            {{- if .Values.config.grpc.enabled }}
+            - "--grpc"
+            # gRPC configuration
+            - "--grpc-port={{ .Values.config.grpc.port }}"
+            - "--grpc-deadline={{ .Values.config.grpc.deadline }}"
+            - "--grpc-retries={{ .Values.config.grpc.retries }}"
+            - "--grpc-retry-delay={{ .Values.config.grpc.retryDelay }}"
+            - "--service-name={{ .Values.config.grpc.serviceName }}"
+            - "--environment={{ .Values.config.grpc.environment }}"
+            {{- end }}
+            # Database configuration
+            - "--db-url={{ include "leads-scraper-service.postgresql.dsn" . }}"
+            - "--db-max-idle-connections={{ .Values.config.database.maxIdleConnections }}"
+            - "--db-max-open-connections={{ .Values.config.database.maxOpenConnections }}"
+            - "--db-max-connection-lifetime={{ .Values.config.database.maxConnectionLifetime }}"
+            - "--db-max-connection-retry-timeout={{ .Values.config.database.maxConnectionRetryTimeout }}"
+            - "--db-retry-sleep={{ .Values.config.database.retrySleep }}"
+            - "--db-query-timeout={{ .Values.config.database.queryTimeout }}"
+            - "--db-max-connection-retries={{ .Values.config.database.maxConnectionRetries }}"
+            # Redis configuration
+            {{- if .Values.config.redis.enabled }}
+            - "--redis-enabled=true"
+            - "--redis-url={{ .Values.config.redis.dsn }}"
+            - "--redis-workers={{ .Values.config.redis.workers }}"
+            - "--redis-retry-interval={{ .Values.config.redis.retryInterval }}"
+            - "--redis-max-retries={{ .Values.config.redis.maxRetries }}"
+            - "--redis-retention-days={{ .Values.config.redis.retentionDays }}"
+            {{- end }}
+            # Monitoring and logging
+            {{- if .Values.config.newrelic.enabled }}
+            - "--newrelic-key={{ .Values.config.newrelic.key }}"
+            {{- end }}
+            - "--log-level={{ .Values.config.logging.level }}"
             # Core scraper settings
             - "-c={{ .Values.config.scraper.concurrency }}"
             - "-depth={{ .Values.config.scraper.depth }}"
@@ -89,10 +129,43 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            {{- if .Values.config.grpc.enabled }}
+            - name: grpc
+              containerPort: {{ .Values.config.grpc.port }}
+              protocol: TCP
+            {{- end }}
+          {{- if .Values.web.livenessProbe }}
           livenessProbe:
-            {{- toYaml .Values.livenessProbe | nindent 12 }}
+            {{- if .Values.web.livenessProbe.http }}
+            httpGet:
+              path: {{ .Values.web.livenessProbe.http.path }}
+              port: {{ .Values.web.livenessProbe.http.port }}
+            initialDelaySeconds: {{ .Values.web.livenessProbe.http.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.livenessProbe.http.periodSeconds }}
+            {{- end }}
+            {{- if and .Values.config.grpc.enabled .Values.web.livenessProbe.grpc }}
+            tcpSocket:
+              port: {{ .Values.web.livenessProbe.grpc.tcpSocket.port }}
+            initialDelaySeconds: {{ .Values.web.livenessProbe.grpc.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.livenessProbe.grpc.periodSeconds }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.web.readinessProbe }}
           readinessProbe:
-            {{- toYaml .Values.readinessProbe | nindent 12 }}
+            {{- if .Values.web.readinessProbe.http }}
+            httpGet:
+              path: {{ .Values.web.readinessProbe.http.path }}
+              port: {{ .Values.web.readinessProbe.http.port }}
+            initialDelaySeconds: {{ .Values.web.readinessProbe.http.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.readinessProbe.http.periodSeconds }}
+            {{- end }}
+            {{- if and .Values.config.grpc.enabled .Values.web.readinessProbe.grpc }}
+            tcpSocket:
+              port: {{ .Values.web.readinessProbe.grpc.tcpSocket.port }}
+            initialDelaySeconds: {{ .Values.web.readinessProbe.grpc.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.readinessProbe.grpc.periodSeconds }}
+            {{- end }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}

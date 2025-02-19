@@ -14,6 +14,9 @@ import (
 )
 
 func TestCreateScrapingWorkflow(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	validWorkflow := &lead_scraper_servicev1.ScrapingWorkflow{
 		CronExpression:        "0 0 * * *",
 		RetryCount:            0,
@@ -34,11 +37,12 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		workflow  *lead_scraper_servicev1.ScrapingWorkflow
-		wantError bool
-		errType   error
-		validate  func(t *testing.T, workflow *lead_scraper_servicev1.ScrapingWorkflow)
+		name        string
+		workflow    *lead_scraper_servicev1.ScrapingWorkflow
+		workspaceID uint64
+		wantError   bool
+		errType     error
+		validate    func(t *testing.T, workflow *lead_scraper_servicev1.ScrapingWorkflow)
 	}{
 		{
 			name:      "[success scenario] - valid workflow",
@@ -64,6 +68,7 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 				assert.Equal(t, validWorkflow.AcceptTermsOfService, workflow.AcceptTermsOfService)
 				assert.Equal(t, validWorkflow.UserAgent, workflow.UserAgent)
 			},
+			workspaceID: tc.Workspace.Id,
 		},
 		{
 			name:      "[failure scenario] - nil workflow",
@@ -79,8 +84,9 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 				GeoFencingZoomMin: 1,
 				GeoFencingZoomMax: 20,
 			},
-			wantError: true,
-			errType:   ErrInvalidInput,
+			workspaceID: tc.Workspace.Id,
+			wantError:   true,
+			errType:     ErrInvalidInput,
 		},
 		{
 			name: "[failure scenario] - invalid geo fencing parameters",
@@ -93,8 +99,9 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 				GeoFencingZoomMin: 1,
 				GeoFencingZoomMax: 20,
 			},
-			wantError: true,
-			errType:   ErrInvalidInput,
+			wantError:   true,
+			errType:     ErrInvalidInput,
+			workspaceID: tc.Workspace.Id,
 		},
 		{
 			name:      "[failure scenario] - context timeout",
@@ -113,7 +120,7 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 				time.Sleep(2 * time.Millisecond)
 			}
 
-			result, err := conn.CreateScrapingWorkflow(ctx, tt.workflow)
+			result, err := conn.CreateScrapingWorkflow(ctx, tt.workspaceID, tt.workflow)
 
 			if tt.wantError {
 				require.Error(t, err)
@@ -141,6 +148,9 @@ func TestCreateScrapingWorkflow(t *testing.T) {
 }
 
 func TestCreateScrapingWorkflow_ConcurrentCreation(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	numWorkflows := 5
 	var wg sync.WaitGroup
 	errors := make(chan error, numWorkflows)
@@ -170,7 +180,7 @@ func TestCreateScrapingWorkflow_ConcurrentCreation(t *testing.T) {
 				UserAgent:             fmt.Sprintf("TestBot/%d", index),
 			}
 
-			created, err := conn.CreateScrapingWorkflow(context.Background(), workflow)
+			created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, workflow)
 			if err != nil {
 				errors <- err
 				return
@@ -225,9 +235,16 @@ func TestCreateScrapingWorkflow_ConcurrentCreation(t *testing.T) {
 }
 
 func TestBatchCreateScrapingWorkflows(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workspace first
-	testWorkspace := testutils.GenerateRandomWorkspace()
-	createdWorkspace, err := conn.CreateWorkspace(context.Background(), testWorkspace)
+	createdWorkspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, createdWorkspace)
 
@@ -367,9 +384,16 @@ func TestBatchCreateScrapingWorkflows(t *testing.T) {
 }
 
 func TestBatchCreateScrapingWorkflows_LargeBatch(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workspace
-	testWorkspace := testutils.GenerateRandomWorkspace()
-	createdWorkspace, err := conn.CreateWorkspace(context.Background(), testWorkspace)
+	createdWorkspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, createdWorkspace)
 

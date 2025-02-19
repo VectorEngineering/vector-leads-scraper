@@ -16,6 +16,7 @@ import (
 	"github.com/Vector/vector-leads-scraper/runner/lambdaaws"
 	"github.com/Vector/vector-leads-scraper/runner/redisrunner"
 	"github.com/Vector/vector-leads-scraper/runner/webrunner"
+	"github.com/Vector/vector-leads-scraper/runner/workerrunner"
 )
 
 func main() {
@@ -79,6 +80,8 @@ func runnerFactory(cfg *runner.Config) (runner.Runner, error) {
 		return lambdaaws.New(cfg)
 	case runner.RunModeAwsLambdaInvoker:
 		return lambdaaws.NewInvoker(cfg)
+	case runner.RunModeWorker:
+		return workerrunner.New(cfg)
 	case runner.RunModeRedis:
 		return redisrunner.New(cfg)
 	case runner.RunModeGRPC:

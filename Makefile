@@ -164,8 +164,11 @@ format: ## runs go fmt
 test: ## runs the unit tests
 	go clean -testcache  && go test -v -race -timeout 5m ./...
 
+unittest:
+	go clean -testcache && go test -v -timeout 5m ./...
+
 test-cover: ## outputs the coverage statistics
-	go test -v -race -timeout 5m ./... -coverprofile coverage.out
+	go clean -testcache  && go test -v -race -timeout 5m ./... -coverprofile coverage.out
 	go tool cover -func coverage.out
 	rm coverage.out
 
@@ -210,14 +213,78 @@ build: ## builds the executable
 run: build ## builds and runs the application
 	./bin/$(APP_NAME)
 
+run-grpc: build ## builds and runs the application in GRPC mode
+	SERVICE_NAME=vector-leads-scraper \
+	VERSION=$(VERSION) \
+	GIT_COMMIT=$(GIT_COMMIT) \
+	BUILD_TIME=$(BUILD_TIME) \
+	GO_VERSION=$(GO_VERSION) \
+	PLATFORM=$(PLATFORM) \
+	GRPC_PORT=50051 \
+	RK_BOOT_CONFIG_PATH=./boot.yaml \
+	./bin/$(APP_NAME) --grpc \
+		--grpc-port=50051 \
+		--addr=:50051 \
+		--service-name=vector-leads-scraper \
+		--environment=development \
+		--redis-enabled=true \
+		--redis-host=localhost \
+		--redis-port=6379 \
+		--redis-password=redispass \
+		--redis-workers=10 \
+		--redis-retry-interval=5s \
+		--redis-max-retries=3 \
+		--redis-retention-days=7 \
+		--newrelic-key=2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL \
+		--db-url="postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+
+run-worker:
+	SERVICE_NAME=vector-leads-scraper \
+        VERSION=$(VERSION) \
+        GIT_COMMIT=$(GIT_COMMIT) \
+        BUILD_TIME=$(BUILD_TIME) \
+        GO_VERSION=$(GO_VERSION) \
+        PLATFORM=$(PLATFORM) \
+        ./bin/google_maps_scraper --worker \
+                --service-name=vector-leads-scraper \
+                --environment=development \
+                --redis-enabled=true \
+                --redis-host=localhost \
+                --redis-port=6379 \
+                --redis-password=redispass \
+                --redis-workers=10 \
+                --redis-retry-interval=5s \
+                --redis-max-retries=3 \
+                --redis-retention-days=7 \
+                --newrelic-key=2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL \
+                --db-url="postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" \
+                -c=10 \
+                -depth=5 \
+                -lang=en \
+                -fast-mode=true \
+                -radius=10000 \
+                -zoom=15 \
+                --exit-on-inactivity=1h \
+                --log-level=info
+
+run-worker-dev: docker-dev build ## Run the worker with development dependencies
+	@echo "Starting worker with development dependencies..."
+	@echo "Waiting for dependencies to be ready..."
+	@sleep 5
+	$(MAKE) run-worker
+
 docker-run: docker-build ## builds and runs the docker container
 	docker run -p 8080:8080 gosom/google-maps-scraper:$(VERSION)
 
-precommit: check-docker check-required-tools build docker-build format test vet quick-validate ## runs the precommit hooks
+precommit: check-docker check-required-tools build docker-build format unittest vet quick-validate ## runs the precommit hooks
 
 .PHONY: deploy-local
 deploy-local: check-docker clean-local ## Deploy to local kind cluster
 	./scripts/deploy-local.sh $(if $(ENABLE_TESTS),--enable-tests)
+
+.PHONY: deploy-worker
+deploy-worker: check-docker clean-local ## Deploy only the worker component to local kind cluster
+	./scripts/deploy-local.sh --worker-only $(if $(ENABLE_TESTS),--enable-tests)
 
 .PHONY: clean-local
 clean-local: ## Clean up local deployment
@@ -233,3 +300,111 @@ port-forward: ## Port forward the service to localhost (only if needed)
 .PHONY: helm-docs
 helm-docs: check-helm-docs ## Generate Helm chart documentation
 	$(HELM_DOCS) -t ./charts/$(CHART_NAME)/.helm-docs.gotmpl -o ./charts/$(CHART_NAME)/README.md
+
+# gRPC testing targets
+.PHONY: install-grpcurl
+install-grpcurl: ## Install grpcurl
+	@which grpcurl >/dev/null || (echo "Installing grpcurl..." && \
+		go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest)
+
+.PHONY: cleanup-grpc
+cleanup-grpc: ## Kill any existing gRPC server instances and cleanup ports
+	@echo "Cleaning up existing gRPC processes..."
+	@-pkill -f "google_maps_scraper.*--grpc" || true
+	@-lsof -ti:50051 | xargs kill -9 || true
+	@sleep 2
+
+.PHONY: start-grpc-dev
+start-grpc-dev: cleanup-grpc ## Start gRPC service in development mode with required dependencies
+	@echo "Starting development environment..."
+	@$(MAKE) docker-dev
+	@echo "Starting gRPC service..."
+	@$(MAKE) run-grpc
+
+.PHONY: test-grpc-api
+test-grpc-api: install-grpcurl ## Test gRPC API endpoints using grpcurl
+	@echo "Testing gRPC API endpoints..."
+	@./test-grpc.sh
+
+.PHONY: grpc-dev
+grpc-dev: start-grpc-dev test-grpc-api ## Start gRPC service and run all tests
+
+.PHONY: stop-grpc-dev
+stop-grpc-dev: ## Stop gRPC service and cleanup
+	@echo "Stopping development environment..."
+	@$(MAKE) docker-dev-down
+	@echo "Cleaning up..."
+	@pkill -f "$(APP_NAME)" || true
+
+# Add this to the help target's dependencies
+help: install-grpcurl
+
+.PHONY: start-all
+start-all: ## Start all components (database, redis, migrations, and gRPC service)
+	@echo "Starting all components..."
+	@echo "1. Starting infrastructure (database and redis)..."
+	@docker-compose -f docker-compose.dev.yaml up -d
+	@echo "Waiting for database to be ready..."
+	@sleep 5
+	@echo "2. Starting gRPC service..."
+	@SERVICE_NAME=vector-leads-scraper \
+		VERSION=$(VERSION) \
+		GIT_COMMIT=$(GIT_COMMIT) \
+		BUILD_TIME=$(BUILD_TIME) \
+		GO_VERSION=$(GO_VERSION) \
+		PLATFORM=$(PLATFORM) \
+		GRPC_PORT=50051 \
+		RK_BOOT_CONFIG_PATH=./boot.yaml \
+		./bin/$(APP_NAME) --grpc \
+			--grpc-port=50051 \
+			--addr=:50051 \
+			--service-name=vector-leads-scraper \
+			--environment=development \
+			--redis-enabled=true \
+			--redis-host=localhost \
+			--redis-port=6379 \
+			--redis-password=redispass \
+			--redis-workers=10 \
+			--redis-retry-interval=5s \
+			--redis-max-retries=3 \
+			--redis-retention-days=7 \
+			--newrelic-key=3db525a8b39e0ebe981b87d98bd8792cFFFFNRAL \
+			--db-url="postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" &
+	@echo "Waiting for gRPC service to be ready..."
+	@sleep 5
+	@echo "All components started successfully!"
+	@echo "You can now run: make test-grpc-api"
+
+run-grpc-dev: docker-dev build ## Run the service in gRPC mode with development dependencies
+	@echo "Starting service in gRPC mode with development dependencies..."
+	@echo "Waiting for dependencies to be ready..."
+	@sleep 5
+	SERVICE_NAME=vector-leads-scraper \
+	VERSION=$(VERSION) \
+	GIT_COMMIT=$(GIT_COMMIT) \
+	BUILD_TIME=$(BUILD_TIME) \
+	GO_VERSION=$(GO_VERSION) \
+	PLATFORM=$(PLATFORM) \
+	GRPC_PORT=50051 \
+	RK_BOOT_CONFIG_PATH=./boot.yaml \
+	./bin/$(APP_NAME) --enable-grpc \
+		--grpc-port=50051 \
+		--addr=:50051 \
+		--service-name=vector-leads-scraper \
+		--environment=development \
+		--redis-enabled=true \
+		--redis-host=localhost \
+		--redis-port=6379 \
+		--redis-password=redispass \
+		--redis-workers=10 \
+		--redis-retry-interval=5s \
+		--redis-max-retries=3 \
+		--redis-retention-days=7 \
+		--newrelic-key=2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL \
+		--db-url="postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+
+deploy-local-grpc: check-docker clean-local ## Deploy to local kind cluster with gRPC enabled
+	@echo "Deploying service to local kind cluster with gRPC enabled..."
+	./scripts/deploy-local.sh --enable-grpc $(if $(ENABLE_TESTS),--enable-tests)
+
+.PHONY: run-grpc-dev deploy-local-grpc

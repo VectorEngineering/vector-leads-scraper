@@ -1,5 +1,5 @@
 # Build stage for Playwright dependencies
-FROM golang:1.23.2-bullseye AS playwright-deps
+FROM golang:1.23.4-bullseye AS playwright-deps
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/browsers
 #ENV PLAYWRIGHT_DRIVER_PATH=/opt/
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -14,14 +14,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && playwright install chromium --with-deps
 
 # Build stage
-FROM golang:1.23.2-bullseye AS builder
+FROM golang:1.23.4-bullseye AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-# Create necessary directories and copy boot.yaml
-RUN mkdir -p /etc/vector-leads-scraper && \
-    cp boot.yaml /etc/vector-leads-scraper/boot.yaml
+# Copy boot.yaml to root directory
+RUN cp boot.yaml /boot.yaml
 RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/bin/google-maps-scraper
 
 # Final stage
@@ -31,7 +30,7 @@ ENV PLAYWRIGHT_DRIVER_PATH=/opt
 
 # Copy from builder stage
 COPY --from=builder /usr/bin/google-maps-scraper /usr/bin/google-maps-scraper
-COPY --from=builder /etc/vector-leads-scraper/boot.yaml /etc/vector-leads-scraper/boot.yaml
+COPY --from=builder /boot.yaml /boot.yaml
 
 # Install only the necessary dependencies in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -63,6 +62,6 @@ COPY --from=playwright-deps /root/.cache/ms-playwright-go /opt/ms-playwright-go
 
 RUN chmod -R 755 /opt/browsers \
     && chmod -R 755 /opt/ms-playwright-go \
-    && chmod 644 /etc/vector-leads-scraper/boot.yaml
+    && chmod 644 /boot.yaml
 
 ENTRYPOINT ["google-maps-scraper"]

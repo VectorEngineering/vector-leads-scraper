@@ -20,14 +20,17 @@ func (db *Db) ListLeads(ctx context.Context, limit, offset int) ([]*lead_scraper
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
-	var leadsORM []lead_scraper_servicev1.LeadORM
-	result := db.Client.Engine.WithContext(ctx).
-		Order("id asc").
+	// Get the query operator
+	leadQop := db.QueryOperator.LeadORM
+
+	// Get the leads
+	leadsORM, err := leadQop.WithContext(ctx).
+		Order(leadQop.Id.Desc()).
 		Limit(limit).
 		Offset(offset).
-		Find(&leadsORM)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to list leads: %w", result.Error)
+		Find()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list leads: %w", err)
 	}
 
 	leads := make([]*lead_scraper_servicev1.Lead, 0, len(leadsORM))

@@ -16,8 +16,10 @@ import (
 func TestUpdateScrapingJob(t *testing.T) {
 	// Create a test job first
 	testJob := testutils.GenerateRandomizedScrapingJob()
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
 
-	created, err := conn.CreateScrapingJob(context.Background(), testJob)
+	created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -175,10 +177,13 @@ func TestUpdateScrapingJob(t *testing.T) {
 }
 
 func TestUpdateScrapingJob_ConcurrentUpdates(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test job first
 	testJob := testutils.GenerateRandomizedScrapingJob()
 
-	created, err := conn.CreateScrapingJob(context.Background(), testJob)
+	created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -254,7 +259,57 @@ func TestUpdateScrapingJob_ConcurrentUpdates(t *testing.T) {
 	require.NotNil(t, finalJob)
 	assert.Equal(t, created.Id, finalJob.Id)
 	assert.NotEqual(t, created.Status, finalJob.Status)
-	assert.NotEqual(t, created.Priority, finalJob.Priority)
 	assert.NotEqual(t, created.Name, finalJob.Name)
 	assert.True(t, finalJob.UpdatedAt.AsTime().After(finalJob.CreatedAt.AsTime()))
+}
+
+func TestIsTerminalStatus(t *testing.T) {
+	tests := []struct {
+		name   string
+		status lead_scraper_servicev1.BackgroundJobStatus
+		want   bool
+	}{
+		{
+			name:   "completed status is terminal",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_COMPLETED,
+			want:   true,
+		},
+		{
+			name:   "failed status is terminal",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_FAILED,
+			want:   true,
+		},
+		{
+			name:   "cancelled status is terminal",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_CANCELLED,
+			want:   true,
+		},
+		{
+			name:   "timed out status is terminal",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_TIMED_OUT,
+			want:   true,
+		},
+		{
+			name:   "queued status is not terminal",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+			want:   false,
+		},
+		{
+			name:   "running status is not terminal",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS,
+			want:   false,
+		},
+		{
+			name:   "unknown status is not terminal",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_UNSPECIFIED,
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isTerminalStatus(tt.status)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }

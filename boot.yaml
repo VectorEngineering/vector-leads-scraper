@@ -2,7 +2,7 @@
 app:
   description: "Vector Leads Scraper Service"
   keywords: ["vector", "leads", "scraper"]
-  name: "${SERVICE_NAME:vector-leads-scraper}"
+  name: "vector-leads-scraper"
   version: "${VERSION:1.0.0}"
   maintainers: []
 
@@ -35,7 +35,7 @@ logger:
       outputPaths: ["stdout"]
       errorOutputPaths: ["stderr"]
       initialFields:
-        service: "${SERVICE_NAME:vector-leads-scraper}"
+        service: "vector-leads-scraper"
         mode: "grpc"
         version: "${VERSION:1.0.0}"
         gitCommit: "${GIT_COMMIT:unknown}"
@@ -43,10 +43,12 @@ logger:
         goVersion: "${GO_VERSION:unknown}"
         platform: "${PLATFORM:unknown}"
       compress: true
-
+event:
+  - name: service-event-logger
+    outputPaths: [""]
 grpc:
-  - name: "${SERVICE_NAME:vector-leads-scraper}"
-    port: 0  # Will be set from config
+  - name: "vector-leads-scraper"
+    port: 50051  # Fixed port number
     enabled: true
     enableReflection: true
     description: "Vector Leads Scraper gRPC Service"
@@ -54,7 +56,8 @@ grpc:
     middleware:
       logging:
         enabled: true
-        loggerEncoding: "json"
+        loggerEncoding: "flatten"
+        eventEncoding: "flatten"
       timeout:
         enabled: true
         timeoutMs: 30000  # 30 seconds for graceful shutdown

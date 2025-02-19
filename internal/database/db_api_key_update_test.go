@@ -14,9 +14,12 @@ import (
 )
 
 func TestUpdateAPIKey(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test API key first
 	testKey := testutils.GenerateRandomAPIKey()
-	created, err := conn.CreateAPIKey(context.Background(), testKey)
+	created, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, testKey)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -42,8 +45,6 @@ func TestUpdateAPIKey(t *testing.T) {
 				Name:                "Updated Key Name",
 				KeyHash:             "updated_hash",
 				KeyPrefix:           "updated_prefix",
-				OrgId:               "updated_org",
-				TenantId:            "updated_tenant",
 				Scopes:              []string{"read", "write", "admin"},
 				AllowedIps:          []string{"192.168.1.1", "192.168.1.2"},
 				IsTestKey:           true,
@@ -60,8 +61,6 @@ func TestUpdateAPIKey(t *testing.T) {
 				assert.Equal(t, "Updated Key Name", apiKey.Name)
 				assert.Equal(t, "updated_hash", apiKey.KeyHash)
 				assert.Equal(t, "updated_prefix", apiKey.KeyPrefix)
-				assert.Equal(t, "updated_org", apiKey.OrgId)
-				assert.Equal(t, "updated_tenant", apiKey.TenantId)
 				assert.Equal(t, []string{"read", "write", "admin"}, apiKey.Scopes)
 				assert.Equal(t, []string{"192.168.1.1", "192.168.1.2"}, apiKey.AllowedIps)
 				assert.True(t, apiKey.IsTestKey)
@@ -134,9 +133,12 @@ func TestUpdateAPIKey(t *testing.T) {
 }
 
 func TestUpdateAPIKey_ConcurrentUpdates(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test API key first
 	testKey := testutils.GenerateRandomAPIKey()
-	created, err := conn.CreateAPIKey(context.Background(), testKey)
+	created, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, testKey)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -162,8 +164,6 @@ func TestUpdateAPIKey_ConcurrentUpdates(t *testing.T) {
 				Name:                fmt.Sprintf("Updated Key %d", index),
 				KeyHash:             fmt.Sprintf("hash_%d", index),
 				KeyPrefix:           fmt.Sprintf("prefix_%d", index),
-				OrgId:               created.OrgId,
-				TenantId:            created.TenantId,
 				Scopes:              []string{"read", "write"},
 				AllowedIps:          []string{"192.168.1.1"},
 				IsTestKey:           true,

@@ -12,11 +12,20 @@ import (
 func TestCreateWebhookConfig(t *testing.T) {
 	ctx := context.Background()
 
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workspace
-	workspace, err := conn.CreateWorkspace(ctx, &lead_scraper_servicev1.Workspace{
-		Name:     "Test Workspace",
-		Industry: "Technology",
-		Domain:   "test.com",
+	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
+		Workspace: &lead_scraper_servicev1.Workspace{
+			Name:              "Test Workspace",
+			Industry:          "Technology",
+			Domain:            "test@example.com",
+			WorkspaceJobLimit: 100,
+		},
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, workspace)
@@ -90,11 +99,20 @@ func TestCreateWebhookConfig(t *testing.T) {
 func TestGetWebhookConfig(t *testing.T) {
 	ctx := context.Background()
 
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workspace
-	workspace, err := conn.CreateWorkspace(ctx, &lead_scraper_servicev1.Workspace{
-		Name:     "Test Workspace",
-		Industry: "Technology",
-		Domain:   "test.com",
+	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
+		Workspace: &lead_scraper_servicev1.Workspace{
+			Name:              "Test Workspace",
+			Industry:          "Technology",
+			Domain:            "test@example.com",
+			WorkspaceJobLimit: 100,
+		},
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, workspace)
@@ -184,12 +202,19 @@ func TestGetWebhookConfig(t *testing.T) {
 
 func TestUpdateWebhookConfig(t *testing.T) {
 	ctx := context.Background()
-
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
 	// Create a test workspace
-	workspace, err := conn.CreateWorkspace(ctx, &lead_scraper_servicev1.Workspace{
-		Name:     "Test Workspace",
-		Industry: "Technology",
-		Domain:   "test.com",
+	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
+		Workspace: &lead_scraper_servicev1.Workspace{
+			Name:              "Test Workspace",
+			Industry:          "Technology",
+			Domain:            "test@example.com",
+			WorkspaceJobLimit: 100,
+		},
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, workspace)
@@ -238,16 +263,14 @@ func TestUpdateWebhookConfig(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:          "invalid workspace id",
-			workspaceId:   0,
-			webhook:       webhook,
-			expectError:   true,
-			errorContains: "invalid input",
-		},
-		{
-			name:          "nil webhook",
-			workspaceId:   workspace.Id,
-			webhook:       nil,
+			name:        "invalid workspace id",
+			workspaceId: 0,
+			webhook: &lead_scraper_servicev1.WebhookConfig{
+				WebhookName: "Updated Webhook",
+				Url:         "https",
+				AuthType:    "bearer",
+				AuthToken:   "updated-token",
+			},
 			expectError:   true,
 			errorContains: "invalid input",
 		},
@@ -255,8 +278,9 @@ func TestUpdateWebhookConfig(t *testing.T) {
 			name:        "non-existent webhook",
 			workspaceId: workspace.Id,
 			webhook: &lead_scraper_servicev1.WebhookConfig{
-				Id:          999999,
+				Id:          9999999,
 				WebhookName: "Non-existent",
+				Url:         "https://non-existent.com/webhook",
 			},
 			expectError:   true,
 			errorContains: "not found",
@@ -265,7 +289,7 @@ func TestUpdateWebhookConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := conn.UpdateWebhookConfig(ctx, tt.workspaceId, tt.webhook)
+			result, err := conn.UpdateWebhookConfig(ctx, tt.webhook.Id, tt.webhook)
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errorContains)
@@ -285,12 +309,19 @@ func TestUpdateWebhookConfig(t *testing.T) {
 
 func TestDeleteWebhookConfig(t *testing.T) {
 	ctx := context.Background()
-
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
 	// Create a test workspace
-	workspace, err := conn.CreateWorkspace(ctx, &lead_scraper_servicev1.Workspace{
-		Name:     "Test Workspace",
-		Industry: "Technology",
-		Domain:   "test.com",
+	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
+		Workspace: &lead_scraper_servicev1.Workspace{
+			Name:              "Test Workspace",
+			Industry:          "Technology",
+			Domain:            "test@example.com",
+			WorkspaceJobLimit: 100,
+		},
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, workspace)
@@ -388,12 +419,20 @@ func TestDeleteWebhookConfig(t *testing.T) {
 
 func TestListWebhookConfigs(t *testing.T) {
 	ctx := context.Background()
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
 
 	// Create a test workspace
-	workspace, err := conn.CreateWorkspace(ctx, &lead_scraper_servicev1.Workspace{
-		Name:     "Test Workspace",
-		Industry: "Technology",
-		Domain:   "test.com",
+	workspace, err := conn.CreateWorkspace(ctx, &CreateWorkspaceInput{
+		Workspace: &lead_scraper_servicev1.Workspace{
+			Name:              "Test Workspace",
+			Industry:          "Technology",
+			Domain:            "test@example.com",
+			WorkspaceJobLimit: 100,
+		},
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, workspace)

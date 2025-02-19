@@ -13,9 +13,12 @@ import (
 )
 
 func setupTestLeadAndJob(t *testing.T) (*lead_scraper_servicev1.ScrapingJob, *lead_scraper_servicev1.Lead) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test scraping job
 	testJob := testutils.GenerateRandomizedScrapingJob()
-	createdJob, err := conn.CreateScrapingJob(context.Background(), testJob)
+	createdJob, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, testJob)
 	require.NoError(t, err)
 	require.NotNil(t, createdJob)
 
@@ -29,6 +32,9 @@ func setupTestLeadAndJob(t *testing.T) (*lead_scraper_servicev1.ScrapingJob, *le
 }
 
 func TestDeleteLead(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	createdJob, createdLead := setupTestLeadAndJob(t)
 
 	// Clean up job after all tests

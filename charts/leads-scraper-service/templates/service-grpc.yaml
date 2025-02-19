@@ -1,0 +1,19 @@
+{{- if .Values.config.grpc.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "leads-scraper-service.fullname" . }}-grpc
+  labels:
+    {{- include "leads-scraper-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grpc
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.config.grpc.port }}
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+  selector:
+    {{- include "leads-scraper-service.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: grpc
+{{- end }} 

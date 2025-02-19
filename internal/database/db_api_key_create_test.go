@@ -14,6 +14,9 @@ import (
 )
 
 func TestCreateAPIKey(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	validAPIKey := testutils.GenerateRandomAPIKey()
 
 	tests := []struct {
@@ -33,8 +36,6 @@ func TestCreateAPIKey(t *testing.T) {
 				assert.Equal(t, validAPIKey.Name, apiKey.Name)
 				assert.Equal(t, validAPIKey.KeyHash, apiKey.KeyHash)
 				assert.Equal(t, validAPIKey.KeyPrefix, apiKey.KeyPrefix)
-				assert.Equal(t, validAPIKey.OrgId, apiKey.OrgId)
-				assert.Equal(t, validAPIKey.TenantId, apiKey.TenantId)
 				assert.Equal(t, validAPIKey.Scopes, apiKey.Scopes)
 				assert.Equal(t, validAPIKey.AllowedIps, apiKey.AllowedIps)
 				assert.Equal(t, validAPIKey.IsTestKey, apiKey.IsTestKey)
@@ -68,7 +69,7 @@ func TestCreateAPIKey(t *testing.T) {
 				time.Sleep(2 * time.Millisecond)
 			}
 
-			result, err := conn.CreateAPIKey(ctx, tt.apiKey)
+			result, err := conn.CreateAPIKey(ctx, tc.Workspace.Id, tt.apiKey)
 
 			if tt.wantError {
 				require.Error(t, err)
@@ -96,6 +97,9 @@ func TestCreateAPIKey(t *testing.T) {
 }
 
 func TestCreateAPIKey_ConcurrentCreation(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	numKeys := 5
 	var wg sync.WaitGroup
 	errors := make(chan error, numKeys)
@@ -110,7 +114,7 @@ func TestCreateAPIKey_ConcurrentCreation(t *testing.T) {
 			apiKey := testutils.GenerateRandomAPIKey()
 			apiKey.Name = fmt.Sprintf("Test Key %d", index)
 
-			result, err := conn.CreateAPIKey(context.Background(), apiKey)
+			result, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, apiKey)
 			if err != nil {
 				errors <- err
 				return

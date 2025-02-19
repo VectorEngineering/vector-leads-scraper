@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Vector/vector-leads-scraper/internal/testutils"
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,17 +16,15 @@ func TestCreateTenantApiKey(t *testing.T) {
 
 	// Create test organization first
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, org)
 
 	// Create a test tenant
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Name:           "Test Tenant",
+		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
-		Description:    "Test Description",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, tenant)
@@ -56,7 +55,7 @@ func TestCreateTenantApiKey(t *testing.T) {
 				KeyHash:     "test-key-hash-123",
 				KeyPrefix:   "test-prefix",
 				Description: "Test API Key",
-				Status:      "active",
+				Status:      lead_scraper_servicev1.Status_STATUS_ACTIVE,
 			},
 			wantError: false,
 		},
@@ -111,17 +110,15 @@ func TestGetTenantApiKey(t *testing.T) {
 
 	// Create test organization first
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, org)
 
 	// Create a test tenant
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Name:           "Test Tenant",
+		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
-		Description:    "Test Description",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, tenant)
@@ -132,7 +129,7 @@ func TestGetTenantApiKey(t *testing.T) {
 		KeyHash:     "test-key-hash-123",
 		KeyPrefix:   "test-prefix",
 		Description: "Test API Key",
-		Status:      "active",
+		Status:      lead_scraper_servicev1.Status_STATUS_ACTIVE,
 	}
 	createdKey, err := conn.CreateTenantApiKey(ctx, tenant.Id, testKey)
 	require.NoError(t, err)
@@ -207,17 +204,15 @@ func TestUpdateTenantApiKey(t *testing.T) {
 
 	// Create test organization first
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, org)
 
 	// Create a test tenant
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Name:           "Test Tenant",
+		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
-		Description:    "Test Description",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, tenant)
@@ -228,7 +223,7 @@ func TestUpdateTenantApiKey(t *testing.T) {
 		KeyHash:     "test-key-hash-123",
 		KeyPrefix:   "test-prefix",
 		Description: "Test API Key",
-		Status:      "active",
+		Status:      lead_scraper_servicev1.Status_STATUS_ACTIVE,
 	}
 	createdKey, err := conn.CreateTenantApiKey(ctx, tenant.Id, testKey)
 	require.NoError(t, err)
@@ -263,7 +258,7 @@ func TestUpdateTenantApiKey(t *testing.T) {
 				KeyHash:     "updated-key-hash-123",
 				KeyPrefix:   "updated-prefix",
 				Description: "Updated Test API Key",
-				Status:      "active",
+				Status:      lead_scraper_servicev1.Status_STATUS_ACTIVE,
 			},
 			wantError: false,
 		},
@@ -320,17 +315,15 @@ func TestDeleteTenantApiKey(t *testing.T) {
 
 	// Create test organization first
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, org)
 
 	// Create a test tenant
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Name:           "Test Tenant",
+		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
-		Description:    "Test Description",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, tenant)
@@ -341,7 +334,7 @@ func TestDeleteTenantApiKey(t *testing.T) {
 		KeyHash:     "test-key-hash-soft",
 		KeyPrefix:   "test-prefix-soft",
 		Description: "Test API Key for Soft Delete",
-		Status:      "active",
+		Status:      lead_scraper_servicev1.Status_STATUS_ACTIVE,
 	}
 	softKey, err := conn.CreateTenantApiKey(ctx, tenant.Id, softDeleteKey)
 	require.NoError(t, err)
@@ -352,7 +345,7 @@ func TestDeleteTenantApiKey(t *testing.T) {
 		KeyHash:     "test-key-hash-hard",
 		KeyPrefix:   "test-prefix-hard",
 		Description: "Test API Key for Hard Delete",
-		Status:      "active",
+		Status:      lead_scraper_servicev1.Status_STATUS_ACTIVE,
 	}
 	hardKey, err := conn.CreateTenantApiKey(ctx, tenant.Id, hardDeleteKey)
 	require.NoError(t, err)
@@ -439,17 +432,15 @@ func TestListTenantApiKeys(t *testing.T) {
 
 	// Create test organization first
 	org, err := conn.CreateOrganization(ctx, &CreateOrganizationInput{
-		Name:        "Test Organization",
-		Description: "Test Description",
+		Organization: testutils.GenerateRandomizedOrganization(),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, org)
 
 	// Create a test tenant
 	tenant, err := conn.CreateTenant(ctx, &CreateTenantInput{
-		Name:           "Test Tenant",
+		Tenant:         testutils.GenerateRandomizedTenant(),
 		OrganizationID: org.Id,
-		Description:    "Test Description",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, tenant)
@@ -462,7 +453,7 @@ func TestListTenantApiKeys(t *testing.T) {
 			KeyHash:     fmt.Sprintf("test-key-hash-%d", i),
 			KeyPrefix:   fmt.Sprintf("test-prefix-%d", i),
 			Description: fmt.Sprintf("Test API Key %d", i),
-			Status:      "active",
+			Status:      lead_scraper_servicev1.Status_STATUS_ACTIVE,
 		}
 		key, err := conn.CreateTenantApiKey(ctx, tenant.Id, testKey)
 		require.NoError(t, err)

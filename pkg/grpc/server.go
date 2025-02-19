@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SolomonAIEngineering/backend-core-library/instrumentation"
+	"github.com/Vector/vector-leads-scraper/internal/database"
+	"github.com/Vector/vector-leads-scraper/internal/taskhandler"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -38,8 +41,11 @@ import (
 //	grpcServer := server.ListenAndServe()
 type Server struct {
 	proto.UnimplementedLeadScraperServiceServer
-	logger *zap.Logger
-	config *Config
+	logger      *zap.Logger
+	config      *Config
+	db          database.DatabaseOperations // Database client for persistence operations
+	telemetry   *instrumentation.Client
+	taskHandler *taskhandler.Handler
 }
 
 // Config defines the server's runtime configuration parameters.
@@ -115,10 +121,12 @@ func (server *Server) RegisterGrpcServer(srv *grpc.Server) {
 //	    WithMetrics(),
 //	    WithAuthInterceptor(),
 //	)
-func NewServer(config *Config, logger *zap.Logger, opts ...ServerOption) (*Server, error) {
+func NewServer(config *Config, logger *zap.Logger, db database.DatabaseOperations, taskHandler *taskhandler.Handler, opts ...ServerOption) (*Server, error) {
 	srv := &Server{
-		logger: logger,
-		config: config,
+		logger:      logger,
+		config:      config,
+		db:          db,
+		taskHandler: taskHandler,
 	}
 
 	for _, opt := range opts {

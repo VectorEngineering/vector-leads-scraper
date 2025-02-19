@@ -2,14 +2,19 @@ package grpc
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strconv"
 
+	"github.com/Vector/vector-leads-scraper/internal/database"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-// CreateScrapingJob initiates a new Google Maps scraping task with the specified parameters.
-// The job will be queued and processed asynchronously. The response includes a job ID
-// that can be used to track the job's progress.
+// CreateScrapingJob creates a new scraping job in the workspace service.
+// It validates the input and creates a new job in the database.
 //
 // Parameters:
 //   - ctx: Context for the request, includes deadline and cancellation signals
@@ -19,54 +24,216 @@ import (
 //   - CreateScrapingJobResponse: Contains the created job's ID and initial status
 //   - error: Any error encountered during job creation
 //
-// Common use cases:
-//   - Scrape business listings for market research
-//   - Collect location data for geographic analysis
-//   - Extract contact information for lead generation
+// Required permissions:
+//   - create:scraping_job
 //
 // Example:
 //
 //	resp, err := server.CreateScrapingJob(ctx, &CreateScrapingJobRequest{
-//	    Name: "Coffee shops in Athens",
-//	    Keywords: []string{"coffee", "café"},
-//	    Lang: "el",
+//	    Job: &ScrapingJob{
+//	        Name: "Coffee shops in Athens",
+//	        Config: &ScrapingJobConfig{
+//	            SearchQuery: "coffee",
+//	            Location: "Athens, Greece",
+//	            MaxResults: 100,
+//	        },
+//	    },
+//	    WorkspaceId: 123,
 //	})
+//
+// TODO: Enhancement Areas
+// 1. Add job validation and optimization:
+//   - Validate search parameters
+//   - Check rate limits and quotas
+//   - Optimize search area coverage
+//   - Validate data schema compatibility
+//
+// 2. Implement intelligent scheduling:
+//   - Dynamic resource allocation
+//   - Priority-based scheduling
+//   - Load balancing across regions
+//   - Concurrent job management
+//
+// 3. Add error handling and recovery:
+//   - Automatic retry policies
+//   - Partial result handling
+//   - Checkpoint/resume support
+//   - Error classification
+//
+// 4. Improve data quality:
+//   - Duplicate detection
+//   - Data enrichment
+//   - Validation rules
+//   - Schema evolution
+//
+// 5. Add monitoring and alerting:
+//   - Progress tracking
+//   - Resource utilization
+//   - Error rate monitoring
+//   - SLA compliance
+//
+// 6. Implement caching and optimization:
+//   - Result caching
+//   - Query optimization
+//   - Resource pooling
+//   - Data deduplication
+//
+// 7. Add compliance features:
+//   - Data privacy rules
+//   - Geographic restrictions
+//   - Rate limit enforcement
+//   - Usage tracking
 func (s *Server) CreateScrapingJob(ctx context.Context, req *proto.CreateScrapingJobRequest) (*proto.CreateScrapingJobResponse, error) {
-	s.logger.Info("creating scraping job", zap.String("name", req.Name))
-	// TODO: Implement job creation logic
-	return &proto.CreateScrapingJobResponse{}, nil
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "create-scraping-job")
+	defer cleanup()
+
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// TODO: Add pre-creation validation
+	// - Validate search parameters
+	// - Check rate limits and quotas
+	// - Verify resource availability
+	// - Validate data schemas
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Validate tenant ID
+	if req.TenantId == 0 {
+		logger.Error("tenant ID is required")
+		return nil, status.Error(codes.InvalidArgument, "tenant ID is required")
+	}
+
+	// Validate coordinates if provided
+	if req.Lat != "" || req.Lon != "" {
+		// Both coordinates must be provided if one is provided
+		if req.Lat == "" || req.Lon == "" {
+			logger.Error("both latitude and longitude must be provided")
+			return nil, status.Error(codes.InvalidArgument, "both latitude and longitude must be provided")
+		}
+
+		// Parse and validate coordinates
+		lat, err := strconv.ParseFloat(req.Lat, 64)
+		if err != nil {
+			logger.Error("invalid latitude", zap.Error(err))
+			return nil, status.Error(codes.InvalidArgument, "invalid latitude")
+		}
+		lon, err := strconv.ParseFloat(req.Lon, 64)
+		if err != nil {
+			logger.Error("invalid longitude", zap.Error(err))
+			return nil, status.Error(codes.InvalidArgument, "invalid longitude")
+		}
+
+		// Validate coordinate ranges
+		if lat < -90 || lat > 90 {
+			logger.Error("latitude out of range", zap.Float64("lat", lat))
+			return nil, status.Error(codes.InvalidArgument, "latitude must be between -90 and 90")
+		}
+		if lon < -180 || lon > 180 {
+			logger.Error("longitude out of range", zap.Float64("lon", lon))
+			return nil, status.Error(codes.InvalidArgument, "longitude must be between -180 and 180")
+		}
+	}
+
+	// Extract job details
+	name := req.Name
+	if name == "" {
+		logger.Error("name is required")
+		return nil, status.Error(codes.InvalidArgument, "name is required")
+	}
+
+	// Validate organization ID
+	if req.OrgId == 0 {
+		logger.Error("organization ID is required")
+		return nil, status.Error(codes.InvalidArgument, "organization ID is required")
+	}
+
+	logger.Info("creating scraping job",
+		zap.String("name", name),
+		zap.Uint64("org_id", req.OrgId),
+		zap.Uint64("tenant_id", req.TenantId),
+	)
+
+	// Convert language code to enum
+	var lang proto.ScrapingJob_Language
+	switch req.Lang {
+	case "en":
+		lang = proto.ScrapingJob_LANGUAGE_ENGLISH
+	case "es":
+		lang = proto.ScrapingJob_LANGUAGE_SPANISH
+	case "fr":
+		lang = proto.ScrapingJob_LANGUAGE_FRENCH
+	case "de":
+		lang = proto.ScrapingJob_LANGUAGE_GERMAN
+	case "it":
+		lang = proto.ScrapingJob_LANGUAGE_ITALIAN
+	case "pt":
+		lang = proto.ScrapingJob_LANGUAGE_PORTUGUESE
+	case "nl":
+		lang = proto.ScrapingJob_LANGUAGE_DUTCH
+	case "ru":
+		lang = proto.ScrapingJob_LANGUAGE_RUSSIAN
+	case "zh":
+		lang = proto.ScrapingJob_LANGUAGE_CHINESE
+	case "ja":
+		lang = proto.ScrapingJob_LANGUAGE_JAPANESE
+	case "ko":
+		lang = proto.ScrapingJob_LANGUAGE_KOREAN
+	case "ar":
+		lang = proto.ScrapingJob_LANGUAGE_ARABIC
+	case "hi":
+		lang = proto.ScrapingJob_LANGUAGE_HINDI
+	case "el":
+		lang = proto.ScrapingJob_LANGUAGE_GREEK
+	case "tr":
+		lang = proto.ScrapingJob_LANGUAGE_TURKISH
+	default:
+		lang = proto.ScrapingJob_LANGUAGE_UNSPECIFIED
+	}
+
+	// Create the scraping job object
+	job := &proto.ScrapingJob{
+		Name:     name,
+		Keywords: req.Keywords,
+		Lang:     lang,
+		Zoom:     req.Zoom,
+		Lat:      req.Lat,
+		Lon:      req.Lon,
+		FastMode: req.FastMode,
+		Radius:   req.Radius,
+		Depth:    req.Depth,
+		Email:    req.Email,
+		MaxTime:  req.MaxTime,
+		Proxies:  req.Proxies,
+		Status:   proto.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+	}
+
+	// Create the job using the database client
+	result, err := s.db.CreateScrapingJob(ctx, req.WorkspaceId, job)
+	if err != nil {
+		logger.Error("failed to create scraping job", zap.Error(err))
+		if err == database.ErrInvalidInput {
+			return nil, status.Error(codes.InvalidArgument, "invalid input")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to create scraping job: %s", err.Error())
+	}
+
+	return &proto.CreateScrapingJobResponse{
+		JobId:  result.Id,
+		Status: result.Status,
+	}, nil
 }
 
-// ListScrapingJobs retrieves a list of all scraping jobs for the authenticated user
-// within their organization context. The results can be filtered by status and other criteria.
-//
-// Parameters:
-//   - ctx: Context for the request, includes deadline and cancellation signals
-//   - req: Contains filtering and pagination parameters
-//
-// Returns:
-//   - ListScrapingJobsResponse: List of jobs matching the filter criteria
-//   - error: Any error encountered during listing
-//
-// The response includes:
-//   - Basic job information (ID, name, status)
-//   - Creation and last updated timestamps
-//   - Progress metrics and error counts
-//   - Pagination tokens for subsequent requests
-//
-// Example:
-//
-//	resp, err := server.ListScrapingJobs(ctx, &ListScrapingJobsRequest{
-//	    PageSize: 50,
-//	    StatusFilter: []string{"RUNNING", "COMPLETED"},
-//	})
-func (s *Server) ListScrapingJobs(ctx context.Context, req *proto.ListScrapingJobsRequest) (*proto.ListScrapingJobsResponse, error) {
-	// TODO: Implement job listing logic
-	return &proto.ListScrapingJobsResponse{}, nil
-}
-
-// GetScrapingJob retrieves detailed information about a specific scraping job,
-// including its current status, configuration, and progress metrics.
+// GetScrapingJob retrieves detailed information about a specific scraping job.
+// This includes its current status, configuration, and any results if available.
 //
 // Parameters:
 //   - ctx: Context for the request, includes deadline and cancellation signals
@@ -76,24 +243,191 @@ func (s *Server) ListScrapingJobs(ctx context.Context, req *proto.ListScrapingJo
 //   - GetScrapingJobResponse: Detailed job information
 //   - error: Any error encountered during retrieval
 //
-// This endpoint is useful for:
-//   - Monitoring job progress
-//   - Debugging failed jobs
-//   - Retrieving job configuration details
+// Required permissions:
+//   - read:scraping_job
 //
 // Example:
 //
 //	resp, err := server.GetScrapingJob(ctx, &GetScrapingJobRequest{
-//	    JobId: "job_123abc",
+//	    JobId: 123,
+//	    OrgId: 456,
+//	    TenantId: 789,
 //	})
 func (s *Server) GetScrapingJob(ctx context.Context, req *proto.GetScrapingJobRequest) (*proto.GetScrapingJobResponse, error) {
-	s.logger.Info("getting scraping job", zap.String("job_id", req.JobId))
-	// TODO: Implement job retrieval logic
-	return &proto.GetScrapingJobResponse{}, nil
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "get-scraping-job")
+	defer cleanup()
+
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Validate job ID
+	if req.JobId == 0 {
+		logger.Error("job ID is required")
+		return nil, status.Error(codes.InvalidArgument, "job ID is required")
+	}
+
+	// Validate organization ID
+	if req.OrgId == 0 {
+		logger.Error("organization ID is required")
+		return nil, status.Error(codes.InvalidArgument, "organization ID is required")
+	}
+
+	// Validate tenant ID
+	if req.TenantId == 0 {
+		logger.Error("tenant ID is required")
+		return nil, status.Error(codes.InvalidArgument, "tenant ID is required")
+	}
+
+	// get tenant by tenant by id
+	if _, err := s.db.GetTenant(ctx, &database.GetTenantInput{
+		ID: req.TenantId,
+	}); err != nil {
+		logger.Error("failed to get tenant", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "tenant does not exist")
+	}
+
+	// get org by org id
+	if _, err := s.db.GetOrganization(ctx, &database.GetOrganizationInput{
+		ID: req.OrgId,
+	}); err != nil {
+		logger.Error("failed to get organization", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "organization does not exist")
+	}
+
+	logger.Info("getting scraping job",
+		zap.Uint64("job_id", req.JobId),
+		zap.Uint64("org_id", req.OrgId),
+		zap.Uint64("tenant_id", req.TenantId),
+	)
+
+	// Get the job using the database client
+	job, err := s.db.GetScrapingJob(ctx, req.JobId)
+	if err != nil {
+		logger.Error("failed to get scraping job", zap.Error(err))
+		if errors.Is(err, database.ErrJobDoesNotExist) {
+			return nil, status.Error(codes.NotFound, "job does not exist")
+		}
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to get scraping job: %v", err))
+	}
+
+	return &proto.GetScrapingJobResponse{
+		Job: job,
+	}, nil
+}
+
+// ListScrapingJobs retrieves a list of all scraping jobs in a workspace.
+// The results can be filtered and paginated.
+//
+// Parameters:
+//   - ctx: Context for the request, includes deadline and cancellation signals
+//   - req: Contains filtering and pagination parameters
+//
+// Returns:
+//   - ListScrapingJobsResponse: List of jobs matching the filter criteria
+//   - error: Any error encountered during listing
+//
+// Required permissions:
+//   - list:scraping_job
+//
+// Example:
+//
+//	resp, err := server.ListScrapingJobs(ctx, &ListScrapingJobsRequest{
+//	    OrgId: 123,
+//	    TenantId: 456,
+//	})
+func (s *Server) ListScrapingJobs(ctx context.Context, req *proto.ListScrapingJobsRequest) (*proto.ListScrapingJobsResponse, error) {
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "list-scraping-jobs")
+	defer cleanup()
+
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Validate organization ID
+	if req.OrgId == 0 {
+		logger.Error("organization ID is required")
+		return nil, status.Error(codes.InvalidArgument, "organization ID is required")
+	}
+
+	// Validate tenant ID
+	if req.TenantId == 0 {
+		logger.Error("tenant ID is required")
+		return nil, status.Error(codes.InvalidArgument, "tenant ID is required")
+	}
+
+	logger.Info("listing scraping jobs",
+		zap.Uint64("org_id", req.OrgId),
+		zap.Uint64("tenant_id", req.TenantId),
+	)
+
+	// get the org by org id
+	if _, err := s.db.GetOrganization(ctx, &database.GetOrganizationInput{
+		ID: req.OrgId,
+	}); err != nil {
+		logger.Error("failed to get organization", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get organization")
+	}
+
+	// get the tenant by tenant id
+	if _, err := s.db.GetTenant(ctx, &database.GetTenantInput{
+		ID: req.TenantId,
+	}); err != nil {
+		logger.Error("failed to get tenant", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get tenant")
+	}
+
+	// page number
+	pageNumber := req.PageNumber
+	if pageNumber == 0 {
+		pageNumber = 1
+	}
+
+	pageSize := req.PageSize
+	if pageSize == 0 {
+		pageSize = 10
+	}
+
+	// compute the offset
+	offset := (pageNumber - 1) * pageSize
+
+	// List jobs using the database client
+	jobs, err := s.db.ListScrapingJobsByParams(ctx, &database.ListScrapingJobsByWorkspaceInput{
+		WorkspaceID: req.WorkspaceId,
+		WorkflowID:  req.WorkflowId,
+		Limit:       uint64(pageSize),
+		Offset:      uint64(offset),
+	})
+	if err != nil {
+		logger.Error("failed to list scraping jobs", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to list scraping jobs")
+	}
+
+	return &proto.ListScrapingJobsResponse{
+		Jobs: jobs,
+	}, nil
 }
 
 // DeleteScrapingJob permanently removes a scraping job and its associated data.
-// This action cannot be undone. If the job is currently running, it will be stopped.
+// This action cannot be undone.
 //
 // Parameters:
 //   - ctx: Context for the request, includes deadline and cancellation signals
@@ -103,51 +437,169 @@ func (s *Server) GetScrapingJob(ctx context.Context, req *proto.GetScrapingJobRe
 //   - DeleteScrapingJobResponse: Confirmation of deletion
 //   - error: Any error encountered during deletion
 //
-// Security notes:
-//   - Requires authentication
-//   - User must have appropriate permissions
-//   - Job must belong to user's organization
+// Required permissions:
+//   - delete:scraping_job
 //
 // Example:
 //
 //	resp, err := server.DeleteScrapingJob(ctx, &DeleteScrapingJobRequest{
-//	    JobId: "job_123abc",
+//	    JobId: 123,
+//	    OrgId: 456,
+//	    TenantId: 789,
 //	})
 func (s *Server) DeleteScrapingJob(ctx context.Context, req *proto.DeleteScrapingJobRequest) (*proto.DeleteScrapingJobResponse, error) {
-	s.logger.Info("deleting scraping job", zap.String("job_id", req.JobId))
-	// TODO: Implement job deletion logic
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "delete-scraping-job")
+	defer cleanup()
+
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Validate job ID
+	if req.JobId == 0 {
+		logger.Error("job ID is required")
+		return nil, status.Error(codes.InvalidArgument, "job ID is required")
+	}
+
+	// Validate organization ID
+	if req.OrgId == 0 {
+		logger.Error("organization ID is required")
+		return nil, status.Error(codes.InvalidArgument, "organization ID is required")
+	}
+
+	// Validate tenant ID
+	if req.TenantId == 0 {
+		logger.Error("tenant ID is required")
+		return nil, status.Error(codes.InvalidArgument, "tenant ID is required")
+	}
+
+	logger.Info("deleting scraping job",
+		zap.Uint64("job_id", req.JobId),
+		zap.Uint64("org_id", req.OrgId),
+		zap.Uint64("tenant_id", req.TenantId),
+	)
+
+	// Delete the job using the database client
+	err := s.db.DeleteScrapingJob(ctx, req.JobId)
+	if err != nil {
+		logger.Error("failed to delete scraping job", zap.Error(err))
+		if err == database.ErrJobDoesNotExist {
+			return nil, status.Error(codes.NotFound, "job not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to delete scraping job")
+	}
+
 	return &proto.DeleteScrapingJobResponse{
 		Success: true,
 	}, nil
 }
 
 // DownloadScrapingResults retrieves the results of a completed scraping job.
-// The response includes the scraped data in CSV format with appropriate headers
-// for browser download.
+// The response includes the scraped data in a structured format.
 //
 // Parameters:
 //   - ctx: Context for the request, includes deadline and cancellation signals
 //   - req: Contains the job ID and optional format preferences
 //
 // Returns:
-//   - DownloadScrapingResultsResponse: Contains the file content and metadata
+//   - DownloadScrapingResultsResponse: Contains the scraped data
 //   - error: Any error encountered during download
 //
-// The CSV file includes:
-//   - Business names and addresses
-//   - Contact information
-//   - Rating and review counts
-//   - Operating hours
-//   - Additional metadata based on job configuration
+// Required permissions:
+//   - read:scraping_job_results
 //
 // Example:
 //
 //	resp, err := server.DownloadScrapingResults(ctx, &DownloadScrapingResultsRequest{
-//	    JobId: "job_123abc",
-//	    Format: "CSV",
+//	    JobId: 123,
+//	    OrgId: 456,
+//	    TenantId: 789,
 //	})
 func (s *Server) DownloadScrapingResults(ctx context.Context, req *proto.DownloadScrapingResultsRequest) (*proto.DownloadScrapingResultsResponse, error) {
-	s.logger.Info("downloading scraping results", zap.String("job_id", req.JobId))
+	// Setup context with timeout, logging, and telemetry trace.
+	ctx, logger, cleanup := s.setupRequest(ctx, "download-scraping-results")
+	defer cleanup()
+
+	// Check for nil request
+	if req == nil {
+		logger.Error("request is nil")
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	// Validate the request
+	if err := req.ValidateAll(); err != nil {
+		logger.Error("invalid request", zap.Error(err))
+		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %s", err.Error())
+	}
+
+	// Validate job ID
+	if req.JobId == 0 {
+		logger.Error("job ID is required")
+		return nil, status.Error(codes.InvalidArgument, "job ID is required")
+	}
+
+	// Validate organization ID
+	if req.OrgId == 0 {
+		logger.Error("organization ID is required")
+		return nil, status.Error(codes.InvalidArgument, "organization ID is required")
+	}
+
+	// Validate tenant ID
+	if req.TenantId == 0 {
+		logger.Error("tenant ID is required")
+		return nil, status.Error(codes.InvalidArgument, "tenant ID is required")
+	}
+
+	logger.Info("downloading scraping results",
+		zap.Uint64("job_id", req.JobId),
+		zap.Uint64("org_id", req.OrgId),
+		zap.Uint64("tenant_id", req.TenantId),
+	)
+
+	// Get the job first to check if it exists and is completed
+	job, err := s.db.GetScrapingJob(ctx, req.JobId)
+	if err != nil {
+		logger.Error("failed to get scraping job", zap.Error(err))
+		if err == database.ErrJobDoesNotExist {
+			return nil, status.Error(codes.NotFound, "job not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to get scraping job")
+	}
+
+	// Check if the job is completed
+	if job.Status != proto.BackgroundJobStatus_BACKGROUND_JOB_STATUS_COMPLETED {
+		logger.Error("job is not completed", zap.String("status", job.Status.String()))
+		return nil, status.Error(codes.FailedPrecondition, "job is not completed")
+	}
+
 	// TODO: Implement results download logic
-	return &proto.DownloadScrapingResultsResponse{}, nil
+	// This would typically involve:
+	// 1. Getting the results from a storage service (e.g., S3)
+	// 2. Converting them to the desired format
+	// 3. Returning them in the response
+
+	return &proto.DownloadScrapingResultsResponse{
+		Content:     []byte{}, // TODO: Return actual results
+		Filename:    "results.csv",
+		ContentType: "text/csv",
+	}, nil
 }
+
+// TODO: Add helper functions
+// - validateJobParameters()
+// - optimizeSearchStrategy()
+// - calculateResourceRequirements()
+// - setupMonitoring()
+// - configureErrorHandling()
+// - processResults()
+// - formatOutput()
+// - handleDelivery()

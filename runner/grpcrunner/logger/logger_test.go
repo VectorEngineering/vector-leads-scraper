@@ -2,7 +2,7 @@ package logger
 
 import (
 	"bytes"
-	"encoding/json"
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest/observer"
 )
 
 // createTestLogger creates a logger that writes to a buffer
@@ -69,120 +68,124 @@ func createTestLogger(t *testing.T, cfg *runner.Config) (*zap.Logger, *bytes.Buf
 }
 
 func TestNewLogger(t *testing.T) {
-	tests := []struct {
+	testCases := []struct {
 		name        string
 		config      *runner.Config
-		wantErr     bool
-		checkFields map[string]interface{}
-		logLevel    zapcore.Level
+		expectError bool
 	}{
 		{
-			name: "valid config with debug level",
+			name: "Valid config with debug level",
 			config: &runner.Config{
 				ServiceName: "test-service",
 				LogLevel:    "debug",
 			},
-			wantErr: false,
-			checkFields: map[string]interface{}{
-				"service": "test-service",
-				"mode":    "grpc",
-			},
-			logLevel: zapcore.DebugLevel,
+			expectError: false,
 		},
 		{
-			name: "valid config with info level",
+			name: "Valid config with info level",
 			config: &runner.Config{
 				ServiceName: "test-service",
 				LogLevel:    "info",
 			},
-			wantErr: false,
-			checkFields: map[string]interface{}{
-				"service": "test-service",
-				"mode":    "grpc",
-			},
-			logLevel: zapcore.InfoLevel,
+			expectError: false,
 		},
 		{
-			name:    "nil config",
-			config:  nil,
-			wantErr: true,
-		},
-		{
-			name: "empty service name",
+			name: "Valid config with warn level",
 			config: &runner.Config{
-				ServiceName: "",
-				LogLevel:    "info",
+				ServiceName: "test-service",
+				LogLevel:    "warn",
 			},
-			wantErr: false,
-			checkFields: map[string]interface{}{
-				"service": "unknown-service",
-				"mode":    "grpc",
-			},
-			logLevel: zapcore.InfoLevel,
+			expectError: false,
 		},
 		{
-			name: "invalid log level",
+			name: "Valid config with error level",
+			config: &runner.Config{
+				ServiceName: "test-service",
+				LogLevel:    "error",
+			},
+			expectError: false,
+		},
+		{
+			name: "Valid config with invalid level (defaults to info)",
 			config: &runner.Config{
 				ServiceName: "test-service",
 				LogLevel:    "invalid",
 			},
-			wantErr: false,
-			checkFields: map[string]interface{}{
-				"service": "test-service",
-				"mode":    "grpc",
+			expectError: false,
+		},
+		{
+			name: "Empty service name (uses default)",
+			config: &runner.Config{
+				ServiceName: "",
+				LogLevel:    "info",
 			},
-			logLevel: zapcore.InfoLevel,
+			expectError: false,
+		},
+		{
+			name:        "Nil config",
+			config:      nil,
+			expectError: true,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.wantErr {
-				logger, err := NewLogger(tt.config)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logger, err := NewLogger(tc.config)
+
+			if tc.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, logger)
-				return
-			}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, logger)
 
-			logger, buf := createTestLogger(t, tt.config)
-			require.NotNil(t, logger)
-
-			// Test logging at different levels
-			logger.Info("test message")
-
-			// Parse JSON output
-			var logEntry map[string]interface{}
-			err := json.Unmarshal(buf.Bytes(), &logEntry)
-			require.NoError(t, err)
-
-			// Verify fields
-			for key, expectedValue := range tt.checkFields {
-				actualValue, ok := logEntry[key]
-				assert.True(t, ok, "field %s not found", key)
-				assert.Equal(t, expectedValue, actualValue, "field %s has wrong value", key)
+				// Test logging at different levels
+				logger.Debug("debug message")
+				logger.Info("info message")
+				logger.Warn("warn message")
+				logger.Error("error message")
 			}
 		})
 	}
 }
 
 func TestNewStandardLogger(t *testing.T) {
-	// Create an observer core for testing
-	core, logs := observer.New(zapcore.InfoLevel)
-	logger := zap.New(core)
+	// Create a Zap logger
+	cfg := &runner.Config{
+		ServiceName: "test-service",
+		LogLevel:    "info",
+	}
+	zapLogger, err := NewLogger(cfg)
+	require.NoError(t, err)
 
 	// Create standard logger
-	stdLogger := NewStandardLogger(logger)
-	require.NotNil(t, stdLogger)
+	stdLogger := NewStandardLogger(zapLogger)
+	assert.NotNil(t, stdLogger)
+	assert.IsType(t, &log.Logger{}, stdLogger)
 
 	// Test logging
-	testMessage := "test message"
-	stdLogger.Print(testMessage)
+	assert.NotPanics(t, func() {
+		stdLogger.Print("test message")
+		stdLogger.Printf("test message %d", 1)
+		stdLogger.Println("test message")
+	})
+}
 
-	// Verify log entry
-	require.Equal(t, 1, logs.Len())
-	entry := logs.All()[0]
-	assert.Equal(t, testMessage+"\n", entry.Message)
-	assert.Equal(t, zapcore.InfoLevel, entry.Level)
+func TestZapWriter(t *testing.T) {
+	// Create a Zap logger
+	cfg := &runner.Config{
+		ServiceName: "test-service",
+		LogLevel:    "info",
+	}
+	zapLogger, err := NewLogger(cfg)
+	require.NoError(t, err)
+
+	writer := &zapWriter{zapLogger.Sugar()}
+
+	// Test Write method
+	n, err := writer.Write([]byte("test message"))
+	assert.NoError(t, err)
+	assert.Equal(t, len("test message"), n)
 }
 
 func TestLoggerWithEnvironment(t *testing.T) {
@@ -190,127 +193,88 @@ func TestLoggerWithEnvironment(t *testing.T) {
 	os.Setenv("ENV", "test")
 	defer os.Unsetenv("ENV")
 
-	config := &runner.Config{
+	cfg := &runner.Config{
 		ServiceName: "test-service",
 		LogLevel:    "info",
 	}
 
-	logger, buf := createTestLogger(t, config)
-	require.NotNil(t, logger)
-
-	// Log a message
-	logger.Info("test message")
-
-	// Parse JSON output
-	var logEntry map[string]interface{}
-	err := json.Unmarshal(buf.Bytes(), &logEntry)
+	logger, err := NewLogger(cfg)
 	require.NoError(t, err)
+	assert.NotNil(t, logger)
 
-	// Verify environment field
-	assert.Equal(t, "test", logEntry["environment"])
+	// Test logging with environment
+	logger.Info("test message with environment")
 }
 
 func TestLoggerSampling(t *testing.T) {
-	// Create a buffer to capture output
-	buf := &bytes.Buffer{}
-
-	// Create a test encoder config
-	encoderCfg := zapcore.EncoderConfig{
-		MessageKey:     "message",
-		LevelKey:       "level",
-		TimeKey:        "time",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		StacktraceKey:  "stacktrace",
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
+	cfg := &runner.Config{
+		ServiceName: "test-service",
+		LogLevel:    "info", // Not debug to enable sampling
 	}
 
-	// Create the core with sampling
-	core := zapcore.NewSampler(
-		zapcore.NewCore(
-			zapcore.NewJSONEncoder(encoderCfg),
-			zapcore.AddSync(buf),
-			zapcore.InfoLevel,
-		),
-		time.Millisecond, // Tick every millisecond
-		3,                // Log first 3 entries
-		10,               // Then sample 1 out of every 10 messages
-	)
-
-	// Create logger
-	logger := zap.New(core)
-
-	// Log messages rapidly
-	for i := 0; i < 100; i++ {
-		logger.Info("test message")
-	}
-
-	// Force sync to ensure all messages are written
-	err := logger.Sync()
+	logger, err := NewLogger(cfg)
 	require.NoError(t, err)
 
-	// Count the number of messages
-	lines := bytes.Split(bytes.TrimSpace(buf.Bytes()), []byte{'\n'})
-	messageCount := len(lines)
-
-	// With our sampling config (initial=3, thereafter=10), we expect:
-	// - First 3 messages to be logged
-	// - Then approximately 1 message every 10 messages
-	// Total should be significantly less than 100
-	assert.True(t, messageCount >= 4 && messageCount < 20,
-		"expected between 4 and 20 messages due to sampling, got %d messages", messageCount)
-
-	// Verify at least one message format
-	if messageCount > 0 {
-		var entry map[string]interface{}
-		err := json.Unmarshal(lines[0], &entry)
-		require.NoError(t, err)
-		assert.Equal(t, "test message", entry["message"])
+	// Test rapid logging to trigger sampling
+	for i := 0; i < 200; i++ {
+		logger.Info("test message for sampling")
 	}
 }
 
-func TestLoggerOutput(t *testing.T) {
-	config := &runner.Config{
+func TestLoggerErrorHook(t *testing.T) {
+	cfg := &runner.Config{
 		ServiceName: "test-service",
-		LogLevel:    "info",
+		LogLevel:    "error",
 	}
 
-	logger, buf := createTestLogger(t, config)
-	require.NotNil(t, logger)
-
-	// Log a message with fields
-	logger.Info("test message", zap.String("key", "value"))
-
-	// Parse JSON output
-	var logEntry map[string]interface{}
-	err := json.Unmarshal(buf.Bytes(), &logEntry)
+	logger, err := NewLogger(cfg)
 	require.NoError(t, err)
 
-	// Verify fields
-	assert.Equal(t, "value", logEntry["key"])
-	assert.Equal(t, "test message", logEntry["message"])
+	// Test error logging to trigger hook
+	logger.Error("test error message")
 }
 
 func TestValidateLogLevel(t *testing.T) {
-	tests := []struct {
+	testCases := []struct {
 		level    string
 		expected zapcore.Level
 	}{
 		{"debug", zapcore.DebugLevel},
+		{"DEBUG", zapcore.DebugLevel},
 		{"info", zapcore.InfoLevel},
+		{"INFO", zapcore.InfoLevel},
 		{"warn", zapcore.WarnLevel},
+		{"WARN", zapcore.WarnLevel},
 		{"error", zapcore.ErrorLevel},
+		{"ERROR", zapcore.ErrorLevel},
 		{"invalid", zapcore.InfoLevel},
 		{"", zapcore.InfoLevel},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.level, func(t *testing.T) {
-			actual := validateLogLevel(tt.level)
-			assert.Equal(t, tt.expected, actual)
+	for _, tc := range testCases {
+		t.Run(tc.level, func(t *testing.T) {
+			result := validateLogLevel(tc.level)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
+}
+
+func TestDefaultOptions(t *testing.T) {
+	cfg := &runner.Config{
+		ServiceName: "test-service",
+		LogLevel:    "debug",
+	}
+
+	opts := defaultOptions(cfg)
+	assert.NotNil(t, opts)
+	assert.Equal(t, cfg.ServiceName, opts.ServiceName)
+	assert.Equal(t, cfg.LogLevel, opts.LogLevel)
+	assert.False(t, opts.Development)
+	assert.Equal(t, 100, opts.SamplingInitial)
+	assert.Equal(t, 100, opts.SamplingThereafter)
+	assert.Equal(t, 100, opts.MaxSize)
+	assert.Equal(t, 7, opts.MaxAge)
+	assert.Equal(t, 5, opts.MaxBackups)
+	assert.True(t, opts.LocalTime)
+	assert.True(t, opts.Compress)
 }

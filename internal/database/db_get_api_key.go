@@ -16,10 +16,13 @@ func (db *Db) GetAPIKey(ctx context.Context, id uint64) (*lead_scraper_servicev1
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
-	var apiKeyORM lead_scraper_servicev1.APIKeyORM
-	result := db.Client.Engine.WithContext(ctx).Where("id = ?", id).First(&apiKeyORM)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to get API key: %w", result.Error)
+	// Get the query operator
+	apiKeyQop := db.QueryOperator.APIKeyORM
+
+	// Get the API key
+	apiKeyORM, err := apiKeyQop.WithContext(ctx).Where(apiKeyQop.Id.Eq(id)).First()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get API key: %w", err)
 	}
 
 	pbResult, err := apiKeyORM.ToPB(ctx)

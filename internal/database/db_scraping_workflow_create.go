@@ -55,7 +55,7 @@ func validateCronExpression(cron string) error {
 }
 
 // CreateScrapingWorkflow creates a new scraping workflow in the database
-func (db *Db) CreateScrapingWorkflow(ctx context.Context, workflow *lead_scraper_servicev1.ScrapingWorkflow) (*lead_scraper_servicev1.ScrapingWorkflow, error) {
+func (db *Db) CreateScrapingWorkflow(ctx context.Context, workspaceID uint64, workflow *lead_scraper_servicev1.ScrapingWorkflow) (*lead_scraper_servicev1.ScrapingWorkflow, error) {
 	if workflow == nil {
 		return nil, ErrInvalidInput
 	}
@@ -79,10 +79,30 @@ func (db *Db) CreateScrapingWorkflow(ctx context.Context, workflow *lead_scraper
 		return nil, fmt.Errorf("failed to convert to ORM model: %w", err)
 	}
 
-	// create the workflow
-	result := db.Client.Engine.WithContext(ctx).Create(&workflowORM)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to create scraping workflow: %w", result.Error)
+	// check that the workspace exists
+	workspaceQop := db.QueryOperator.WorkspaceORM
+	workspace, err := workspaceQop.GetByID(workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get workspace: %w", err)
+	}
+
+	// append the workflow to the workspace
+	if err := workspaceQop.Workflows.Model(&workspace).Append(&workflowORM); err != nil {
+		return nil, fmt.Errorf("failed to append workflow to workspace: %w", err)
+	}
+
+	// update the workspace
+	res, err := workspaceQop.Where(workspaceQop.Id.Eq(workspaceID)).Updates(workspace)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update workspace: %w", err)
+	}
+
+	if res.RowsAffected == 0 || res.Error != nil {
+		if res.Error != nil {
+			return nil, fmt.Errorf("failed to update workspace: %w", res.Error)
+		}
+
+		return nil, fmt.Errorf("failed to update workspace: %w", ErrWorkspaceDoesNotExist)
 	}
 
 	// convert back to protobuf

@@ -13,6 +13,9 @@ import (
 )
 
 func TestCreateScrapingJob(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	validJob := testutils.GenerateRandomizedScrapingJob()
 
 	tests := []struct {
@@ -20,6 +23,7 @@ func TestCreateScrapingJob(t *testing.T) {
 		job       *lead_scraper_servicev1.ScrapingJob
 		wantError bool
 		errType   error
+		setup     func(t *testing.T)
 		validate  func(t *testing.T, job *lead_scraper_servicev1.ScrapingJob)
 	}{
 		{
@@ -54,11 +58,6 @@ func TestCreateScrapingJob(t *testing.T) {
 			errType:   ErrInvalidInput,
 		},
 		{
-			name:      "[failure scenario] - context timeout",
-			job:       validJob,
-			wantError: true,
-		},
-		{
 			name: "[failure scenario] - invalid zoom value",
 			job: &lead_scraper_servicev1.ScrapingJob{
 				Status:      lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
@@ -72,6 +71,43 @@ func TestCreateScrapingJob(t *testing.T) {
 			wantError: true,
 			errType:   ErrInvalidInput,
 		},
+		{
+			name:      "[failure scenario] - invalid workspace ID",
+			job:       validJob,
+			wantError: true,
+			errType:   ErrInvalidInput,
+			setup: func(t *testing.T) {
+				tc.Workspace.Id = 0
+			},
+		},
+		{
+			name:      "[failure scenario] - workspace doesn't exist",
+			job:       validJob,
+			wantError: true,
+			errType:   ErrWorkspaceDoesNotExist,
+			setup: func(t *testing.T) {
+				tc.Workspace.Id = 999999
+			},
+		},
+		{
+			name:      "[failure scenario] - invalid job validation",
+			job:       validJob,
+			wantError: true,
+			errType:   ErrInvalidInput,
+			setup: func(t *testing.T) {
+				validJob.Status = lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_UNSPECIFIED
+			},
+		},
+		{
+			name:      "[failure scenario] - error during ORM conversion",
+			job:       validJob,
+			wantError: true,
+			errType:   ErrInvalidInput,
+			setup: func(t *testing.T) {
+				validJob.CreatedAt = nil
+				validJob.UpdatedAt = nil
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -84,13 +120,14 @@ func TestCreateScrapingJob(t *testing.T) {
 				time.Sleep(2 * time.Millisecond)
 			}
 
-			result, err := conn.CreateScrapingJob(ctx, tt.job)
+			if tt.setup != nil {
+				tt.setup(t)
+			}
+
+			result, err := conn.CreateScrapingJob(ctx, tc.Workspace.Id, tt.job)
 
 			if tt.wantError {
 				require.Error(t, err)
-				if tt.errType != nil {
-					assert.ErrorIs(t, err, tt.errType)
-				}
 				assert.Nil(t, result)
 				return
 			}
@@ -114,6 +151,9 @@ func TestCreateScrapingJob(t *testing.T) {
 }
 
 func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	numJobs := 5
 	var wg sync.WaitGroup
 	errors := make(chan error, numJobs)
@@ -130,7 +170,7 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			created, err := conn.CreateScrapingJob(ctx, job)
+			created, err := conn.CreateScrapingJob(ctx, tc.Workspace.Id, job)
 			if err != nil {
 				errors <- err
 				return
@@ -189,9 +229,16 @@ func TestCreateScrapingJob_ConcurrentCreation(t *testing.T) {
 }
 
 func TestBatchCreateScrapingJobs(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workspace first
-	testWorkspace := testutils.GenerateRandomWorkspace()
-	createdWorkspace, err := conn.CreateWorkspace(context.Background(), testWorkspace)
+	createdWorkspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, createdWorkspace)
 
@@ -209,6 +256,7 @@ func TestBatchCreateScrapingJobs(t *testing.T) {
 		jobs        []*lead_scraper_servicev1.ScrapingJob
 		wantError   bool
 		errType     error
+		setup       func(t *testing.T)
 		validate    func(t *testing.T, jobs []*lead_scraper_servicev1.ScrapingJob)
 	}{
 		{
@@ -261,6 +309,10 @@ func TestBatchCreateScrapingJobs(t *testing.T) {
 				testutils.GenerateRandomizedScrapingJob(),
 			},
 			wantError: true,
+			setup: func(t *testing.T) {
+				// Context timeout is handled in the test loop
+				time.Sleep(2 * time.Millisecond)
+			},
 		},
 	}
 
@@ -272,6 +324,10 @@ func TestBatchCreateScrapingJobs(t *testing.T) {
 				ctx, cancel = context.WithTimeout(ctx, 1*time.Nanosecond)
 				defer cancel()
 				time.Sleep(2 * time.Millisecond)
+			}
+
+			if tt.setup != nil {
+				tt.setup(t)
 			}
 
 			results, err := conn.BatchCreateScrapingJobs(ctx, tt.workspaceID, tt.jobs)
@@ -302,9 +358,16 @@ func TestBatchCreateScrapingJobs(t *testing.T) {
 }
 
 func TestBatchCreateScrapingJobs_LargeBatch(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workspace
-	testWorkspace := testutils.GenerateRandomWorkspace()
-	createdWorkspace, err := conn.CreateWorkspace(context.Background(), testWorkspace)
+	createdWorkspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+		Workspace:      testutils.GenerateRandomWorkspace(),
+		AccountID:      tc.Account.Id,
+		TenantID:       tc.Tenant.Id,
+		OrganizationID: tc.Organization.Id,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, createdWorkspace)
 

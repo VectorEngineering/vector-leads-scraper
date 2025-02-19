@@ -66,7 +66,6 @@ func (db *Db) GetAccount(ctx context.Context, input *GetAccountInput) (*lead_scr
 	}
 
 	// Query the account by id and account status. NOTE: we only include the account status if it is not unspecifed
-	var account *lead_scraper_servicev1.AccountORM
 	queryRef := b.WithContext(ctx)
 
 	if input.AccountStatus != lead_scraper_servicev1.Account_ACCOUNT_STATUS_UNSPECIFIED {
@@ -77,7 +76,8 @@ func (db *Db) GetAccount(ctx context.Context, input *GetAccountInput) (*lead_scr
 		queryRef = queryRef.Where(b.AccountStatus.In(lead_scraper_servicev1.Account_ACCOUNT_STATUS_SUSPENDED.String()))
 	}
 
-	account, err := queryRef.Where(b.Id.Eq(input.ID)).First()
+	queryRef = queryRef.Where(b.Id.Eq(input.ID))
+	account, err := db.PreloadAccount(queryRef)
 	if err != nil {
 		if err.Error() == "record not found" {
 			return nil, ErrAccountDoesNotExist

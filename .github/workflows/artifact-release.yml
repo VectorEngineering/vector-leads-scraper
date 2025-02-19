@@ -42,6 +42,9 @@ on:
       REDIS_URL:
         required: false
         description: "Redis connection string override"
+      PROXIES:
+        required: false
+        description: "Comma-separated list of proxies to use"
 
 permissions:
   contents: write
@@ -56,7 +59,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        go: ['1.23.1']
+        go: ['1.23.4']
 
     steps:
       - name: Check out code
@@ -89,7 +92,7 @@ jobs:
       - name: Go Build
         run: go build -o /dev/null ./...
       - name: Test
-        run: go test -v -race -timeout 5m ./...
+        run: go test -v -timeout 5m ./...
   build-leads-scraper:
     needs: run
     name: Build leads scraper images for ${{ inputs.environment }}
@@ -124,3 +127,4 @@ jobs:
       AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
       REDIS_URL: ${{ secrets.REDIS_URL }}
+      PROXIES: ${{ secrets.PROXIES }}

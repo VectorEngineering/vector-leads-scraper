@@ -16,9 +16,12 @@ func (db *Db) UpdateScrapingJob(ctx context.Context, job *lead_scraper_servicev1
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
+	// Get the query operator
+	jobQop := db.QueryOperator.ScrapingJobORM
+
 	// Check if job exists and get current status
-	var existingJob lead_scraper_servicev1.ScrapingJobORM
-	if result := db.Client.Engine.WithContext(ctx).Where("id = ?", job.Id).First(&existingJob); result.Error != nil {
+	existingJob, err := jobQop.WithContext(ctx).Where(jobQop.Id.Eq(job.Id)).First()
+	if err != nil {
 		return nil, fmt.Errorf("job does not exist: %w", ErrJobDoesNotExist)
 	}
 
@@ -40,17 +43,17 @@ func (db *Db) UpdateScrapingJob(ctx context.Context, job *lead_scraper_servicev1
 	}
 
 	// update the job
-	result := db.Client.Engine.WithContext(ctx).Where("id = ?", job.Id).Updates(&jobORM)
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to update scraping job: %w", result.Error)
+	if _, err := jobQop.WithContext(ctx).Where(jobQop.Id.Eq(job.Id)).Updates(&jobORM); err != nil {
+		return nil, fmt.Errorf("failed to update scraping job: %w", err)
 	}
 
 	// get the updated record
-	if result := db.Client.Engine.WithContext(ctx).Where("id = ?", job.Id).First(&jobORM); result.Error != nil {
-		return nil, fmt.Errorf("failed to get updated scraping job: %w", result.Error)
+	updatedJob, err := jobQop.WithContext(ctx).Where(jobQop.Id.Eq(job.Id)).First()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated scraping job: %w", err)
 	}
 
-	pbResult, err := jobORM.ToPB(ctx)
+	pbResult, err := updatedJob.ToPB(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to protobuf: %w", err)
 	}

@@ -6,64 +6,87 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Vector/vector-leads-scraper/internal/testutils"
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDb_DeleteWorkspace(t *testing.T) {
-	type args struct {
-		ctx context.Context
-		id  uint64
-	}
+	// Initialize test context
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
 
 	tests := []struct {
 		name    string
-		args    args
-		setup   func(t *testing.T) *lead_scraper_servicev1.Workspace
+		id      uint64
+		setup   func(t *testing.T) uint64
 		wantErr bool
 		errType error
 	}{
 		{
-			name: "[success scenario] - delete existing workspace",
-			args: args{
-				ctx: context.Background(),
-			},
-			setup: func(t *testing.T) *lead_scraper_servicev1.Workspace {
-				workspace, err := conn.CreateWorkspace(context.Background(), testContext.Workspace)
+			name: "[success] delete existing workspace",
+			setup: func(t *testing.T) uint64 {
+				// Create a new workspace to delete
+				workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+					Workspace:      testutils.GenerateRandomWorkspace(),
+					AccountID:      tc.Account.Id,
+					OrganizationID: tc.Organization.Id,
+					TenantID:       tc.Tenant.Id,
+				})
 				require.NoError(t, err)
 				require.NotNil(t, workspace)
-				return workspace
+				return workspace.Id
 			},
 			wantErr: false,
 		},
 		{
-			name: "[failure scenario] - workspace does not exist",
-			args: args{
-				ctx: context.Background(),
-				id:  999999, // Non-existent ID
-			},
+			name:    "[failure] delete with invalid ID",
+			id:      0,
 			wantErr: true,
+			errType: ErrInvalidInput,
 		},
 		{
-			name: "[failure scenario] - zero ID",
-			args: args{
-				ctx: context.Background(),
-				id:  0,
+			name:    "[failure] delete non-existent workspace",
+			id:      999999,
+			wantErr: true,
+			errType: ErrWorkspaceDoesNotExist,
+		},
+		{
+			name: "[failure] delete already deleted workspace",
+			setup: func(t *testing.T) uint64 {
+				// Create a workspace first
+				workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+					Workspace:      testutils.GenerateRandomWorkspace(),
+					AccountID:      tc.Account.Id,
+					OrganizationID: tc.Organization.Id,
+					TenantID:       tc.Tenant.Id,
+				})
+				require.NoError(t, err)
+				require.NotNil(t, workspace)
+
+				// Delete it once
+				err = conn.DeleteWorkspace(context.Background(), workspace.Id)
+				require.NoError(t, err)
+
+				return workspace.Id
 			},
 			wantErr: true,
+			errType: ErrWorkspaceDoesNotExist,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var workspace *lead_scraper_servicev1.Workspace
+			var id uint64
 			if tt.setup != nil {
-				workspace = tt.setup(t)
-				tt.args.id = workspace.Id
+				id = tt.setup(t)
+			} else {
+				id = tt.id
 			}
 
-			err := conn.DeleteWorkspace(tt.args.ctx, tt.args.id)
+			err := conn.DeleteWorkspace(context.Background(), id)
+
 			if tt.wantErr {
 				require.Error(t, err)
 				if tt.errType != nil {
@@ -71,22 +94,31 @@ func TestDb_DeleteWorkspace(t *testing.T) {
 				}
 				return
 			}
+
 			require.NoError(t, err)
 
-			// Verify workspace no longer exists
-			_, err = conn.GetWorkspace(context.Background(), tt.args.id)
-			require.Error(t, err)
+			// Verify the workspace was actually deleted
+			_, err = conn.GetWorkspace(context.Background(), id)
+			assert.ErrorIs(t, err, ErrWorkspaceDoesNotExist)
 		})
 	}
 }
 
 func TestDb_DeleteWorkspace_ConcurrentDeletions(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create multiple workspaces
 	numWorkspaces := 5
 	workspaces := make([]*lead_scraper_servicev1.Workspace, 0, numWorkspaces)
 
 	for i := 0; i < numWorkspaces; i++ {
-		workspace, err := conn.CreateWorkspace(context.Background(), testContext.Workspace)
+		workspace, err := conn.CreateWorkspace(context.Background(), &CreateWorkspaceInput{
+			Workspace:      testutils.GenerateRandomWorkspace(),
+			AccountID:      tc.Account.Id,
+			OrganizationID: tc.Organization.Id,
+			TenantID:       tc.Tenant.Id,
+		})
 		require.NoError(t, err)
 		workspaces = append(workspaces, workspace)
 	}

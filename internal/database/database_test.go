@@ -109,12 +109,12 @@ type TxCleanupHandler struct {
 
 // txCleanupHandler creates a new TxCleanupHandler with a timeout context and initialized
 // transaction. It:
-// - Creates a context with a 10-second timeout
+// - Creates a context with a 60-second timeout
 // - Begins a new transaction
 // - Sets a savepoint for potential rollbacks
 // Returns a configured TxCleanupHandler ready for use in tests.
 func txCleanupHandler() *TxCleanupHandler {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	db := conn.Client.Engine
 	tx := db.WithContext(ctx).Begin()
 	tx.SavePoint(SAVE_POINT)

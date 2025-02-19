@@ -16,13 +16,16 @@ func (db *Db) GetScrapingJob(ctx context.Context, id uint64) (*lead_scraper_serv
 	ctx, cancel := context.WithTimeout(ctx, db.GetQueryTimeout())
 	defer cancel()
 
-	var jobORM lead_scraper_servicev1.ScrapingJobORM
-	result := db.Client.Engine.WithContext(ctx).Where("id = ?", id).First(&jobORM)
-	if result.Error != nil {
-		if result.Error.Error() == "record not found" {
-			return nil, fmt.Errorf("%w: %v", ErrJobDoesNotExist, result.Error)
+	// Get the query operator
+	jobQop := db.QueryOperator.ScrapingJobORM
+
+	// Get the job
+	jobORM, err := jobQop.WithContext(ctx).Where(jobQop.Id.Eq(id)).First()
+	if err != nil {
+		if err.Error() == "record not found" {
+			return nil, fmt.Errorf("%w: %v", ErrJobDoesNotExist, err)
 		}
-		return nil, fmt.Errorf("failed to get scraping job: %w", result.Error)
+		return nil, fmt.Errorf("failed to get scraping job: %w", err)
 	}
 
 	pbResult, err := jobORM.ToPB(ctx)

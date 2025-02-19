@@ -1,0 +1,116 @@
+{{- if .Values.config.grpc.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "leads-scraper-service.fullname" . }}-grpc
+  labels:
+    {{- include "leads-scraper-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grpc
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "leads-scraper-service.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: grpc
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "leads-scraper-service.labels" . | nindent 8 }}
+        app.kubernetes.io/component: grpc
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "leads-scraper-service.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if eq .Values.config.grpc.environment "development" }}
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - until nc -z -w1 {{ .Values.config.redis.host }} {{ .Values.config.redis.port }}; do echo waiting for Redis; sleep 2; done;
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}-grpc
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            # Enable gRPC mode
+            - "--grpc"
+            # gRPC configuration
+            - "--grpc-port={{ .Values.config.grpc.port }}"
+            - "--service-name={{ .Values.config.grpc.serviceName }}"
+            - "--environment={{ .Values.config.grpc.environment }}"
+            - "--addr=:{{ .Values.config.grpc.port }}"
+            # Database configuration
+            - "--db-url={{ include "leads-scraper-service.postgresql.dsn" . }}"
+            - "--db-max-idle-connections={{ .Values.config.database.maxIdleConnections }}"
+            - "--db-max-open-connections={{ .Values.config.database.maxOpenConnections }}"
+            - "--db-max-connection-lifetime={{ .Values.config.database.maxConnectionLifetime }}"
+            - "--db-max-connection-retry-timeout={{ .Values.config.database.maxConnectionRetryTimeout }}"
+            - "--db-retry-sleep={{ .Values.config.database.retrySleep }}"
+            - "--db-query-timeout={{ .Values.config.database.queryTimeout }}"
+            - "--db-max-connection-retries={{ .Values.config.database.maxConnectionRetries }}"
+            # Redis configuration
+            {{- if .Values.config.redis.enabled }}
+            - "--redis-enabled=true"
+            - "--redis-host={{ .Values.config.redis.host }}"
+            - "--redis-port={{ .Values.config.redis.port }}"
+            - "--redis-password={{ .Values.config.redis.password }}"
+            - "--redis-workers={{ .Values.config.redis.workers }}"
+            - "--redis-retry-interval={{ .Values.config.redis.retryInterval }}"
+            - "--redis-max-retries={{ .Values.config.redis.maxRetries }}"
+            - "--redis-retention-days={{ .Values.config.redis.retentionDays }}"
+            - "--redis-url={{ .Values.config.redis.dsn }}"
+            {{- end }}
+            # Monitoring and logging
+            {{- if .Values.config.newrelic.enabled }}
+            - "--newrelic-key={{ .Values.config.newrelic.key }}"
+            {{- end }}
+            - "--log-level={{ .Values.config.logging.level }}"
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.config.grpc.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe.grpc | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe.grpc | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }} 

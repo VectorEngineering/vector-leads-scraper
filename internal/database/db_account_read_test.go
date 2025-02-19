@@ -18,7 +18,6 @@ func TestGetAccountInput_validate(t *testing.T) {
 		d       *GetAccountInput
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "success - valid input",
 			d: &GetAccountInput{
@@ -37,6 +36,9 @@ func TestGetAccountInput_validate(t *testing.T) {
 }
 
 func TestDb_GetAccount(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create test accounts
 	validAccount := generateRandomizedAccount()
 
@@ -92,8 +94,8 @@ func TestDb_GetAccount(t *testing.T) {
 					// Create the account first
 					acct, err := db.CreateAccount(context.Background(), &CreateAccountInput{
 						Account:  validAccount,
-						OrgID:    "test-org",
-						TenantID: "test-tenant",
+						OrgID:    tc.Organization.Id,
+						TenantID: tc.Tenant.Id,
 					})
 					require.NoError(t, err)
 					require.NotNil(t, acct)
@@ -143,7 +145,6 @@ func TestListAccountsInput_validate(t *testing.T) {
 		d       *ListAccountsInput
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "success - valid input",
 			d: &ListAccountsInput{
@@ -163,6 +164,9 @@ func TestListAccountsInput_validate(t *testing.T) {
 }
 
 func TestDb_ListAccounts(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	tests := []struct {
 		name        string
 		input       *ListAccountsInput
@@ -228,8 +232,8 @@ func TestDb_ListAccounts(t *testing.T) {
 						mockAccount := generateRandomizedAccount()
 						createdAcct, err := db.CreateAccount(context.Background(), &CreateAccountInput{
 							Account:  mockAccount,
-							OrgID:    "test-org",
-							TenantID: "test-tenant",
+							OrgID:    tc.Organization.Id,
+							TenantID: tc.Tenant.Id,
 						})
 						require.NoError(t, err)
 						require.NotNil(t, createdAcct)

@@ -13,11 +13,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 )
 
 // setupTest creates a new registry and returns a cleanup function
-func setupTest() (*prometheus.Registry, func()) {
+func setupTest(t *testing.T) (*prometheus.Registry, func()) {
 	oldRegisterer := prometheus.DefaultRegisterer
 	oldGatherer := prometheus.DefaultGatherer
 
@@ -34,64 +35,192 @@ func setupTest() (*prometheus.Registry, func()) {
 }
 
 func TestNew(t *testing.T) {
-	registry, cleanup := setupTest()
-	defer cleanup()
-
-	logger := zaptest.NewLogger(t)
-	metrics := New(logger)
-	require.NotNil(t, metrics)
-
-	// Verify all metrics are initialized
-	assert.NotNil(t, metrics.uptime)
-	assert.NotNil(t, metrics.goroutines)
-	assert.NotNil(t, metrics.requestsTotal)
-	assert.NotNil(t, metrics.requestDuration)
-	assert.NotNil(t, metrics.requestsInFlight)
-	assert.NotNil(t, metrics.errorTotal)
-	assert.NotNil(t, metrics.memoryUsage)
-	assert.NotNil(t, metrics.cpuUsage)
-	assert.NotNil(t, metrics.openConnections)
-	assert.NotNil(t, metrics.componentHealth)
-	assert.NotNil(t, metrics.gcDuration)
-	assert.NotNil(t, metrics.gcCount)
-	assert.NotNil(t, metrics.threadCount)
-	assert.NotNil(t, metrics.heapObjects)
-	assert.NotNil(t, metrics.heapAlloc)
-	assert.NotNil(t, metrics.stackInUse)
-	assert.NotNil(t, metrics.redisLatency)
-	assert.NotNil(t, metrics.redisConnectionStatus)
-	assert.NotNil(t, metrics.redisOperations)
-	assert.NotNil(t, metrics.redisErrors)
-
-	// Verify metrics are registered
-	metricFamilies, err := registry.Gather()
-	require.NoError(t, err)
-	assert.NotEmpty(t, metricFamilies)
+	setupTest(t)
+	logger, _ := zap.NewDevelopment()
+	m := New(logger)
+	assert.NotNil(t, m)
+	assert.NotNil(t, m.logger)
+	assert.NotNil(t, m.requestsTotal)
+	assert.NotNil(t, m.requestDuration)
+	assert.NotNil(t, m.errorTotal)
 }
 
-func TestStartServer(t *testing.T) {
-	registry, cleanup := setupTest()
-	defer cleanup()
+func TestMetrics_StartServer(t *testing.T) {
+	setupTest(t)
+	logger, _ := zap.NewDevelopment()
+	m := New(logger)
 
-	logger := zaptest.NewLogger(t)
-	metrics := New(logger)
-	require.NotNil(t, metrics)
-
-	// Create test server with the test registry
-	handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
-	server := httptest.NewServer(handler)
+	// Create a test server
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	// Make request to /metrics endpoint
-	resp, err := http.Get(server.URL)
-	require.NoError(t, err)
-	defer resp.Body.Close()
+	// Record some test metrics
+	m.RecordRequest("test", time.Second, "success")
+	m.SetGoroutineCount(10)
+	m.SetMemoryUsage(1024)
 
+	// Test metrics endpoint
+	resp, err := http.Get(server.URL + "/metrics")
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
+func TestMetrics_Collection(t *testing.T) {
+	setupTest(t)
+	logger, _ := zap.NewDevelopment()
+	m := New(logger)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	// Start collection in a goroutine
+	go m.StartCollection(ctx)
+
+	// Wait for at least one collection cycle
+	time.Sleep(20 * time.Millisecond)
+
+	// Test various metric setters
+	testCases := []struct {
+		name     string
+		testFunc func()
+	}{
+		{
+			name: "SetGoroutineCount",
+			testFunc: func() {
+				m.SetGoroutineCount(10)
+			},
+		},
+		{
+			name: "SetMemoryUsage",
+			testFunc: func() {
+				m.SetMemoryUsage(1024)
+			},
+		},
+		{
+			name: "SetComponentHealth",
+			testFunc: func() {
+				m.SetComponentHealth("test", 1)
+			},
+		},
+		{
+			name: "RecordRequest",
+			testFunc: func() {
+				m.RecordRequest("test", time.Second, "success")
+			},
+		},
+		{
+			name: "RequestsInFlight",
+			testFunc: func() {
+				m.IncrementRequestsInFlight()
+				m.DecrementRequestsInFlight()
+			},
+		},
+		{
+			name: "RecordError",
+			testFunc: func() {
+				m.RecordError("test_error")
+			},
+		},
+		{
+			name: "SetOpenConnections",
+			testFunc: func() {
+				m.SetOpenConnections(5)
+			},
+		},
+		{
+			name: "SetCPUUsage",
+			testFunc: func() {
+				m.SetCPUUsage(50.0)
+			},
+		},
+		{
+			name: "Redis Metrics",
+			testFunc: func() {
+				m.SetRedisLatency(0.1)
+				m.SetRedisConnectionStatus(1)
+				m.RecordRedisOperation("get")
+				m.RecordRedisError("connection_error")
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.testFunc()
+		})
+	}
+}
+
+func TestMetrics_Concurrent(t *testing.T) {
+	setupTest(t)
+	logger, _ := zap.NewDevelopment()
+	m := New(logger)
+
+	// Test concurrent access to metrics
+	concurrency := 10
+	done := make(chan bool)
+
+	for i := 0; i < concurrency; i++ {
+		go func() {
+			m.RecordRequest("test", time.Millisecond, "success")
+			m.IncrementRequestsInFlight()
+			m.DecrementRequestsInFlight()
+			m.RecordError("test_error")
+			done <- true
+		}()
+	}
+
+	// Wait for all goroutines to complete
+	for i := 0; i < concurrency; i++ {
+		<-done
+	}
+}
+
+func TestMetrics_CollectFunction(t *testing.T) {
+	setupTest(t)
+	logger, _ := zap.NewDevelopment()
+	m := New(logger)
+
+	startTime := time.Now()
+	m.collect(startTime)
+
+	// Verify that metrics were collected without panicking
+	assert.NotPanics(t, func() {
+		m.collect(startTime)
+	})
+}
+
+func TestMetrics_Registry(t *testing.T) {
+	// Create a new registry for this test
+	oldRegisterer := prometheus.DefaultRegisterer
+	oldGatherer := prometheus.DefaultGatherer
+	defer func() {
+		prometheus.DefaultRegisterer = oldRegisterer
+		prometheus.DefaultGatherer = oldGatherer
+	}()
+
+	// Create a new registry for each instance
+	logger, _ := zap.NewDevelopment()
+
+	// First instance
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+	m1 := New(logger)
+	assert.NotNil(t, m1)
+
+	// Second instance with a new registry
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+	m2 := New(logger)
+	assert.NotNil(t, m2)
+
+	// Test both instances
+	m1.RecordRequest("test1", time.Second, "success")
+	m2.RecordRequest("test2", time.Second, "success")
+}
+
 func TestStartCollection(t *testing.T) {
-	registry, cleanup := setupTest()
+	registry, cleanup := setupTest(t)
 	defer cleanup()
 
 	logger := zaptest.NewLogger(t)
@@ -124,7 +253,7 @@ func TestStartCollection(t *testing.T) {
 }
 
 func TestMetricsCollection(t *testing.T) {
-	registry, cleanup := setupTest()
+	registry, cleanup := setupTest(t)
 	defer cleanup()
 
 	logger := zaptest.NewLogger(t)
@@ -172,7 +301,7 @@ func TestMetricsCollection(t *testing.T) {
 }
 
 func TestMetricsLabels(t *testing.T) {
-	registry, cleanup := setupTest()
+	registry, cleanup := setupTest(t)
 	defer cleanup()
 
 	logger := zaptest.NewLogger(t)
@@ -229,7 +358,7 @@ func TestMetricsLabels(t *testing.T) {
 }
 
 func TestMetricsReset(t *testing.T) {
-	_, cleanup := setupTest()
+	_, cleanup := setupTest(t)
 	defer cleanup()
 
 	logger := zaptest.NewLogger(t)

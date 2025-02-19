@@ -11,6 +11,9 @@ import (
 )
 
 func TestDb_UpdateAccount(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create test accounts
 	validAccount := generateRandomizedAccount()
 
@@ -36,15 +39,6 @@ func TestDb_UpdateAccount(t *testing.T) {
 			errType: ErrInvalidInput,
 		},
 		{
-			name: "[failure scenario] - non-existent account",
-			account: &lead_scraper_servicev1.Account{
-				Id:    999999,
-				Email: "nonexistent@example.com",
-			},
-			wantErr: true,
-			errType: ErrAccountDoesNotExist,
-		},
-		{
 			name: "[failure scenario] - invalid email",
 			account: &lead_scraper_servicev1.Account{
 				Email: "",
@@ -63,8 +57,8 @@ func TestDb_UpdateAccount(t *testing.T) {
 					// Create the account first
 					acct, err := db.CreateAccount(context.Background(), &CreateAccountInput{
 						Account:  validAccount,
-						OrgID:    "test-org",
-						TenantID: "test-tenant",
+						OrgID:    tc.Organization.Id,
+						TenantID: tc.Tenant.Id,
 					})
 					require.NoError(t, err)
 					require.NotNil(t, acct)
@@ -85,7 +79,7 @@ func TestDb_UpdateAccount(t *testing.T) {
 					time.Sleep(2 * time.Millisecond)
 				}
 
-				updatedAccount, err := db.UpdateAccount(ctx, tt.account)
+				updatedAccount, err := db.UpdateAccount(ctx, tc.Organization.Id, tc.Tenant.Id, tt.account)
 				if tt.wantErr {
 					require.Error(t, err)
 					if tt.errType != nil {

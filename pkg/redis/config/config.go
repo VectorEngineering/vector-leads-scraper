@@ -56,6 +56,41 @@ var DefaultQueuePriorities = map[string]int{
 	"low":      1,
 }
 
+// parseQueuePriorities parses a string of queue priorities in the format "queue1:1,queue2:2,queue3:3"
+func parseQueuePriorities(s string) (map[string]int, error) {
+	if s == "" {
+		return nil, nil
+	}
+
+	priorities := make(map[string]int)
+	pairs := strings.Split(s, ",")
+
+	for _, pair := range pairs {
+		parts := strings.Split(pair, ":")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid queue priority format: %s", pair)
+		}
+
+		queue := strings.TrimSpace(parts[0])
+		if queue == "" {
+			return nil, fmt.Errorf("empty queue name in priority pair: %s", pair)
+		}
+
+		priority, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+		if err != nil {
+			return nil, fmt.Errorf("invalid priority value in pair %s: %w", pair, err)
+		}
+
+		if priority < 1 {
+			return nil, fmt.Errorf("priority must be greater than 0: %s", pair)
+		}
+
+		priorities[queue] = priority
+	}
+
+	return priorities, nil
+}
+
 // NewRedisConfig creates a new Redis configuration from environment variables
 func NewRedisConfig() (*RedisConfig, error) {
 	cfg := &RedisConfig{
@@ -68,9 +103,18 @@ func NewRedisConfig() (*RedisConfig, error) {
 		QueuePriorities: make(map[string]int),
 	}
 
-	// Initialize queue priorities with defaults
-	for queue, priority := range DefaultQueuePriorities {
-		cfg.QueuePriorities[queue] = priority
+	// Handle custom queue priorities if provided
+	if customPriorities := os.Getenv("REDIS_QUEUE_PRIORITIES"); customPriorities != "" {
+		priorities, err := parseQueuePriorities(customPriorities)
+		if err != nil {
+			return nil, fmt.Errorf("invalid queue priorities: %w", err)
+		}
+		cfg.QueuePriorities = priorities
+	} else {
+		// Initialize queue priorities with defaults only if no custom priorities are provided
+		for queue, priority := range DefaultQueuePriorities {
+			cfg.QueuePriorities[queue] = priority
+		}
 	}
 
 	// Check if Redis URL is provided
@@ -112,25 +156,24 @@ func NewRedisConfig() (*RedisConfig, error) {
 				cfg.DB = db
 			}
 		}
-
-		return cfg, nil
-	}
-
-	// If no Redis URL is provided, use individual configuration parameters
-	// Validate and set Port
-	if port, err := validatePort(getEnvOrDefault("REDIS_PORT", strconv.Itoa(defaultPort))); err != nil {
-		return nil, fmt.Errorf("invalid port: %w", err)
 	} else {
-		cfg.Port = port
+		// If no Redis URL is provided, use individual configuration parameters
+		// Validate and set Port
+		if port, err := validatePort(getEnvOrDefault("REDIS_PORT", strconv.Itoa(defaultPort))); err != nil {
+			return nil, fmt.Errorf("invalid port: %w", err)
+		} else {
+			cfg.Port = port
+		}
+
+		// Validate and set DB
+		if db, err := validateDB(getEnvOrDefault("REDIS_DB", strconv.Itoa(defaultDB))); err != nil {
+			return nil, fmt.Errorf("invalid DB: %w", err)
+		} else {
+			cfg.DB = db
+		}
 	}
 
-	// Validate and set DB
-	if db, err := validateDB(getEnvOrDefault("REDIS_DB", strconv.Itoa(defaultDB))); err != nil {
-		return nil, fmt.Errorf("invalid DB: %w", err)
-	} else {
-		cfg.DB = db
-	}
-
+	// Always validate these parameters regardless of URL or individual params
 	// Validate and set Workers
 	if workers, err := validateWorkers(getEnvOrDefault("REDIS_WORKERS", strconv.Itoa(defaultWorkers))); err != nil {
 		return nil, fmt.Errorf("invalid workers: %w", err)
@@ -161,11 +204,8 @@ func NewRedisConfig() (*RedisConfig, error) {
 
 	// Validate TLS configuration if enabled
 	if cfg.UseTLS {
-		// Skip TLS file validation in test mode
-		if !isTestMode() {
-			if err := validateTLSConfig(cfg); err != nil {
-				return nil, fmt.Errorf("invalid TLS configuration: %w", err)
-			}
+		if err := validateTLSConfig(cfg); err != nil {
+			return nil, fmt.Errorf("invalid TLS configuration: %w", err)
 		}
 	}
 
@@ -179,6 +219,11 @@ func (c *RedisConfig) GetRedisAddr() string {
 		host = "[" + host + "]"
 	}
 	return fmt.Sprintf("%s:%d", host, c.Port)
+}
+
+// GetAddr returns the Redis address in the format "host:port"
+func (c *RedisConfig) GetAddr() string {
+	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 
 func validatePort(port string) (int, error) {

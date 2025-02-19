@@ -12,9 +12,12 @@ import (
 )
 
 func TestValidateAPIKey(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test API key first
 	testKey := testutils.GenerateRandomAPIKey()
-	created, err := conn.CreateAPIKey(context.Background(), testKey)
+	created, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, testKey)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -43,8 +46,6 @@ func TestValidateAPIKey(t *testing.T) {
 				assert.Equal(t, created.Name, apiKey.Name)
 				assert.Equal(t, created.KeyHash, apiKey.KeyHash)
 				assert.Equal(t, created.KeyPrefix, apiKey.KeyPrefix)
-				assert.Equal(t, created.OrgId, apiKey.OrgId)
-				assert.Equal(t, created.TenantId, apiKey.TenantId)
 				assert.Equal(t, created.Scopes, apiKey.Scopes)
 				assert.Equal(t, created.AllowedIps, apiKey.AllowedIps)
 				assert.Equal(t, created.IsTestKey, apiKey.IsTestKey)

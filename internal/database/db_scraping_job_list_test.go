@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -12,8 +13,12 @@ import (
 )
 
 func TestListScrapingJobs(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+	table := lead_scraper_servicev1.ScrapingJobORM{}.TableName()
+
 	// Clean up any existing jobs first
-	result := conn.Client.Engine.Exec("DELETE FROM gmaps_jobs")
+	result := conn.Client.Engine.Exec(fmt.Sprintf("DELETE FROM %s", table))
 	require.NoError(t, result.Error)
 
 	// Create multiple test jobs
@@ -22,7 +27,7 @@ func TestListScrapingJobs(t *testing.T) {
 
 	for i := 0; i < numJobs; i++ {
 		job := testutils.GenerateRandomizedScrapingJob()
-		created, err := conn.CreateScrapingJob(context.Background(), job)
+		created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, job)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		jobIDs[i] = created.Id
@@ -150,11 +155,134 @@ func TestListScrapingJobs(t *testing.T) {
 }
 
 func TestListScrapingJobs_EmptyDatabase(t *testing.T) {
+	table := lead_scraper_servicev1.ScrapingJobORM{}.TableName()
 	// Clean up any existing jobs first
-	result := conn.Client.Engine.Exec("DELETE FROM gmaps_jobs")
+	result := conn.Client.Engine.Exec(fmt.Sprintf("DELETE FROM %s", table))
 	require.NoError(t, result.Error)
 
 	results, err := conn.ListScrapingJobs(context.Background(), 10, 0)
 	require.NoError(t, err)
 	assert.Empty(t, results)
+}
+
+func TestDb_ListScrapingJobsByStatus(t *testing.T) {
+	table := lead_scraper_servicev1.ScrapingJobORM{}.TableName()
+	// Initialize test context
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
+	// Clean up any existing jobs first
+	result := conn.Client.Engine.Exec(fmt.Sprintf("DELETE FROM %s", table))
+	require.NoError(t, result.Error)
+
+	// Create test jobs with different statuses
+	jobStatuses := []lead_scraper_servicev1.BackgroundJobStatus{
+		lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+		lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS,
+		lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_COMPLETED,
+		lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_FAILED,
+	}
+
+	// Create test jobs
+	var createdJobs []*lead_scraper_servicev1.ScrapingJob
+	for _, status := range jobStatuses {
+		job := testutils.GenerateRandomizedScrapingJob()
+		job.Status = status
+		created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, job)
+		require.NoError(t, err)
+		require.NotNil(t, created)
+		createdJobs = append(createdJobs, created)
+	}
+
+	// Cleanup after test
+	defer func() {
+		for _, job := range createdJobs {
+			err := conn.DeleteScrapingJob(context.Background(), job.Id)
+			require.NoError(t, err)
+		}
+	}()
+
+	tests := []struct {
+		name     string
+		status   lead_scraper_servicev1.BackgroundJobStatus
+		limit    uint64
+		offset   uint64
+		wantErr  bool
+		errType  error
+		validate func(t *testing.T, got []*lead_scraper_servicev1.ScrapingJob)
+	}{
+		{
+			name:   "[success] list queued jobs",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+			limit:  10,
+			offset: 0,
+			validate: func(t *testing.T, got []*lead_scraper_servicev1.ScrapingJob) {
+				require.Len(t, got, 1)
+				assert.Equal(t, lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED, got[0].Status)
+			},
+		},
+		{
+			name:   "[success] list in progress jobs",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS,
+			limit:  10,
+			offset: 0,
+			validate: func(t *testing.T, got []*lead_scraper_servicev1.ScrapingJob) {
+				require.Len(t, got, 1)
+				assert.Equal(t, lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_IN_PROGRESS, got[0].Status)
+			},
+		},
+		{
+			name:   "[success] list with offset",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_COMPLETED,
+			limit:  1,
+			offset: 0,
+			validate: func(t *testing.T, got []*lead_scraper_servicev1.ScrapingJob) {
+				require.Len(t, got, 1)
+				assert.Equal(t, lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_COMPLETED, got[0].Status)
+			},
+		},
+		{
+			name:   "[success] empty result for non-existent status",
+			status: lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_UNSPECIFIED,
+			limit:  10,
+			offset: 0,
+			validate: func(t *testing.T, got []*lead_scraper_servicev1.ScrapingJob) {
+				assert.Len(t, got, 0)
+			},
+		},
+		{
+			name:    "[failure] invalid limit",
+			status:  lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+			limit:   0,
+			offset:  0,
+			wantErr: true,
+			errType: ErrInvalidInput,
+		},
+		{
+			name:    "[failure] invalid offset",
+			status:  lead_scraper_servicev1.BackgroundJobStatus_BACKGROUND_JOB_STATUS_QUEUED,
+			limit:   10,
+			offset:  ^uint64(0), // Max uint64 value to force negative int64
+			wantErr: true,
+			errType: ErrInvalidInput,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := conn.ListScrapingJobsByStatus(context.Background(), tt.status, tt.limit, tt.offset)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.errType != nil {
+					assert.ErrorIs(t, err, tt.errType)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			if tt.validate != nil {
+				tt.validate(t, got)
+			}
+		})
+	}
 }

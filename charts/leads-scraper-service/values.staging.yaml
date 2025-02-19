@@ -82,17 +82,28 @@ resources:
 
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 livenessProbe:
-  httpGet:
+  http:
     path: /health
     port: http
-  initialDelaySeconds: 5
-  periodSeconds: 10
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  grpc:
+    tcpSocket:
+      port: grpc
+    initialDelaySeconds: 10
+    periodSeconds: 15
+
 readinessProbe:
-  httpGet:
+  http:
     path: /health
     port: http
-  initialDelaySeconds: 5
-  periodSeconds: 10
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  grpc:
+    tcpSocket:
+      port: grpc
+    initialDelaySeconds: 5
+    periodSeconds: 10
 
 # This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
@@ -131,13 +142,43 @@ tests:
 
 # Application specific configuration
 config:
-  # -- Enable Redis task handler
+  # gRPC Configuration
+  grpc:
+    # -- Enable gRPC server mode
+    enabled: false
+    # -- gRPC server port
+    port: 50051
+    # -- Service name for gRPC server
+    serviceName: "vector-leads-scraper"
+    # -- Environment (development, staging, production)
+    environment: "staging"
+    # -- gRPC deadline
+    deadline: "5s"
+    # -- gRPC retries
+    retries: 3
+    # -- gRPC retry delay
+    retryDelay: "1s"
+
+  # Redis Configuration
   redis:
+    # -- Enable Redis task handler
     enabled: true
-    # -- Redis connection string
-    dsn: ""
+    # -- Redis host
+    host: "gmaps-scraper-leads-scraper-service-redis-master.default.svc.cluster.local"
+    # -- Redis port
+    port: 6379
+    # -- Redis password
+    password: "redispass"
+    # -- Redis DSN (connection string)
+    dsn: "redis://:redispass@gmaps-scraper-leads-scraper-service-redis-master.default.svc.cluster.local:6379/0"
     # -- Redis workers
     workers: 10
+    # -- Retry interval for failed tasks
+    retryInterval: "5s"
+    # -- Maximum number of retries
+    maxRetries: 3
+    # -- Number of days to retain task history
+    retentionDays: 7
   # Database Configuration (Required)
   database:
     # Database connection string (Required)
@@ -173,6 +214,30 @@ config:
     fastMode: true
     exitOnInactivity: ""
     proxies: ""
+
+  newrelic:
+    enabled: true
+    key: "2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL"
+
+  logging:
+    level: "info"
+
+# Worker Configuration
+worker:
+  enabled: true
+  replicas: 1
+  concurrency: 10
+  depth: 5
+  fastMode: true
+  emailExtraction: false
+  exitOnInactivity: "1h"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
 # PostgreSQL subchart configuration
 postgresql:

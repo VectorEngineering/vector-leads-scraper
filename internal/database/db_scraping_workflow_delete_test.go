@@ -13,10 +13,13 @@ import (
 )
 
 func TestDeleteScrapingWorkflow(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a test workflow first
 	testWorkflow := testutils.GenerateRandomScrapingWorkflow()
 
-	created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)
+	created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, testWorkflow)
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
@@ -63,7 +66,7 @@ func TestDeleteScrapingWorkflow(t *testing.T) {
 					GeoFencingZoomMin: 1,
 					GeoFencingZoomMax: 20,
 				}
-				created, err := conn.CreateScrapingWorkflow(context.Background(), workflow)
+				created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, workflow)
 				require.NoError(t, err)
 				require.NotNil(t, created)
 
@@ -114,6 +117,9 @@ func TestDeleteScrapingWorkflow(t *testing.T) {
 }
 
 func TestDeleteScrapingWorkflow_ConcurrentDeletions(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	numWorkflows := 5
 	var wg sync.WaitGroup
 	errors := make(chan error, numWorkflows)
@@ -139,7 +145,7 @@ func TestDeleteScrapingWorkflow_ConcurrentDeletions(t *testing.T) {
 			AcceptTermsOfService:  true,
 			UserAgent:             "TestBot/1.0",
 		}
-		created, err := conn.CreateScrapingWorkflow(context.Background(), workflow)
+		created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, workflow)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		workflowIDs[i] = created.Id
@@ -175,12 +181,15 @@ func TestDeleteScrapingWorkflow_ConcurrentDeletions(t *testing.T) {
 }
 
 func TestBatchDeleteScrapingWorkflows(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create test workflows first
 	numWorkflows := 5
 	workflowIDs := make([]uint64, numWorkflows)
 	for i := 0; i < numWorkflows; i++ {
 		testWorkflow := testutils.GenerateRandomScrapingWorkflow()
-		created, err := conn.CreateScrapingWorkflow(context.Background(), testWorkflow)
+		created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, testWorkflow)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		workflowIDs[i] = created.Id
@@ -228,7 +237,7 @@ func TestBatchDeleteScrapingWorkflows(t *testing.T) {
 			setup: func(t *testing.T) []uint64 {
 				// Create one workflow and combine with non-existent ID
 				workflow := testutils.GenerateRandomScrapingWorkflow()
-				created, err := conn.CreateScrapingWorkflow(context.Background(), workflow)
+				created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, workflow)
 				require.NoError(t, err)
 				require.NotNil(t, created)
 				return []uint64{created.Id, 999999}
@@ -278,12 +287,15 @@ func TestBatchDeleteScrapingWorkflows(t *testing.T) {
 }
 
 func TestBatchDeleteScrapingWorkflows_LargeBatch(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Create a large batch of workflows
 	numWorkflows := 100
 	workflowIDs := make([]uint64, numWorkflows)
 	for i := 0; i < numWorkflows; i++ {
 		workflow := testutils.GenerateRandomScrapingWorkflow()
-		created, err := conn.CreateScrapingWorkflow(context.Background(), workflow)
+		created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, workflow)
 		require.NoError(t, err)
 		require.NotNil(t, created)
 		workflowIDs[i] = created.Id

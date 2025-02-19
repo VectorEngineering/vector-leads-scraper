@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Vector/vector-leads-scraper/internal/taskhandler"
-	"github.com/Vector/vector-leads-scraper/pkg/redis/tasks"
+	"github.com/Vector/vector-leads-scraper/internal/taskhandler/tasks"
 	"github.com/Vector/vector-leads-scraper/runner"
 	"github.com/hibiken/asynq"
 )

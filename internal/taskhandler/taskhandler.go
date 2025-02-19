@@ -85,8 +85,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Vector/vector-leads-scraper/internal/taskhandler/tasks"
 	"github.com/Vector/vector-leads-scraper/pkg/redis"
-	"github.com/Vector/vector-leads-scraper/pkg/redis/tasks"
+	"github.com/Vector/vector-leads-scraper/pkg/redis/scheduler"
 	"github.com/Vector/vector-leads-scraper/runner"
 	"github.com/hibiken/asynq"
 )
@@ -101,6 +102,7 @@ type Handler struct {
 	wg         sync.WaitGroup               // WaitGroup for graceful shutdown
 	done       chan struct{}                // Channel for shutdown signaling
 	logger     *log.Logger                  // Logger for handler operations
+	scheduler  *scheduler.Scheduler         // Scheduler for scheduled tasks
 }
 
 // Options configures the task handler.
@@ -172,32 +174,37 @@ func New(cfg *runner.Config, opts *Options) (*Handler, error) {
 		return nil, fmt.Errorf("failed to initialize Redis components: %w", err)
 	}
 
-	// Initialize task handlers
-	handlers := make(map[string]tasks.TaskHandler)
-	for _, taskType := range opts.TaskTypes {
-		handler := tasks.NewHandler(
-			tasks.WithMaxRetries(opts.MaxRetries),
-			tasks.WithRetryInterval(opts.RetryInterval),
-		)
-		handlers[taskType] = handler
-	}
+	// Initialize the scheduler
+	scheduler := scheduler.New(asynq.RedisClientOpt{
+		Addr:     cfg.Addr,
+		Password: cfg.RedisPassword,
+		DB:       cfg.RedisDB,
+	}, nil)
 
-	// Initialize task mux
-	mux := asynq.NewServeMux()
-	for taskType, handler := range handlers {
-		h := handler // Create a new variable to avoid closure issues
-		mux.HandleFunc(taskType, func(ctx context.Context, task *asynq.Task) error {
-			return h.ProcessTask(ctx, task)
-		})
-	}
-
-	return &Handler{
-		mux:        mux,
-		handlers:   handlers,
+	// Create the handler instance with empty handlers map
+	h := &Handler{
+		mux:        asynq.NewServeMux(),
+		handlers:   make(map[string]tasks.TaskHandler),
 		components: components,
 		done:       make(chan struct{}),
 		logger:     logger,
-	}, nil
+		scheduler:  scheduler,
+	}
+
+	// Register task handlers
+	for _, taskType := range opts.TaskTypes {
+		if err := h.RegisterHandler(taskType, tasks.NewHandler(
+			scheduler,
+			tasks.WithMaxRetries(opts.MaxRetries),
+			tasks.WithRetryInterval(opts.RetryInterval),
+		)); err != nil {
+			// Clean up on error
+			h.Close(context.Background())
+			return nil, fmt.Errorf("failed to register handler for task type %s: %w", taskType, err)
+		}
+	}
+
+	return h, nil
 }
 
 // Run starts the task handler and begins processing tasks.
@@ -370,8 +377,12 @@ func (h *Handler) MonitorHealth(ctx context.Context) error {
 func (h *Handler) Close(ctx context.Context) error {
 	h.logger.Println("Shutting down task handler...")
 
-	// Signal all goroutines to stop
-	close(h.done)
+	// Use sync.Once to ensure the channel is closed only once
+	var once sync.Once
+	once.Do(func() {
+		// Signal all goroutines to stop
+		close(h.done)
+	})
 
 	// Wait for all goroutines to finish
 	h.wg.Wait()
@@ -379,6 +390,7 @@ func (h *Handler) Close(ctx context.Context) error {
 	// Close Redis components
 	if err := h.components.Close(ctx); err != nil {
 		h.logger.Printf("Error closing Redis components: %v", err)
+		return fmt.Errorf("error closing Redis components: %w", err)
 	}
 
 	h.logger.Println("Task handler shutdown complete")
@@ -466,4 +478,12 @@ func (h *Handler) GetTaskDetails(ctx context.Context, taskId string, queue strin
 	}
 
 	return h.components.Client.GetTaskInfo(ctx, taskId, queue)
+}
+
+func (h *Handler) RegisterScheduledTask(ctx context.Context, cronExpression string, task *asynq.Task, opts ...asynq.Option) (string, error) {
+	return h.scheduler.Register(cronExpression, task, opts...)
+}
+
+func (h *Handler) UnregisterScheduledTask(ctx context.Context, entryID string) error {
+	return h.scheduler.Unregister(entryID)
 }

@@ -36,7 +36,7 @@ func TestQuotaManagementInterceptor(t *testing.T) {
 		{
 			name: "valid tenant ID",
 			setupContext: func() context.Context {
-				return context.WithValue(context.Background(), tenantIDKey, "tenant123")
+				return context.WithValue(context.Background(), tenantIDKey, "123")
 			},
 			expectedError: false,
 		},
@@ -99,7 +99,7 @@ func TestQuotaManagementStreamInterceptor(t *testing.T) {
 		{
 			name: "valid tenant ID",
 			setupContext: func() context.Context {
-				return context.WithValue(context.Background(), tenantIDKey, "tenant123")
+				return context.WithValue(context.Background(), tenantIDKey, "123")
 			},
 			expectedError: false,
 		},

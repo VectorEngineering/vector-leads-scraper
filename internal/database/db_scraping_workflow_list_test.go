@@ -11,6 +11,9 @@ import (
 )
 
 func TestListScrapingWorkflows(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
 	// Clean up any existing workflows first
 	existingWorkflows, err := conn.ListScrapingWorkflows(context.Background(), 100, 0)
 	require.NoError(t, err)
@@ -58,7 +61,7 @@ func TestListScrapingWorkflows(t *testing.T) {
 
 	createdWorkflows := make([]*lead_scraper_servicev1.ScrapingWorkflow, 0, len(workflows))
 	for _, w := range workflows {
-		created, err := conn.CreateScrapingWorkflow(context.Background(), w)
+		created, err := conn.CreateScrapingWorkflow(context.Background(), tc.Workspace.Id, w)
 		require.NoError(t, err, "Failed to create test workflow")
 		require.NotNil(t, created, "Created workflow is nil")
 		createdWorkflows = append(createdWorkflows, created)

@@ -8,18 +8,28 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
+	"gorm.io/gen/field"
 )
 
 // CreateOrganizationInput holds the input parameters for the CreateOrganization function
 type CreateOrganizationInput struct {
-	Name        string `validate:"required"`
-	Description string
+	Organization *lead_scraper_servicev1.Organization
 }
 
 func (d *CreateOrganizationInput) validate() error {
 	if err := validator.New(validator.WithRequiredStructEnabled()).Struct(d); err != nil {
 		return multierr.Append(ErrInvalidInput, err)
 	}
+
+	if d.Organization == nil {
+		return ErrInvalidInput
+	}
+
+	// validate the organization
+	if err := d.Organization.Validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -36,25 +46,22 @@ func (db *Db) CreateOrganization(ctx context.Context, input *CreateOrganizationI
 		return nil, err
 	}
 
-	org := &lead_scraper_servicev1.OrganizationORM{
-		Name:        input.Name,
-		Description: input.Description,
+	org := input.Organization
+	// Convert to ORM
+	orgOrm, err := org.ToORM(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert organization to ORM: %w", err)
 	}
 
-	if err := db.Client.Engine.WithContext(ctx).Create(org).Error; err != nil {
+	orgQop := db.QueryOperator.OrganizationORM
+	if err := orgQop.WithContext(ctx).Create(&orgOrm); err != nil {
 		db.Logger.Error("failed to create organization",
 			zap.Error(err),
-			zap.String("name", input.Name))
+			zap.String("name", org.GetName()))
 		return nil, fmt.Errorf("failed to create organization: %w", err)
 	}
 
-	// Convert to protobuf
-	orgPb, err := org.ToPB(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert organization to protobuf: %w", err)
-	}
-
-	return &orgPb, nil
+	return org, nil
 }
 
 // GetOrganizationInput holds the input parameters for the GetOrganization function
@@ -82,8 +89,12 @@ func (db *Db) GetOrganization(ctx context.Context, input *GetOrganizationInput) 
 		return nil, err
 	}
 
-	var org *lead_scraper_servicev1.OrganizationORM
-	if err := db.Client.Engine.WithContext(ctx).First(&org, input.ID).Error; err != nil {
+	// Get the query operator
+	orgQop := db.QueryOperator.OrganizationORM
+
+	// Get the organization
+	org, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).First()
+	if err != nil {
 		if err.Error() == "record not found" {
 			return nil, ErrOrganizationDoesNotExist
 		}
@@ -129,21 +140,32 @@ func (db *Db) UpdateOrganization(ctx context.Context, input *UpdateOrganizationI
 		return nil, err
 	}
 
+	// Get the query operator
+	orgQop := db.QueryOperator.OrganizationORM
+
+	// Create the update model
 	org := &lead_scraper_servicev1.OrganizationORM{
 		Id:          input.ID,
 		Name:        input.Name,
 		Description: input.Description,
 	}
 
-	if err := db.Client.Engine.WithContext(ctx).Save(org).Error; err != nil {
+	// Update the organization
+	if _, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).Updates(org); err != nil {
 		db.Logger.Error("failed to update organization",
 			zap.Error(err),
 			zap.Uint64("organization_id", input.ID))
 		return nil, fmt.Errorf("failed to update organization: %w", err)
 	}
 
+	// Get the updated organization
+	updatedOrg, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).First()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated organization: %w", err)
+	}
+
 	// Convert to protobuf
-	orgPb, err := org.ToPB(ctx)
+	orgPb, err := updatedOrg.ToPB(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert organization to protobuf: %w", err)
 	}
@@ -176,7 +198,35 @@ func (db *Db) DeleteOrganization(ctx context.Context, input *DeleteOrganizationI
 		return err
 	}
 
-	if err := db.Client.Engine.WithContext(ctx).Delete(&lead_scraper_servicev1.OrganizationORM{}, input.ID).Error; err != nil {
+	// Get the query operator
+	orgQop := db.QueryOperator.OrganizationORM
+
+	// First check if the organization exists
+	_, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).First()
+	if err != nil {
+
+		if err.Error() == "record not found" {
+			return ErrOrganizationDoesNotExist
+		}
+		db.Logger.Error("failed to get organization",
+			zap.Error(err),
+			zap.Uint64("organization_id", input.ID))
+		return fmt.Errorf("failed to get organization: %w", err)
+	}
+
+	// Delete all associated tenants first
+	tenantQop := db.QueryOperator.TenantORM
+	if _, err := tenantQop.WithContext(ctx).Where(tenantQop.OrganizationId.Eq(input.ID)).Select(field.AssociationFields).Delete(); err != nil {
+
+		db.Logger.Error("failed to delete organization's tenants",
+			zap.Error(err),
+			zap.Uint64("organization_id", input.ID))
+		return fmt.Errorf("failed to delete organization's tenants: %w", err)
+	}
+
+	// Delete the organization
+	if _, err := orgQop.WithContext(ctx).Where(orgQop.Id.Eq(input.ID)).Select(field.AssociationFields).Delete(); err != nil {
+
 		db.Logger.Error("failed to delete organization",
 			zap.Error(err),
 			zap.Uint64("organization_id", input.ID))
@@ -212,12 +262,16 @@ func (db *Db) ListOrganizations(ctx context.Context, input *ListOrganizationsInp
 		return nil, err
 	}
 
-	var orgs []*lead_scraper_servicev1.OrganizationORM
-	if err := db.Client.Engine.WithContext(ctx).
-		Order("id desc").
+	// Get the query operator
+	orgQop := db.QueryOperator.OrganizationORM
+
+	// Get the organizations
+	orgs, err := orgQop.WithContext(ctx).
+		Order(orgQop.Id.Desc()).
 		Limit(input.Limit).
 		Offset(input.Offset).
-		Find(&orgs).Error; err != nil {
+		Find()
+	if err != nil {
 		db.Logger.Error("failed to list organizations", zap.Error(err))
 		return nil, fmt.Errorf("failed to list organizations: %w", err)
 	}
