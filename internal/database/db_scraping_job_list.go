@@ -51,7 +51,7 @@ type ListScrapingJobsByWorkspaceInput struct {
 	WorkspaceID uint64
 	WorkflowID  uint64
 	Limit       uint64 `validate:"required,gt=0"`
-	Offset      uint64 `validate:"required,gte=0"`
+	Offset      uint64 `validate:"gte=0"`
 }
 
 func (input *ListScrapingJobsByWorkspaceInput) Validate() error {
