@@ -189,10 +189,16 @@ func TestJobs(t *testing.T) {
 			}
 		}
 
+		// Cancel the context to prevent additional database queries
+		cancel()
+
 		// Verify we received both jobs
 		assert.Len(t, jobs, 2)
 		assert.Equal(t, "job1", jobs[0].GetID())
 		assert.Equal(t, "job2", jobs[1].GetID())
+
+		// Wait a moment for goroutines to clean up
+		time.Sleep(100 * time.Millisecond)
 
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
