@@ -33,13 +33,21 @@ func (s *Server) CreateTenantAPIKey(ctx context.Context, req *proto.CreateTenant
 		return nil, status.Errorf(codes.Internal, "failed to get tenant id from context: %s", err.Error())
 	}
 
-	logger.Info("creating tenant API key")
+	logger.Info("creating tenant API key", 
+		zap.Uint64("tenant_id", tenantId),
+		zap.String("api_key_name", req.ApiKey.Name),
+		zap.String("api_key_description", req.ApiKey.Description))
 
 	apiKey, err := s.db.CreateTenantApiKey(ctx, tenantId, req.ApiKey)
 	if err != nil {
 		logger.Error("failed to create tenant API key", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create tenant API key")
 	}
+
+	logger.Info("tenant API key created", 
+		zap.Uint64("key_id", apiKey.Id),
+		zap.String("key_hash", apiKey.KeyHash),
+		zap.String("key_name", apiKey.Name))
 
 	return &proto.CreateTenantAPIKeyResponse{
 		KeyId:    apiKey.Id,
@@ -142,7 +150,9 @@ func (s *Server) DeleteTenantAPIKey(ctx context.Context, req *proto.DeleteTenant
 		return nil, status.Error(codes.Internal, "failed to delete tenant API key")
 	}
 
-	return &proto.DeleteTenantAPIKeyResponse{}, nil
+	return &proto.DeleteTenantAPIKeyResponse{
+		Success: true,
+	}, nil
 }
 
 // ListTenantAPIKeys retrieves all API keys for a tenant.
