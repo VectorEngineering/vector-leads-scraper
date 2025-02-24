@@ -199,6 +199,22 @@ func (s *Server) CreateScrapingJob(ctx context.Context, req *proto.CreateScrapin
 		lang = proto.ScrapingJob_LANGUAGE_UNSPECIFIED
 	}
 
+	// get the org by org id
+	if _, err := s.db.GetOrganization(ctx, &database.GetOrganizationInput{
+		ID: req.OrgId,
+	}); err != nil {
+		logger.Error("failed to get organization", zap.Error(err))
+		return nil, status.Error(codes.Internal, "organization does not exist")
+	}
+
+	// get the tenant by tenant id
+	if _, err := s.db.GetTenant(ctx, &database.GetTenantInput{
+		ID: req.TenantId,
+	}); err != nil {
+		logger.Error("failed to get tenant", zap.Error(err))
+		return nil, status.Error(codes.Internal, "tenant does not exist")
+	}
+
 	// Create the scraping job object
 	job := &proto.ScrapingJob{
 		Name:     name,
@@ -404,6 +420,22 @@ func (s *Server) ListScrapingJobs(ctx context.Context, req *proto.ListScrapingJo
 	pageSize := req.PageSize
 	if pageSize == 0 {
 		pageSize = 10
+	}
+
+	// get the org by org id
+	if _, err := s.db.GetOrganization(ctx, &database.GetOrganizationInput{
+		ID: req.OrgId,
+	}); err != nil {
+		logger.Error("failed to get organization", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get organization")
+	}
+
+	// get the tenant by tenant id
+	if _, err := s.db.GetTenant(ctx, &database.GetTenantInput{
+		ID: req.TenantId,
+	}); err != nil {
+		logger.Error("failed to get tenant", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get tenant")
 	}
 
 	// compute the offset

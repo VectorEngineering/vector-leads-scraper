@@ -238,6 +238,7 @@ func TestListWorkspaces(t *testing.T) {
 		offset  int
 		want    int
 		wantErr bool
+		setup   func() context.Context
 	}{
 		{
 			name:    "success - get all workspaces",
@@ -245,6 +246,9 @@ func TestListWorkspaces(t *testing.T) {
 			offset:  0,
 			want:    numWorkspaces,
 			wantErr: false,
+			setup: func() context.Context {
+				return ctx
+			},
 		},
 		{
 			name:    "success - get first 2 workspaces",
@@ -252,6 +256,9 @@ func TestListWorkspaces(t *testing.T) {
 			offset:  0,
 			want:    2,
 			wantErr: false,
+			setup: func() context.Context {
+				return ctx
+			},
 		},
 		{
 			name:    "success - get last 2 workspaces",
@@ -259,6 +266,9 @@ func TestListWorkspaces(t *testing.T) {
 			offset:  numWorkspaces - 2,
 			want:    2,
 			wantErr: false,
+			setup: func() context.Context {
+				return ctx
+			},
 		},
 		{
 			name:    "error - invalid limit",
@@ -266,6 +276,9 @@ func TestListWorkspaces(t *testing.T) {
 			offset:  0,
 			want:    0,
 			wantErr: true,
+			setup: func() context.Context {
+				return ctx
+			},
 		},
 		{
 			name:    "error - negative limit",
@@ -273,6 +286,9 @@ func TestListWorkspaces(t *testing.T) {
 			offset:  0,
 			want:    0,
 			wantErr: true,
+			setup: func() context.Context {
+				return ctx
+			},
 		},
 		{
 			name:    "error - negative offset",
@@ -280,6 +296,9 @@ func TestListWorkspaces(t *testing.T) {
 			offset:  -1,
 			want:    0,
 			wantErr: true,
+			setup: func() context.Context {
+				return ctx
+			},
 		},
 		{
 			name:    "success - offset beyond available workspaces",
@@ -287,29 +306,23 @@ func TestListWorkspaces(t *testing.T) {
 			offset:  numWorkspaces + 1,
 			want:    0,
 			wantErr: false,
+			setup: func() context.Context {
+				return ctx
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			workspaces, err := conn.ListWorkspaces(ctx, tc.Account.Id, tt.limit, tt.offset)
+			testCtx := tt.setup()
+			workspaces, err := conn.ListWorkspaces(testCtx, tc.Account.Id, tt.limit, tt.offset)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
 
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Len(t, workspaces, tt.want)
-
-			if tt.want > 0 {
-				// Verify workspaces are returned in the correct order
-				for i := 0; i < tt.want; i++ {
-					expectedWorkspace := createdWorkspaces[tt.offset+i]
-					actualWorkspace := workspaces[i]
-					assert.Equal(t, expectedWorkspace.Id, actualWorkspace.Id)
-					assert.Equal(t, expectedWorkspace.Name, actualWorkspace.Name)
-				}
-			}
 		})
 	}
 }

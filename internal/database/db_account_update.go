@@ -67,20 +67,27 @@ func (db *Db) UpdateAccount(ctx context.Context, orgId, tenantId uint64, account
 		return nil, fmt.Errorf("failed to convert account to orm: %w", err)
 	}
 
-	// update the account tied to the tenant
-	if err := tenantOrm.Accounts.WithContext(ctx).Model(tenant).Replace(&updatedAcct); err != nil {
+	// The issue is here - instead of using Replace which doesn't seem to be working correctly,
+	// directly update the account in the database
+	result, err := acOrm.WithContext(ctx).Where(
+		acOrm.Id.Eq(account.Id),
+	).Updates(&updatedAcct)
+
+	if err != nil {
 		return nil, fmt.Errorf("failed to update account: %w", err)
 	}
 
-	// update the tenant
-	res, err := tenantOrm.WithContext(ctx).Updates(tenant)
+	if result.RowsAffected == 0 {
+		return nil, fmt.Errorf("account not found or no changes made")
+	}
+
+	// Get the updated account to return
+	updatedAccount, err := db.GetAccount(ctx, &GetAccountInput{
+		ID: account.Id,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to update tenant: %w", err)
+		return nil, fmt.Errorf("failed to get updated account: %w", err)
 	}
 
-	if res.RowsAffected == 0 {
-		return nil, fmt.Errorf("tenant not found")
-	}
-
-	return account, nil
+	return updatedAccount, nil
 }

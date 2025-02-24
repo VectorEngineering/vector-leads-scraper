@@ -2,6 +2,7 @@ package s3uploader
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -33,6 +34,11 @@ func New(accessKey, secretKey, region string) *Uploader {
 }
 
 func (u *Uploader) Upload(ctx context.Context, bucketName, key string, body io.Reader) error {
+	// Add validation for nil body
+	if body == nil {
+		return errors.New("upload body cannot be nil")
+	}
+
 	input := &s3.PutObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(key),

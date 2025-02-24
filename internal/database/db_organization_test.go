@@ -383,3 +383,139 @@ func TestListOrganizations(t *testing.T) {
 		})
 	}
 }
+
+func TestGetOrganizationInput_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *GetOrganizationInput
+		wantErr bool
+	}{
+		{
+			name: "valid input",
+			input: &GetOrganizationInput{
+				ID: 123,
+			},
+			wantErr: false,
+		},
+		{
+			name: "zero ID",
+			input: &GetOrganizationInput{
+				ID: 0,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrInvalidInput)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestUpdateOrganizationInput_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *UpdateOrganizationInput
+		wantErr bool
+	}{
+		{
+			name: "valid input",
+			input: &UpdateOrganizationInput{
+				ID:          123,
+				Name:        "Test Organization",
+				Description: "Test Description",
+			},
+			wantErr: false,
+		},
+		{
+			name: "zero ID",
+			input: &UpdateOrganizationInput{
+				ID:          0,
+				Name:        "Test Organization",
+				Description: "Test Description",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty name",
+			input: &UpdateOrganizationInput{
+				ID:          123,
+				Name:        "",
+				Description: "Test Description",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrInvalidInput)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestListOrganizationsInput_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *ListOrganizationsInput
+		wantErr bool
+	}{
+		{
+			name: "valid input",
+			input: &ListOrganizationsInput{
+				Limit:  10,
+				Offset: 0,
+			},
+			wantErr: false,
+		},
+		{
+			name: "zero limit",
+			input: &ListOrganizationsInput{
+				Limit:  0,
+				Offset: 0,
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative limit",
+			input: &ListOrganizationsInput{
+				Limit:  -1,
+				Offset: 0,
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative offset",
+			input: &ListOrganizationsInput{
+				Limit:  10,
+				Offset: -1,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrInvalidInput)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

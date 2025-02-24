@@ -156,3 +156,109 @@ func TestCreateAPIKey_ConcurrentCreation(t *testing.T) {
 		require.NotZero(t, key.Id)
 	}
 }
+
+func TestRotateAPIKey(t *testing.T) {
+	tc := setupAccountTestContext(t)
+	defer tc.Cleanup()
+
+	// Create an initial API key that we'll rotate
+	initialKey := testutils.GenerateRandomAPIKey()
+	createdKey, err := conn.CreateAPIKey(context.Background(), tc.Workspace.Id, initialKey)
+	require.NoError(t, err)
+	require.NotNil(t, createdKey)
+
+	// Clean up at the end
+	defer func() {
+		err := conn.DeleteAPIKey(context.Background(), createdKey.Id)
+		require.NoError(t, err)
+	}()
+
+	// Create a new key to rotate to
+	newKey := testutils.GenerateRandomAPIKey()
+	newKey.Name = "Rotated Key"
+
+	tests := []struct {
+		name        string
+		workspaceId uint64
+		keyId       uint64
+		newKey      *lead_scraper_servicev1.APIKey
+		wantError   bool
+		errType     error
+		validate    func(t *testing.T, apiKey *lead_scraper_servicev1.APIKey)
+	}{
+		{
+			name:        "[success scenario] - valid rotation",
+			workspaceId: tc.Workspace.Id,
+			keyId:       createdKey.Id,
+			newKey:      newKey,
+			wantError:   false,
+			validate: func(t *testing.T, apiKey *lead_scraper_servicev1.APIKey) {
+				assert.NotNil(t, apiKey)
+				assert.Equal(t, createdKey.Id, apiKey.Id) // ID should remain the same
+				assert.Equal(t, newKey.Name, apiKey.Name) // But other fields should be updated
+				assert.Equal(t, newKey.KeyHash, apiKey.KeyHash)
+				assert.Equal(t, newKey.KeyPrefix, apiKey.KeyPrefix)
+				assert.Equal(t, newKey.Scopes, apiKey.Scopes)
+			},
+		},
+		{
+			name:        "[failure scenario] - nil new key",
+			workspaceId: tc.Workspace.Id,
+			keyId:       createdKey.Id,
+			newKey:      nil,
+			wantError:   true,
+			errType:     ErrInvalidInput,
+		},
+		{
+			name:        "[failure scenario] - invalid workspace ID",
+			workspaceId: 999999, // Non-existent workspace ID
+			keyId:       createdKey.Id,
+			newKey:      newKey,
+			wantError:   true,
+		},
+		{
+			name:        "[failure scenario] - invalid key ID",
+			workspaceId: tc.Workspace.Id,
+			keyId:       999999, // Non-existent key ID
+			newKey:      newKey,
+			wantError:   true,
+		},
+		{
+			name:        "[failure scenario] - context timeout",
+			workspaceId: tc.Workspace.Id,
+			keyId:       createdKey.Id,
+			newKey:      newKey,
+			wantError:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			if tt.name == "[failure scenario] - context timeout" {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, 1*time.Nanosecond)
+				defer cancel()
+				time.Sleep(2 * time.Millisecond)
+			}
+
+			result, err := conn.RotateAPIKey(ctx, tt.workspaceId, tt.keyId, tt.newKey)
+
+			if tt.wantError {
+				require.Error(t, err)
+				if tt.errType != nil {
+					assert.ErrorIs(t, err, tt.errType)
+				}
+				assert.Nil(t, result)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, result)
+
+			if tt.validate != nil {
+				tt.validate(t, result)
+			}
+		})
+	}
+}

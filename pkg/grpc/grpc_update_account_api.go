@@ -68,13 +68,39 @@ func (s *Server) UpdateAccount(ctx context.Context, req *proto.UpdateAccountRequ
 
 	tenantId := payload.GetTenantId()
 
+	// Verify organization exists
+	_, err := s.db.GetOrganization(ctx, &database.GetOrganizationInput{
+		ID: orgId,
+	})
+	if err != nil {
+		logger.Error("failed to get organization", zap.Error(err))
+		if err == database.ErrOrganizationDoesNotExist {
+			return nil, status.Error(codes.NotFound, "organization not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to get organization")
+	}
+
+	// Verify tenant exists if provided
+	if tenantId != 0 {
+		_, err := s.db.GetTenant(ctx, &database.GetTenantInput{
+			ID: tenantId,
+		})
+		if err != nil {
+			logger.Error("failed to get tenant", zap.Error(err))
+			if err == database.ErrTenantDoesNotExist {
+				return nil, status.Error(codes.NotFound, "tenant not found")
+			}
+			return nil, status.Error(codes.Internal, "failed to get tenant")
+		}
+	}
+
 	logger.Info("updating account", zap.Uint64("account_id", account.GetId()))
 
 	// Update the account using the database client
 	result, err := s.db.UpdateAccount(ctx, orgId, tenantId, account)
 	if err != nil {
 		logger.Error("failed to update account", zap.Error(err))
-		if err == database.ErrAccountDoesNotExist {
+		if err == database.ErrAccountDoesNotExist || err.Error() == "account not found" {
 			return nil, status.Error(codes.NotFound, "account not found")
 		}
 		return nil, status.Error(codes.Internal, "failed to update account")

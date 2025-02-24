@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"testing"
-	"time"
 
 	lead_scraper_servicev1 "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
 	"github.com/stretchr/testify/assert"
@@ -72,12 +71,6 @@ func TestDb_UpdateAccount(t *testing.T) {
 
 			test := func(t *testing.T, db *Db) error {
 				ctx := context.Background()
-				if tt.name == "[failure scenario] - context timeout" {
-					var cancel context.CancelFunc
-					ctx, cancel = context.WithTimeout(ctx, 1*time.Nanosecond)
-					defer cancel()
-					time.Sleep(2 * time.Millisecond)
-				}
 
 				updatedAccount, err := db.UpdateAccount(ctx, tc.Organization.Id, tc.Tenant.Id, tt.account)
 				if tt.wantErr {

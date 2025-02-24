@@ -46,20 +46,19 @@ func (e *httpExporter) Export(ctx context.Context, batch *Batch) error {
 		return fmt.Errorf("failed to marshal batch: %w", err)
 	}
 
-	var body io.Reader = bytes.NewReader(payload)
+	var compressedBuf *bytes.Buffer
 	contentEncoding := ""
 
 	// Compress if payload size exceeds threshold
 	if e.compressionThreshold > 0 && int64(len(payload)) > e.compressionThreshold {
-		var buf bytes.Buffer
-		gz := gzip.NewWriter(&buf)
+		compressedBuf = &bytes.Buffer{}
+		gz := gzip.NewWriter(compressedBuf)
 		if _, err := gz.Write(payload); err != nil {
 			return fmt.Errorf("failed to compress payload: %w", err)
 		}
 		if err := gz.Close(); err != nil {
 			return fmt.Errorf("failed to close gzip writer: %w", err)
 		}
-		body = &buf
 		contentEncoding = "gzip"
 	}
 
@@ -71,6 +70,14 @@ func (e *httpExporter) Export(ctx context.Context, batch *Batch) error {
 		wg.Add(1)
 		go func(endpoint string) {
 			defer wg.Done()
+
+			// Create a new reader for each goroutine to avoid data races
+			var body io.Reader
+			if contentEncoding == "gzip" {
+				body = bytes.NewReader(compressedBuf.Bytes())
+			} else {
+				body = bytes.NewReader(payload)
+			}
 
 			err := e.sendWithRetry(ctx, endpoint, body, contentEncoding)
 			if err != nil {
@@ -128,9 +135,9 @@ func (e *httpExporter) sendWithRetry(ctx context.Context, endpoint string, body 
 			return nil
 		}
 
-		body, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(resp.Body)
 		if attempt == e.retryConfig.MaxRetries {
-			return fmt.Errorf("received status code %d: %s", resp.StatusCode, string(body))
+			return fmt.Errorf("received status code %d: %s", resp.StatusCode, string(respBody))
 		}
 
 		time.Sleep(backoff)
