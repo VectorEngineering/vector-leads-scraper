@@ -1,0 +1,152 @@
+service:
+  type: ClusterIP
+  enabled: true
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: grpc
+      port: 50051
+      targetPort: 50051
+
+# Probes for the web deployment - use only HTTP probes
+web:
+  livenessProbe:
+    http:
+      path: /health
+      port: http
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    grpc: null  # Disable gRPC probe for web deployment
+  readinessProbe:
+    http:
+      path: /health
+      port: http
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    grpc: null  # Disable gRPC probe for web deployment
+
+# Probes for the gRPC deployment - use only TCP socket probes
+livenessProbe:
+  grpc:
+    tcpSocket:
+      port: grpc
+    initialDelaySeconds: 10
+    periodSeconds: 15
+
+readinessProbe:
+  grpc:
+    tcpSocket:
+      port: grpc
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+worker:
+  enabled: true
+  replicas: 1
+  concurrency: 10
+  depth: 5
+  fastMode: true
+  emailExtraction: false
+  exitOnInactivity: "1h"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+config:
+  grpc:
+    enabled: true
+    port: 50051
+    serviceName: "vector-leads-scraper"
+    environment: "development"
+  database:
+    dsn: "postgres://postgres:postgres@gmaps-scraper-leads-scraper-service-postgresql:5432/leads_scraper?sslmode=disable"
+    maxIdleConnections: 10
+    maxOpenConnections: 100
+    maxConnectionLifetime: "10m"
+    maxConnectionRetryTimeout: "10s"
+    retrySleep: "1s"
+    queryTimeout: "10s"
+    maxConnectionRetries: 3
+  redis:
+    enabled: true
+    host: "gmaps-scraper-leads-scraper-service-redis-master"
+    port: 6379
+    password: "redispass"
+    dsn: "redis://:redispass@gmaps-scraper-leads-scraper-service-redis-master:6379/0"
+    workers: 10
+    retryInterval: "5s"
+    maxRetries: 3
+    retentionDays: 7
+  newrelic:
+    enabled: true
+    key: "2aa111a8b39e0ebe981c11a11cc8792cFFFFNRAL"
+  logging:
+    level: "info"
+  scraper:
+    webServer: true
+    concurrency: 11
+    depth: 5
+    language: "en"
+    searchRadius: 10000
+    zoomLevel: 15
+    fastMode: true
+
+tests:
+  enabled: true
+  healthCheck:
+    enabled: true
+    path: "/health"
+  configCheck:
+    enabled: true
+
+postgresql:
+  enabled: true
+  auth:
+    username: "postgres"
+    password: "postgres"
+    database: "leads_scraper"
+    existingSecret: ""
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    service:
+      ports:
+        postgresql: 5432
+    extraEnvVars:
+      - name: POSTGRESQL_MAX_CONNECTIONS
+        value: "100"
+      - name: POSTGRESQL_SHARED_BUFFERS
+        value: "128MB"
+      - name: POSTGRESQL_PASSWORD
+        value: "postgres"
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    password: "redispass"
+  master:
+    persistence:
+      enabled: true
+      size: 1Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi 
