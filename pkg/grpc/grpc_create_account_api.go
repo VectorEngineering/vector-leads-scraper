@@ -2,6 +2,8 @@ package grpc
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	"github.com/Vector/vector-leads-scraper/internal/database"
 	proto "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
@@ -69,6 +71,12 @@ func (s *Server) CreateAccount(ctx context.Context, req *proto.CreateAccountRequ
 		if err == database.ErrAccountAlreadyExists {
 			return nil, status.Error(codes.AlreadyExists, "account already exists")
 		}
+		if err == database.ErrInvalidInput || strings.Contains(err.Error(), "email is required") {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		if errors.Is(err, database.ErrTenantDoesNotExist) || strings.Contains(err.Error(), "record not found") {
+			return nil, status.Error(codes.NotFound, "organization or tenant not found")
+		}
 		return nil, status.Errorf(codes.Internal, "failed to create account: %s", err.Error())
 	}
 
@@ -103,7 +111,7 @@ func (s *Server) CreateAccount(ctx context.Context, req *proto.CreateAccountRequ
 		}
 
 		// Add the workspace to the account response
-		result.Workspaces = append(result.Workspaces, workspaceResult)
+		result.Workspaces = []*proto.Workspace{workspaceResult}
 	}
 
 	return &proto.CreateAccountResponse{
