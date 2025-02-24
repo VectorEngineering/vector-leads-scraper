@@ -33,7 +33,7 @@ func (s *Server) CreateTenantAPIKey(ctx context.Context, req *proto.CreateTenant
 		return nil, status.Errorf(codes.Internal, "failed to get tenant id from context: %s", err.Error())
 	}
 
-	logger.Info("creating tenant API key", 
+	logger.Info("creating tenant API key",
 		zap.Uint64("tenant_id", tenantId),
 		zap.String("api_key_name", req.ApiKey.Name),
 		zap.String("api_key_description", req.ApiKey.Description))
@@ -44,7 +44,7 @@ func (s *Server) CreateTenantAPIKey(ctx context.Context, req *proto.CreateTenant
 		return nil, status.Error(codes.Internal, "failed to create tenant API key")
 	}
 
-	logger.Info("tenant API key created", 
+	logger.Info("tenant API key created",
 		zap.Uint64("key_id", apiKey.Id),
 		zap.String("key_hash", apiKey.KeyHash),
 		zap.String("key_name", apiKey.Name))

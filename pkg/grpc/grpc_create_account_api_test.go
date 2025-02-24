@@ -223,7 +223,7 @@ func TestServer_CreateAccount(t *testing.T) {
 			if tt.setup != nil {
 				tt.setup()
 			}
-			
+
 			resp, err := MockServer.CreateAccount(context.Background(), tt.req)
 			if tt.wantErr {
 				require.Error(t, err)
@@ -235,7 +235,7 @@ func TestServer_CreateAccount(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, resp)
 			require.NotNil(t, resp.Account)
-			
+
 			// Verify the account was created with the correct properties
 			assert.NotZero(t, resp.Account.Id)
 			if tt.req.Account.Email != "" {
@@ -250,11 +250,11 @@ func TestServer_CreateAccount(t *testing.T) {
 			if tt.req.Account.ConcurrentJobLimit != 0 {
 				assert.Equal(t, tt.req.Account.ConcurrentJobLimit, resp.Account.ConcurrentJobLimit)
 			}
-			
+
 			// Verify the workspace was created
 			assert.NotEmpty(t, resp.Account.Workspaces)
 			assert.Equal(t, tt.req.InitialWorkspaceName, resp.Account.Workspaces[0].Name)
-			
+
 			// Verify the account can be retrieved
 			getResp, err := MockServer.GetAccount(context.Background(), &proto.GetAccountRequest{
 				Id:             resp.Account.Id,

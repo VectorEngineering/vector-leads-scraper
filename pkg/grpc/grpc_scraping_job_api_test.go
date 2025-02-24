@@ -135,12 +135,12 @@ func TestServer_CreateScrapingJob(t *testing.T) {
 	// Set up context with metadata
 	ctx := context.Background()
 	md := metadata.New(map[string]string{
-		"x-tenant-id": fmt.Sprintf("%d", testCtx.TenantId),
+		"x-tenant-id":       fmt.Sprintf("%d", testCtx.TenantId),
 		"x-organization-id": fmt.Sprintf("%d", testCtx.Organization.Id),
-		"authorization": "Bearer test-token",
+		"authorization":     "Bearer test-token",
 	})
 	ctx = metadata.NewIncomingContext(ctx, md)
-	
+
 	// Use the middleware to extract and validate the auth info
 	var err error
 	ctx, err = middleware.ExtractAuthInfo(ctx)
@@ -627,7 +627,7 @@ func TestServer_CreateScrapingJob(t *testing.T) {
 				Zoom:               15,
 				Depth:              2,
 				MaxTime:            3600,
-				Lat:                "",         // Missing latitude
+				Lat:                "",          // Missing latitude
 				Lon:                "-122.4194", // Only longitude provided
 			},
 			wantErr: true,
@@ -723,7 +723,7 @@ func TestServer_CreateScrapingJob(t *testing.T) {
 			if tc.setup != nil {
 				tc.setup()
 			}
-			
+
 			resp, err := MockServer.CreateScrapingJob(ctx, tc.req)
 			if tc.wantErr {
 				require.Error(t, err)
@@ -919,20 +919,20 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 	defer testCtx.Cleanup()
 
 	ctx := context.Background()
-	
+
 	// Set up metadata for tenant ID
 	md := metadata.New(map[string]string{
-		"x-tenant-id": fmt.Sprintf("%d", testCtx.TenantId),
+		"x-tenant-id":       fmt.Sprintf("%d", testCtx.TenantId),
 		"x-organization-id": fmt.Sprintf("%d", testCtx.Organization.Id),
-		"authorization": "Bearer test-token",
+		"authorization":     "Bearer test-token",
 	})
 	ctx = metadata.NewIncomingContext(ctx, md)
-	
+
 	// Use the middleware to extract and validate the auth info
 	var err error
 	ctx, err = middleware.ExtractAuthInfo(ctx)
 	require.NoError(t, err, "Failed to extract auth info from context")
-	
+
 	// Create a few scraping jobs to list
 	createdJobs := make([]*proto.CreateScrapingJobResponse, 0, 5)
 	for i := 0; i < 5; i++ {
@@ -957,10 +957,10 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		require.NotNil(t, createResp)
 		createdJobs = append(createdJobs, createResp)
 	}
-	
+
 	// Create a workflow ID for testing
 	workflowID := uint64(12345)
-	
+
 	tests := []struct {
 		name    string
 		req     *proto.ListScrapingJobsRequest
@@ -969,19 +969,19 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		checkFn func(*testing.T, *proto.ListScrapingJobsResponse)
 	}{
 		{
-			name: "nil request",
-			req:  nil,
+			name:    "nil request",
+			req:     nil,
 			wantErr: true,
 			errCode: codes.InvalidArgument,
 		},
 		{
 			name: "missing org ID",
 			req: &proto.ListScrapingJobsRequest{
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				WorkflowId:  workflowID,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				WorkflowId:         workflowID,
 				AuthPlatformUserId: "test-user-1",
-				PageSize:    10,
+				PageSize:           10,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -989,11 +989,11 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "missing tenant ID",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				WorkspaceId: testCtx.Workspace.Id,
-				WorkflowId:  workflowID,
+				OrgId:              testCtx.Organization.Id,
+				WorkspaceId:        testCtx.Workspace.Id,
+				WorkflowId:         workflowID,
 				AuthPlatformUserId: "test-user-1",
-				PageSize:    10,
+				PageSize:           10,
 			},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
@@ -1001,13 +1001,13 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "valid request with default pagination",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				WorkflowId:  workflowID,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				WorkflowId:         workflowID,
 				AuthPlatformUserId: "test-user-1",
-				PageSize: 10,
-				PageNumber: 1,
+				PageSize:           10,
+				PageNumber:         1,
 			},
 			wantErr: false,
 			checkFn: func(t *testing.T, resp *proto.ListScrapingJobsResponse) {
@@ -1020,13 +1020,13 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "valid request with custom page size",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				WorkflowId:  workflowID,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				WorkflowId:         workflowID,
 				AuthPlatformUserId: "test-user-1",
-				PageSize:    2,
-				PageNumber:  1,
+				PageSize:           2,
+				PageNumber:         1,
 			},
 			wantErr: false,
 			checkFn: func(t *testing.T, resp *proto.ListScrapingJobsResponse) {
@@ -1039,13 +1039,13 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "valid request with second page",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				WorkflowId:  workflowID,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				WorkflowId:         workflowID,
 				AuthPlatformUserId: "test-user-1",
-				PageSize:    2,
-				PageNumber:  2,
+				PageSize:           2,
+				PageNumber:         2,
 			},
 			wantErr: false,
 			checkFn: func(t *testing.T, resp *proto.ListScrapingJobsResponse) {
@@ -1058,13 +1058,13 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "valid request with zero page size (should use default)",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				WorkflowId:  workflowID,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				WorkflowId:         workflowID,
 				AuthPlatformUserId: "test-user-1",
-				PageSize:    1, // Changed from 0 to 1 to pass validation
-				PageNumber:  1,
+				PageSize:           1, // Changed from 0 to 1 to pass validation
+				PageNumber:         1,
 			},
 			wantErr: false,
 			checkFn: func(t *testing.T, resp *proto.ListScrapingJobsResponse) {
@@ -1077,13 +1077,13 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "valid request with zero page number (should use default)",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				WorkflowId:  workflowID,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				WorkflowId:         workflowID,
 				AuthPlatformUserId: "test-user-1",
-				PageSize:    10,
-				PageNumber:  1, // Changed from 0 to 1 to ensure it works
+				PageSize:           10,
+				PageNumber:         1, // Changed from 0 to 1 to ensure it works
 			},
 			wantErr: false,
 			checkFn: func(t *testing.T, resp *proto.ListScrapingJobsResponse) {
@@ -1096,13 +1096,13 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "non-existent organization",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       999999,
-				TenantId:    testCtx.TenantId,
-				WorkspaceId: testCtx.Workspace.Id,
-				WorkflowId:  workflowID,
+				OrgId:              999999,
+				TenantId:           testCtx.TenantId,
+				WorkspaceId:        testCtx.Workspace.Id,
+				WorkflowId:         workflowID,
 				AuthPlatformUserId: "test-user-1",
-				PageSize:    10,
-				PageNumber:  1,
+				PageSize:           10,
+				PageNumber:         1,
 			},
 			wantErr: true,
 			errCode: codes.Internal,
@@ -1110,23 +1110,23 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 		{
 			name: "non-existent tenant",
 			req: &proto.ListScrapingJobsRequest{
-				OrgId:       testCtx.Organization.Id,
-				TenantId:    999999,
-				WorkspaceId: testCtx.Workspace.Id,
-				WorkflowId:  workflowID,
+				OrgId:              testCtx.Organization.Id,
+				TenantId:           999999,
+				WorkspaceId:        testCtx.Workspace.Id,
+				WorkflowId:         workflowID,
 				AuthPlatformUserId: "test-user-1",
-				PageSize:    10,
-				PageNumber:  1,
+				PageSize:           10,
+				PageNumber:         1,
 			},
 			wantErr: true,
 			errCode: codes.Internal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp, err := MockServer.ListScrapingJobs(ctx, tt.req)
-			
+
 			if tt.wantErr {
 				require.Error(t, err)
 				st, ok := status.FromError(err)
@@ -1134,10 +1134,10 @@ func TestServer_ListScrapingJobs(t *testing.T) {
 				assert.Equal(t, tt.errCode, st.Code())
 				return
 			}
-			
+
 			require.NoError(t, err)
 			require.NotNil(t, resp)
-			
+
 			if tt.checkFn != nil {
 				tt.checkFn(t, resp)
 			}
@@ -1414,28 +1414,28 @@ func TestServer_DeleteScrapingJob(t *testing.T) {
 func TestServer_DownloadScrapingResults(t *testing.T) {
 	// Create test data - first create a scraping job
 	ctx := context.Background()
-	
+
 	// Initialize test context
 	testCtx := initializeScrapingJobTestContext(t)
 	defer testCtx.Cleanup()
-	
+
 	// Set up metadata for tenant ID
 	md := metadata.New(map[string]string{
-		"x-tenant-id": "123",
+		"x-tenant-id":   "123",
 		"authorization": "Bearer test-token",
 	})
 	ctx = metadata.NewIncomingContext(ctx, md)
-	
+
 	// Create a workflow with proper workspace ID
 	workflow := testutils.GenerateRandomWorkflowsForWorkspace(testCtx.Workspace, 1)[0]
 	// Ensure the workspace ID is properly set
 	workflowResp, err := MockServer.CreateWorkflow(ctx, &proto.CreateWorkflowRequest{
-		Workflow: workflow,
+		Workflow:    workflow,
 		WorkspaceId: testCtx.Workspace.Id,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, workflowResp)
-	
+
 	// Create a scraping job
 	createResp, err := MockServer.CreateScrapingJob(ctx, &proto.CreateScrapingJobRequest{
 		Name:               "Test Job",
@@ -1456,13 +1456,13 @@ func TestServer_DownloadScrapingResults(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, createResp)
-	
+
 	// Access the job ID correctly
 	jobID := createResp.JobId
-	
+
 	// Use the same user ID that was used to create the job
 	userID := "test-user"
-	
+
 	tests := []struct {
 		name    string
 		req     *proto.DownloadScrapingResultsRequest
@@ -1470,8 +1470,8 @@ func TestServer_DownloadScrapingResults(t *testing.T) {
 		errCode codes.Code
 	}{
 		{
-			name: "nil request",
-			req:  nil,
+			name:    "nil request",
+			req:     nil,
 			wantErr: true,
 			errCode: codes.InvalidArgument,
 		},
@@ -1528,11 +1528,11 @@ func TestServer_DownloadScrapingResults(t *testing.T) {
 			errCode: codes.FailedPrecondition,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp, err := MockServer.DownloadScrapingResults(ctx, tt.req)
-			
+
 			if tt.wantErr {
 				require.Error(t, err)
 				st, ok := status.FromError(err)
@@ -1540,7 +1540,7 @@ func TestServer_DownloadScrapingResults(t *testing.T) {
 				assert.Equal(t, tt.errCode, st.Code())
 				return
 			}
-			
+
 			// If the test expects success (should not happen with mock data)
 			require.NoError(t, err)
 			require.NotNil(t, resp)

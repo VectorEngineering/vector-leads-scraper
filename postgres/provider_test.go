@@ -38,21 +38,21 @@ func TestNewProvider(t *testing.T) {
 
 func TestPush(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		mockSetup func(mock sqlmock.Sqlmock)
-		job      scrapemate.IJob
-		wantErr  bool
+		job       scrapemate.IJob
+		wantErr   bool
 	}{
 		{
 			name: "Push GmapJob",
 			mockSetup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec("INSERT INTO gmaps_jobs").
 					WithArgs(
-						"test-id", 
+						"test-id",
 						int64(1), // Changed from float64 to int64
-						"search", 
-						sqlmock.AnyArg(), 
-						sqlmock.AnyArg(), 
+						"search",
+						sqlmock.AnyArg(),
+						sqlmock.AnyArg(),
 						statusNew,
 					).
 					WillReturnResult(sqlmock.NewResult(1, 1))
@@ -70,11 +70,11 @@ func TestPush(t *testing.T) {
 			mockSetup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec("INSERT INTO gmaps_jobs").
 					WithArgs(
-						"place-id", 
+						"place-id",
 						int64(2), // Changed from float64 to int64
-						"place", 
-						sqlmock.AnyArg(), 
-						sqlmock.AnyArg(), 
+						"place",
+						sqlmock.AnyArg(),
+						sqlmock.AnyArg(),
 						statusNew,
 					).
 					WillReturnResult(sqlmock.NewResult(1, 1))
@@ -92,11 +92,11 @@ func TestPush(t *testing.T) {
 			mockSetup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec("INSERT INTO gmaps_jobs").
 					WithArgs(
-						"email-id", 
+						"email-id",
 						int64(3), // Changed from float64 to int64
-						"email", 
-						sqlmock.AnyArg(), 
-						sqlmock.AnyArg(), 
+						"email",
+						sqlmock.AnyArg(),
+						sqlmock.AnyArg(),
 						statusNew,
 					).
 					WillReturnResult(sqlmock.NewResult(1, 1))
@@ -114,11 +114,11 @@ func TestPush(t *testing.T) {
 			mockSetup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec("INSERT INTO gmaps_jobs").
 					WithArgs(
-						"error-id", 
+						"error-id",
 						int64(1), // Changed from float64 to int64
-						"search", 
-						sqlmock.AnyArg(), 
-						sqlmock.AnyArg(), 
+						"search",
+						sqlmock.AnyArg(),
+						sqlmock.AnyArg(),
 						statusNew,
 					).
 					WillReturnError(sql.ErrConnDone)
@@ -256,7 +256,7 @@ func TestDecodeJob(t *testing.T) {
 		payload := encodeGmapJob(t, "test-gmap")
 		job, err := decodeJob("search", payload)
 		require.NoError(t, err)
-		
+
 		gmapJob, ok := job.(*gmaps.GmapJob)
 		assert.True(t, ok)
 		assert.Equal(t, "test-gmap", gmapJob.GetID())
@@ -266,7 +266,7 @@ func TestDecodeJob(t *testing.T) {
 		payload := encodePlaceJob(t, "test-place")
 		job, err := decodeJob("place", payload)
 		require.NoError(t, err)
-		
+
 		placeJob, ok := job.(*gmaps.PlaceJob)
 		assert.True(t, ok)
 		assert.Equal(t, "test-place", placeJob.GetID())
@@ -276,7 +276,7 @@ func TestDecodeJob(t *testing.T) {
 		payload := encodeEmailJob(t, "test-email")
 		job, err := decodeJob("email", payload)
 		require.NoError(t, err)
-		
+
 		emailJob, ok := job.(*gmaps.EmailExtractJob)
 		assert.True(t, ok)
 		assert.Equal(t, "test-email", emailJob.GetID())
@@ -340,7 +340,7 @@ func encodeJob(t *testing.T, job scrapemate.IJob) []byte {
 	default:
 		t.Fatalf("invalid job type %T", job)
 	}
-	
+
 	require.NoError(t, err, "Failed to encode job")
 	return buf.Bytes()
 }
@@ -348,8 +348,8 @@ func encodeJob(t *testing.T, job scrapemate.IJob) []byte {
 // Mock invalid job type for testing
 type invalidJob struct{}
 
-func (j *invalidJob) GetID() string          { return "invalid" }
-func (j *invalidJob) GetURL() string         { return "" }
-func (j *invalidJob) GetPriority() float64   { return 0 }
-func (j *invalidJob) SetPriority(p float64)  {}
+func (j *invalidJob) GetID() string           { return "invalid" }
+func (j *invalidJob) GetURL() string          { return "" }
+func (j *invalidJob) GetPriority() float64    { return 0 }
+func (j *invalidJob) SetPriority(p float64)   {}
 func (j *invalidJob) Unmarshall([]byte) error { return nil }

@@ -72,7 +72,7 @@ func (db *Db) UpdateAccount(ctx context.Context, orgId, tenantId uint64, account
 	result, err := acOrm.WithContext(ctx).Where(
 		acOrm.Id.Eq(account.Id),
 	).Updates(&updatedAcct)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to update account: %w", err)
 	}

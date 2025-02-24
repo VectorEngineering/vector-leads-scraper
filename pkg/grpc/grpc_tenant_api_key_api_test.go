@@ -21,11 +21,11 @@ func TestServer_CreateTenantAPIKey(t *testing.T) {
 
 	// Set up tenant ID in context using the middleware approach
 	md := metadata.New(map[string]string{
-		"x-tenant-id": fmt.Sprintf("%d", testCtx.TenantId),
+		"x-tenant-id":       fmt.Sprintf("%d", testCtx.TenantId),
 		"x-organization-id": fmt.Sprintf("%d", testCtx.Organization.Id),
 	})
 	ctx = metadata.NewIncomingContext(ctx, md)
-	
+
 	// Use the middleware to extract and validate the auth info
 	var err error
 	ctx, err = middleware.ExtractAuthInfo(ctx)
@@ -60,7 +60,7 @@ func TestServer_CreateTenantAPIKey(t *testing.T) {
 			req: &proto.CreateTenantAPIKeyRequest{
 				OrganizationId: testCtx.Organization.Id,
 				TenantId:       testCtx.TenantId,
-				ApiKey: &proto.TenantAPIKey{
+				ApiKey:         &proto.TenantAPIKey{
 					// Missing required fields
 				},
 			},
@@ -95,11 +95,11 @@ func TestServer_GetTenantAPIKey(t *testing.T) {
 
 	// Set up tenant ID in context using the middleware approach
 	md := metadata.New(map[string]string{
-		"x-tenant-id": fmt.Sprintf("%d", testCtx.TenantId),
+		"x-tenant-id":       fmt.Sprintf("%d", testCtx.TenantId),
 		"x-organization-id": fmt.Sprintf("%d", testCtx.Organization.Id),
 	})
 	ctx = metadata.NewIncomingContext(ctx, md)
-	
+
 	// Use the middleware to extract and validate the auth info
 	var err error
 	ctx, err = middleware.ExtractAuthInfo(ctx)
@@ -189,12 +189,12 @@ func TestServer_UpdateTenantAPIKey(t *testing.T) {
 
 	// Set up tenant ID in context using the middleware approach
 	md := metadata.New(map[string]string{
-		"x-tenant-id": fmt.Sprintf("%d", testCtx.TenantId),
+		"x-tenant-id":       fmt.Sprintf("%d", testCtx.TenantId),
 		"x-organization-id": fmt.Sprintf("%d", testCtx.Organization.Id),
-		"authorization": "Bearer test-token",
+		"authorization":     "Bearer test-token",
 	})
 	ctx = metadata.NewIncomingContext(ctx, md)
-	
+
 	// Use the middleware to extract and validate the auth info
 	var err error
 	ctx, err = middleware.ExtractAuthInfo(ctx)
@@ -236,8 +236,8 @@ func TestServer_UpdateTenantAPIKey(t *testing.T) {
 			errCode: codes.InvalidArgument,
 		},
 		{
-			name: "invalid request - missing API key",
-			req: &proto.UpdateTenantAPIKeyRequest{},
+			name:    "invalid request - missing API key",
+			req:     &proto.UpdateTenantAPIKeyRequest{},
 			wantErr: true,
 			errCode: codes.InvalidArgument,
 		},
@@ -292,12 +292,12 @@ func TestServer_DeleteTenantAPIKey(t *testing.T) {
 
 	// Set up tenant ID in context using the middleware approach
 	md := metadata.New(map[string]string{
-		"x-tenant-id": fmt.Sprintf("%d", testCtx.TenantId),
+		"x-tenant-id":       fmt.Sprintf("%d", testCtx.TenantId),
 		"x-organization-id": fmt.Sprintf("%d", testCtx.Organization.Id),
-		"authorization": "Bearer test-token",
+		"authorization":     "Bearer test-token",
 	})
 	ctx = metadata.NewIncomingContext(ctx, md)
-	
+
 	// Use the middleware to extract and validate the auth info
 	var err error
 	ctx, err = middleware.ExtractAuthInfo(ctx)
@@ -395,11 +395,11 @@ func TestServer_ListTenantAPIKeys(t *testing.T) {
 
 	// Set up tenant ID in context using the middleware approach
 	md := metadata.New(map[string]string{
-		"x-tenant-id": fmt.Sprintf("%d", testCtx.TenantId),
+		"x-tenant-id":       fmt.Sprintf("%d", testCtx.TenantId),
 		"x-organization-id": fmt.Sprintf("%d", testCtx.Organization.Id),
 	})
 	ctx = metadata.NewIncomingContext(ctx, md)
-	
+
 	// Use the middleware to extract and validate the auth info
 	var err error
 	ctx, err = middleware.ExtractAuthInfo(ctx)

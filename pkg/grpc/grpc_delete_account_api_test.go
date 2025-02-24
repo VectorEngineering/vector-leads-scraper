@@ -137,7 +137,7 @@ func TestServer_DeleteAccount(t *testing.T) {
 					OrganizationId: tc.Organization.Id,
 					TenantId:       tc.TenantId,
 				})
-				
+
 				// Don't fail the test if this setup call fails - the actual test will handle it
 				// Just log the error if there is one
 				if err != nil {

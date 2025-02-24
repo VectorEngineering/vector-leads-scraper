@@ -100,7 +100,7 @@ func TestMain(m *testing.M) {
 func createCustomUploader(endpoint string) *Uploader {
 	// We'll use the original New method as a template but modify the configuration
 	uploader := New(minioAccessKey, minioSecretKey, minioRegion)
-	
+
 	// Customize the client to point to our minio instance
 	customClient := s3.NewFromConfig(aws.Config{
 		Region: minioRegion,
@@ -129,11 +129,11 @@ func createCustomUploader(endpoint string) *Uploader {
 
 func TestNew(t *testing.T) {
 	tests := []struct {
-		name       string
-		accessKey  string
-		secretKey  string
-		region     string
-		wantNil    bool
+		name      string
+		accessKey string
+		secretKey string
+		region    string
+		wantNil   bool
 	}{
 		{
 			name:      "ValidCredentials",
@@ -209,37 +209,37 @@ func TestUpload(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			
+
 			err := uploader.Upload(ctx, tt.bucketName, tt.key, tt.body)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify the file was uploaded correctly
 				getObjectInput := &s3.GetObjectInput{
 					Bucket: aws.String(tt.bucketName),
 					Key:    aws.String(tt.key),
 				}
-				
+
 				result, err := uploader.client.GetObject(ctx, getObjectInput)
 				require.NoError(t, err)
-				
+
 				body, err := io.ReadAll(result.Body)
 				require.NoError(t, err)
 				defer result.Body.Close()
-				
+
 				// If we had a body to compare against
 				if tt.body != nil {
 					// Reset the original body and read it for comparison
 					if seeker, ok := tt.body.(io.Seeker); ok {
 						_, err = seeker.Seek(0, io.SeekStart)
 						require.NoError(t, err)
-						
+
 						originalBody, err := io.ReadAll(tt.body)
 						require.NoError(t, err)
-						
+
 						assert.Equal(t, originalBody, body)
 					}
 				}
@@ -251,35 +251,35 @@ func TestUpload(t *testing.T) {
 func TestUploadLargeFile(t *testing.T) {
 	uploader := createCustomUploader(minioEndpoint)
 	require.NotNil(t, uploader)
-	
+
 	// Create a 5MB file
 	size := 5 * 1024 * 1024 // 5MB
 	data := make([]byte, size)
-	
+
 	// Fill with pattern for verification
 	for i := 0; i < size; i++ {
 		data[i] = byte(i % 256)
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	err := uploader.Upload(ctx, minioBucket, "large-file.bin", bytes.NewReader(data))
 	require.NoError(t, err)
-	
+
 	// Verify the file was uploaded correctly
 	getObjectInput := &s3.GetObjectInput{
 		Bucket: aws.String(minioBucket),
 		Key:    aws.String("large-file.bin"),
 	}
-	
+
 	result, err := uploader.client.GetObject(ctx, getObjectInput)
 	require.NoError(t, err)
-	
+
 	downloadedData, err := io.ReadAll(result.Body)
 	require.NoError(t, err)
 	defer result.Body.Close()
-	
+
 	assert.Equal(t, size, len(downloadedData))
 	assert.Equal(t, data, downloadedData)
 }
@@ -288,30 +288,30 @@ func TestUploadLargeFile(t *testing.T) {
 func TestConcurrentUploads(t *testing.T) {
 	uploader := createCustomUploader(minioEndpoint)
 	require.NotNil(t, uploader)
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	// Create multiple upload tasks
 	uploadCount := 5
 	errChan := make(chan error, uploadCount)
-	
+
 	for i := 0; i < uploadCount; i++ {
 		go func(index int) {
 			content := fmt.Sprintf("Content for file %d", index)
 			key := fmt.Sprintf("concurrent-file-%d.txt", index)
-			
+
 			err := uploader.Upload(ctx, minioBucket, key, bytes.NewReader([]byte(content)))
 			errChan <- err
 		}(i)
 	}
-	
+
 	// Check results
 	for i := 0; i < uploadCount; i++ {
 		err := <-errChan
 		assert.NoError(t, err)
 	}
-	
+
 	// Verify all files exist
 	for i := 0; i < uploadCount; i++ {
 		key := fmt.Sprintf("concurrent-file-%d.txt", i)
@@ -319,14 +319,14 @@ func TestConcurrentUploads(t *testing.T) {
 			Bucket: aws.String(minioBucket),
 			Key:    aws.String(key),
 		}
-		
+
 		result, err := uploader.client.GetObject(ctx, getObjectInput)
 		require.NoError(t, err)
-		
+
 		body, err := io.ReadAll(result.Body)
 		require.NoError(t, err)
 		result.Body.Close()
-		
+
 		expectedContent := fmt.Sprintf("Content for file %d", i)
 		assert.Equal(t, expectedContent, string(body))
 	}

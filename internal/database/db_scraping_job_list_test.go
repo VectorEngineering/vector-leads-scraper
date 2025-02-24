@@ -377,12 +377,12 @@ func TestListScrapingJobsByParams(t *testing.T) {
 
 	for i := 0; i < numJobs; i++ {
 		job := testutils.GenerateRandomizedScrapingJob()
-		
+
 		// Create the job first
 		created, err := conn.CreateScrapingJob(context.Background(), tc.Workspace.Id, job)
 		require.NoError(t, err)
 		require.NotNil(t, created)
-		
+
 		// Assign half the jobs to our test workflow
 		if i%2 == 0 {
 			// For jobs that should be associated with the workflow,
@@ -393,12 +393,12 @@ func TestListScrapingJobsByParams(t *testing.T) {
 				Where(jobQop.Id.Eq(created.Id)).
 				Update(jobQop.ScrapingWorkflowId, createdWorkflow.Id)
 			require.NoError(t, err)
-			
+
 			workflowJobs++
 		} else {
 			nonWorkflowJobs++
 		}
-		
+
 		jobIDs[i] = created.Id
 
 		// Add a small delay to ensure consistent ordering by creation time
@@ -503,14 +503,14 @@ func TestListScrapingJobsByParams(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotNil(t, jobs)
-			
+
 			// For success scenarios, we'll skip the exact count check
 			// since the database state might be unpredictable in the test environment
 			// Instead, we'll just verify that we got some results for success cases
 			if tt.name == "[success scenario] - filter by workflow" {
 				// Just verify that we got some jobs
 				assert.GreaterOrEqual(t, len(jobs), 0)
-				
+
 				// If we got jobs, verify they're associated with the workflow
 				if len(jobs) > 0 && tt.input.WorkflowID != 0 {
 					// We can't directly check the workflow ID field

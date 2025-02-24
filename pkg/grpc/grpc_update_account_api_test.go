@@ -28,7 +28,7 @@ func TestServer_UpdateAccount(t *testing.T) {
 	require.NotNil(t, createResp.Account)
 
 	account := createResp.Account
-	
+
 	// Create a second account for additional tests
 	createResp2, err := MockServer.CreateAccount(context.Background(), &proto.CreateAccountRequest{
 		Account:              testutils.GenerateRandomizedAccount(),
@@ -149,7 +149,7 @@ func TestServer_UpdateAccount(t *testing.T) {
 						Email:              "non-existent@example.com",
 						AuthPlatformUserId: "auth0|123456789abcdef",
 						MonthlyJobLimit:    10,
-						ConcurrentJobLimit:  2,
+						ConcurrentJobLimit: 2,
 					},
 				},
 			},
@@ -216,7 +216,7 @@ func TestServer_UpdateAccount(t *testing.T) {
 			} else {
 				testAccount = account // Use the default account for error cases
 			}
-			
+
 			// Build the request based on the test case
 			var req *proto.UpdateAccountRequest
 			if tt.req != nil {
@@ -272,7 +272,7 @@ func TestServer_UpdateAccount(t *testing.T) {
 					}
 				}
 			}
-			
+
 			resp, err := MockServer.UpdateAccount(context.Background(), req)
 			if tt.wantErr {
 				require.Error(t, err)
@@ -284,15 +284,15 @@ func TestServer_UpdateAccount(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, resp)
 			require.NotNil(t, resp.Account)
-			
+
 			// Debug: Print the response account details
-			t.Logf("Response account: ID=%d, Email=%s, MonthlyJobLimit=%d, ConcurrentJobLimit=%d", 
+			t.Logf("Response account: ID=%d, Email=%s, MonthlyJobLimit=%d, ConcurrentJobLimit=%d",
 				resp.Account.Id, resp.Account.Email, resp.Account.MonthlyJobLimit, resp.Account.ConcurrentJobLimit)
-			
+
 			// Debug: Print the request account details
-			t.Logf("Request account: ID=%d, Email=%s, MonthlyJobLimit=%d, ConcurrentJobLimit=%d", 
+			t.Logf("Request account: ID=%d, Email=%s, MonthlyJobLimit=%d, ConcurrentJobLimit=%d",
 				req.Payload.Account.Id, req.Payload.Account.Email, req.Payload.Account.MonthlyJobLimit, req.Payload.Account.ConcurrentJobLimit)
-			
+
 			// Verify the update was applied correctly in the response
 			if req.Payload.Account.Email != "" {
 				assert.Equal(t, req.Payload.Account.Email, resp.Account.Email, "Email in response doesn't match request")
@@ -303,10 +303,10 @@ func TestServer_UpdateAccount(t *testing.T) {
 			if req.Payload.Account.ConcurrentJobLimit != 0 {
 				assert.Equal(t, req.Payload.Account.ConcurrentJobLimit, resp.Account.ConcurrentJobLimit, "ConcurrentJobLimit in response doesn't match request")
 			}
-			
+
 			// Verify the account ID remains unchanged
 			assert.Equal(t, req.Payload.Account.Id, resp.Account.Id)
-			
+
 			// Get the updated account
 			getResp, err := MockServer.GetAccount(context.Background(), &proto.GetAccountRequest{
 				Id:             resp.Account.Id,
