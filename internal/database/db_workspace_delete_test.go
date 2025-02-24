@@ -23,6 +23,7 @@ func TestDb_DeleteWorkspace(t *testing.T) {
 		setup   func(t *testing.T) uint64
 		wantErr bool
 		errType error
+		ctx     context.Context
 	}{
 		{
 			name: "[success] delete existing workspace",
@@ -39,18 +40,21 @@ func TestDb_DeleteWorkspace(t *testing.T) {
 				return workspace.Id
 			},
 			wantErr: false,
+			ctx:     context.Background(),
 		},
 		{
 			name:    "[failure] delete with invalid ID",
 			id:      0,
 			wantErr: true,
 			errType: ErrInvalidInput,
+			ctx:     context.Background(),
 		},
 		{
 			name:    "[failure] delete non-existent workspace",
 			id:      999999,
 			wantErr: true,
 			errType: ErrWorkspaceDoesNotExist,
+			ctx:     context.Background(),
 		},
 		{
 			name: "[failure] delete already deleted workspace",
@@ -73,6 +77,7 @@ func TestDb_DeleteWorkspace(t *testing.T) {
 			},
 			wantErr: true,
 			errType: ErrWorkspaceDoesNotExist,
+			ctx:     context.Background(),
 		},
 	}
 
@@ -85,7 +90,7 @@ func TestDb_DeleteWorkspace(t *testing.T) {
 				id = tt.id
 			}
 
-			err := conn.DeleteWorkspace(context.Background(), id)
+			err := conn.DeleteWorkspace(tt.ctx, id)
 
 			if tt.wantErr {
 				require.Error(t, err)

@@ -3,6 +3,7 @@ module github.com/Vector/vector-leads-scraper
 go 1.23.4
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/JohannesKaufmann/html-to-markdown v1.6.0
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.2.2
 	github.com/PuerkitoBio/goquery v1.10.2
@@ -30,6 +31,7 @@ require (
 	github.com/mcnijman/go-emailaddress v1.1.1
 	github.com/newrelic/go-agent/v3 v3.36.0
 	github.com/newrelic/go-agent/v3/integrations/nrgrpc v1.4.5
+	github.com/ory/dockertest/v3 v3.11.0
 	github.com/playwright-community/playwright-go v0.5001.0
 	github.com/posthog/posthog-go v1.3.1
 	github.com/prometheus/client_golang v1.20.5
@@ -258,7 +260,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runc v1.1.13 // indirect
 	github.com/openzipkin/zipkin-go v0.4.2 // indirect
-	github.com/ory/dockertest/v3 v3.11.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
