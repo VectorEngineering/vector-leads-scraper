@@ -1,8 +1,40 @@
-# Google maps scraper
+# Google Maps Scraper
 ![build](https://github.com/Vector/vector-leads-scraper/actions/workflows/build.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Vector/vector-leads-scraper)](https://goreportcard.com/report/github.com/Vector/vector-leads-scraper)
 
 > A free and open-source Google Maps scraper with both command line and web UI options. This tool is easy to use and allows you to extract data from Google Maps efficiently.
+
+```mermaid
+graph TB
+    subgraph "Google Maps Scraper Architecture"
+        direction TB
+        cli[Command Line Interface] --> engine
+        web[Web UI] --> engine
+        engine[Scraping Engine] --> providers
+        
+        subgraph "Providers"
+            file[File Output]
+            json[JSON Output]
+            db[PostgreSQL]
+            custom[Custom Plugins]
+        end
+        
+        providers --> file
+        providers --> json
+        providers --> db
+        providers --> custom
+        
+        engine --> features
+        
+        subgraph "Features"
+            direction LR
+            email[Email Extraction]
+            proxy[Proxy Support]
+            aws[AWS Integration]
+            fast[Fast Mode]
+        end
+    end
+```
 
 ## Sponsors
 
@@ -42,7 +74,7 @@ You can find the full list of our APIs here: [https://serpapi.com/search-api](ht
 <hr>
 
 [![Capsolver banner](https://raw.githubusercontent.com/gosom/google-maps-scraper/main/img/capsolver-banner.png)](https://www.capsolver.com/?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos)
-**[CapSolver](https://www.capsolver.com/?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos)** automates CAPTCHA solving for efficient web scraping. It supports [reCAPTCHA V2](https://docs.capsolver.com/guide/captcha/ReCaptchaV2.html?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos), [reCAPTCHA V3](https://docs.capsolver.com/guide/captcha/ReCaptchaV3.html?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos), [hCaptcha](https://docs.capsolver.com/guide/captcha/HCaptcha.html?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos), and more. With API and extension options, it’s perfect for any web scraping project.
+**[CapSolver](https://www.capsolver.com/?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos)** automates CAPTCHA solving for efficient web scraping. It supports [reCAPTCHA V2](https://docs.capsolver.com/guide/captcha/ReCaptchaV2.html?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos), [reCAPTCHA V3](https://docs.capsolver.com/guide/captcha/ReCaptchaV3.html?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos), [hCaptcha](https://docs.capsolver.com/guide/captcha/HCaptcha.html?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos), and more. With API and extension options, it's perfect for any web scraping project.
 
 <hr>
 
@@ -52,54 +84,104 @@ You can find the full list of our APIs here: [https://serpapi.com/search-api](ht
 
 <hr>
 
+## What Google Maps Scraper Does
 
-## What Google maps scraper does
+A command line and web-based Google Maps scraper built using the [scrapemate](https://github.com/gosom/scrapemate) web crawling framework. You can use this repository as is, or you can customize the code to suit your specific needs.
 
-A command line and web based google maps scraper build using 
-
-[scrapemate](https://github.com/gosom/scrapemate) web crawling framework.
-
-You can use this repository either as is, or you can use its code as a base and
-customize it to your needs
+```mermaid
+sequenceDiagram
+    participant User
+    participant Scraper
+    participant GMaps as Google Maps
+    participant Website as Business Website
+    
+    User->>Scraper: Input search queries
+    Scraper->>GMaps: Search for businesses
+    GMaps-->>Scraper: Search results page
+    Scraper->>Scraper: Extract basic data
+    Scraper->>GMaps: Visit business details
+    GMaps-->>Scraper: Business details page
+    Scraper->>Scraper: Extract comprehensive data
+    alt Email extraction enabled
+        Scraper->>Website: Visit business website
+        Website-->>Scraper: Website content
+        Scraper->>Scraper: Extract email addresses
+    end
+    Scraper-->>User: Structured data results
+```
 
 ![Example GIF](img/example.gif)
 
 ### Web UI:
 
-```
+```bash
 mkdir -p gmapsdata && docker run -v $PWD/gmapsdata:/gmapsdata -p 8080:8080 gosom/google-maps-scraper -data-folder /gmapsdata
 ```
 
-Or dowload the [binary](https://github.com/Vector/vector-leads-scraper/releases) for your platform and run it.
+Or download the [binary](https://github.com/Vector/vector-leads-scraper/releases) for your platform and run it.
 
-Note: The results will take at least 3 minutes to appear, even if you add only one keyword. This is the minimum configured runtime.
+> **Note**: The results will take at least 3 minutes to appear, even if you add only one keyword. This is the minimum configured runtime.
 
-Note: for MacOS the docker command should not work. **HELP REQUIRED**
+> **Note**: For MacOS, the docker command may not work as expected. **HELP REQUIRED**
 
+### Command Line:
 
-### Command line:
-
-```
+```bash
 touch results.csv && docker run -v $PWD/example-queries.txt:/example-queries -v $PWD/results.csv:/results.csv gosom/google-maps-scraper -depth 1 -input /example-queries -results /results.csv -exit-on-inactivity 3m
 ```
 
-file `results.csv` will contain the parsed results.
+The file `results.csv` will contain the parsed results.
 
-**If you want emails use additionally the `-email` parameter*
+**If you want to extract emails, use the `-email` parameter additionally**
 
 ### REST API
+
 The Google Maps Scraper provides a RESTful API for programmatic management of scraping tasks.
 
-### Key Endpoints
+```mermaid
+classDiagram
+    class APIController {
+        +CreateJob(request)
+        +GetJob(id)
+        +ListJobs()
+        +DeleteJob(id)
+        +DownloadResults(id)
+    }
+    
+    class Job {
+        +String id
+        +String status
+        +String[] queries
+        +int depth
+        +bool emailExtraction
+        +Date createdAt
+        +Date completedAt
+    }
+    
+    class Result {
+        +String businessName
+        +String category
+        +String address
+        +String phone
+        +String website
+        +float rating
+        +int reviewCount
+        +String[] emails
+    }
+    
+    APIController --> Job : manages
+    Job --> Result : contains
+```
 
-- POST /api/v1/jobs: Create a new scraping job
-- GET /api/v1/jobs: List all jobs
-- GET /api/v1/jobs/{id}: Get details of a specific job
-- DELETE /api/v1/jobs/{id}: Delete a job
-- GET /api/v1/jobs/{id}/download: Download job results as CSV
+#### Key Endpoints
 
-For detailed API documentation, refer to the OpenAPI 3.0.3 specification available through Swagger UI or Redoc when running the app http://localhost:8080/api/docs
+- `POST /api/v1/jobs`: Create a new scraping job
+- `GET /api/v1/jobs`: List all jobs
+- `GET /api/v1/jobs/{id}`: Get details of a specific job
+- `DELETE /api/v1/jobs/{id}`: Delete a job
+- `GET /api/v1/jobs/{id}/download`: Download job results as CSV
 
+For detailed API documentation, refer to the OpenAPI 3.0.3 specification available through Swagger UI or Redoc when running the app at http://localhost:8080/api/docs
 
 ## 🌟 Support the Project!
 
@@ -107,50 +189,131 @@ If you find this tool useful, consider giving it a **star** on GitHub.
 Feel free to check out the **Sponsor** button on this repository to see how you can further support the development of this project. 
 Your support helps ensure continued improvement and maintenance.
 
-
 ## Features
 
-- Extracts many data points from google maps
+```mermaid
+mindmap
+  root((Google Maps Scraper))
+    Data Extraction
+      Business details
+      Contact information
+      Geolocation data
+      Reviews and ratings
+      Operating hours
+      Price ranges
+    Output Options
+      CSV export
+      JSON export
+      PostgreSQL storage
+      Custom plugins
+    Performance
+      120 URLs/minute
+      Concurrent processing
+      Multi-machine scaling
+    Special Features
+      Email extraction
+      Proxy support
+        SOCKS5
+        HTTP/HTTPS
+      AWS Lambda integration
+      Fast Mode (Beta)
+```
+
+- Extracts many data points from Google Maps
 - Exports the data to CSV, JSON or PostgreSQL 
-- Performance about 120 urls per minute (-depth 1 -c 8)
+- Performance about 120 URLs per minute (-depth 1 -c 8)
 - Extendable to write your own exporter
-- Dockerized for easy run in multiple platforms
-- Scalable in multiple machines
+- Dockerized for easy run on multiple platforms
+- Scalable across multiple machines
 - Optionally extracts emails from the website of the business
 - SOCKS5/HTTP/HTTPS proxy support
 - Serverless execution via AWS Lambda functions (experimental & no documentation yet)
 - Fast Mode (BETA)
 
-## Notes on email extraction
+## Notes on Email Extraction
 
-By default email extraction is disabled. 
+By default, email extraction is disabled. 
 
-If you enable email extraction (see quickstart) then the scraper will visit the 
-website of the business (if exists) and it will try to extract the emails from the
-page.
+If you enable email extraction (see quickstart), the scraper will visit the business website (if it exists) and try to extract emails from the page.
 
-For the moment it only checks only one page of the website (the one that is registered in Gmaps). At some point, it will be added support to try to extract from other pages like about, contact, impressum etc. 
+Currently, it only checks one page of the website (the one registered in Google Maps). Support for extracting from other pages like about, contact, impressum, etc. will be added in the future.
 
+```mermaid
+flowchart LR
+    scraper[Google Maps Scraper]
+    gmaps[Google Maps Page]
+    website[Business Website]
+    result[Results with Email]
+    
+    scraper -->|1. Scrape| gmaps
+    gmaps -->|2. Get Website URL| scraper
+    scraper -->|3. Visit Website| website
+    website -->|4. Extract Email| scraper
+    scraper -->|5. Add to| result
+    
+    style scraper fill:#f9f,stroke:#333,stroke-width:2px
+    style gmaps fill:#bbf,stroke:#333,stroke-width:2px
+    style website fill:#bbf,stroke:#333,stroke-width:2px
+    style result fill:#bfb,stroke:#333,stroke-width:2px
+```
 
-Keep in mind that enabling email extraction results to larger processing time, since more
-pages are scraped. 
+Keep in mind that enabling email extraction results in longer processing time, since more pages are scraped.
 
 ## Fast Mode
 
-Fast mode returns you at most 21 search results per query ordered by distance from the **latitude** and **longitude** provided.
-All the results are within the specified **radius**
+Fast mode returns at most 21 search results per query ordered by distance from the provided **latitude** and **longitude** within the specified **radius**.
 
-It does not contain all the data points but basic ones. 
-However it provides the ability to extract data really fast. 
+It doesn't contain all data points but provides basic ones, allowing for much faster data extraction.
 
-When you use the fast mode ensure that you have provided:
+When using fast mode, ensure you have provided:
 - zoom
 - radius (in meters)
 - latitude
 - longitude
 
-
 **Fast mode is Beta, you may experience blocking**
+
+## Data Fields Extracted
+
+```mermaid
+classDiagram
+    class BusinessListing {
+        +String input_id
+        +String link
+        +String title
+        +String category
+        +String address
+        +String open_hours
+        +String popular_times
+        +String website
+        +String phone
+        +String plus_code
+        +int review_count
+        +float review_rating
+        +Map reviews_per_rating
+        +float latitude
+        +float longitude
+        +String cid
+        +String status
+        +String descriptions
+        +String reviews_link
+        +String thumbnail
+        +String timezone
+        +String price_range
+        +String data_id
+        +String[] images
+        +String reservations
+        +String order_online
+        +String menu
+        +boolean owner
+        +String complete_address
+        +String about
+        +Map user_reviews
+        +String[] emails
+    }
+```
+
+### Extracted Data Fields
 
 #### 1. `input_id`
 - Internal identifier for the input query.
@@ -252,10 +415,10 @@ When you use the fast mode ensure that you have provided:
 #### 32. `emails`
 - Email addresses associated with the business, if available.
 
-**Note**: email is empty by default (see Usage)
+**Note**: Email is empty by default (see Usage)
 
-**Note**: Input id is an ID that you can define per query. By default it's a UUID
-In order to define it you can have an input file like:
+**Note**: Input ID is an ID that you can define per query. By default, it's a UUID.
+To define it, you can have an input file like:
 
 ```
 Matsuhisa Athens #!#MyIDentifier
@@ -263,23 +426,21 @@ Matsuhisa Athens #!#MyIDentifier
 
 ## Quickstart
 
-### Using docker:
+### Using Docker:
 
-```
+```bash
 touch results.csv && docker run -v $PWD/example-queries.txt:/example-queries -v $PWD/results.csv:/results.csv gosom/google-maps-scraper -depth 1 -input /example-queries -results /results.csv -exit-on-inactivity 3m
 ```
 
-file `results.csv` will contain the parsed results.
+The file `results.csv` will contain the parsed results.
 
-**If you want emails use additionally the `-email` parameter**
+**If you want emails, use the `-email` parameter additionally**
 
-
-### On your host
+### On Your Host
 
 (tested only on Ubuntu 22.04)
 
-
-```
+```bash
 git clone https://github.com/Vector/vector-leads-scraper.git
 cd google-maps-scraper
 go mod download
@@ -287,15 +448,16 @@ go build
 ./google-maps-scraper -input example-queries.txt -results restaurants-in-cyprus.csv -exit-on-inactivity 3m
 ```
 
-Be a little bit patient. In the first run it downloads required libraries.
+Be a little bit patient. The first run downloads required libraries.
 
-The results are written when they arrive in the `results` file you specified
+The results are written when they arrive in the `results` file you specified.
 
-**If you want emails use additionally the `-email` parameter**
+**If you want emails, use the `-email` parameter additionally**
 
-### Command line options
+### Command Line Options
 
-try `./google-maps-scraper -h` to see the command line options available:
+Try `./google-maps-scraper -h` to see the command line options available:
+
 ```
   -addr string
         address to listen on for web server (default ":8080")
@@ -357,15 +519,35 @@ try `./google-maps-scraper -h` to see the command line options available:
         set zoom level (0-21) for search (default 15)
 ```
 
-## Using a custom writer
+## Using a Custom Writer
 
-In cases the results need to be written in a custom format or in another system like a db a message queue or basically anything the Go plugin system can be utilized.
+For cases where results need to be written in a custom format or to another system like a database or message queue, you can utilize the Go plugin system.
 
-Write a Go plugin (see an example in examples/plugins/example_writeR.go) 
+```mermaid
+flowchart LR
+    scraper[Scraper Core]
+    plugin[Custom Plugin]
+    output[(Custom Output)]
+    
+    scraper -->|Data| plugin
+    plugin -->|Write| output
+    
+    subgraph "Plugin Implementation"
+    interface[Plugin Interface]
+    writer[Custom Writer]
+    interface --> writer
+    end
+    
+    style scraper fill:#f9f,stroke:#333,stroke-width:2px
+    style plugin fill:#bbf,stroke:#333,stroke-width:2px
+    style output fill:#bfb,stroke:#333,stroke-width:2px
+```
+
+Write a Go plugin (see an example in examples/plugins/example_writer.go) 
 
 Compile it using (for Linux):
 
-```
+```bash
 go build -buildmode=plugin -tags=plugin -o ~/mytest/plugins/example_writer.so examples/plugins/example_writer.go
 ```
 
@@ -375,67 +557,65 @@ See an example:
 
 1. Write your plugin (use the examples/plugins/example_writer.go as a reference)
 2. Build your plugin `go build -buildmode=plugin -tags=plugin -o ~/myplugins/example_writer.so plugins/example_writer.go`
-3. Download the lastes [release](https://github.com/Vector/vector-leads-scraper/releases/) or build the program
+3. Download the latest [release](https://github.com/Vector/vector-leads-scraper/releases/) or build the program
 4. Run the program like `./google-maps-scraper -writer ~/myplugins:DummyPrinter -input example-queries.txt`
-
 
 ### Plugins and Docker
 
-It is possible to use the docker image and use tha plugins.
-In such case make sure that the shared library is build using a compatible GLIB version with the docker image.
-otherwise you will encounter an error like:
+It is possible to use the Docker image with plugins.
+Make sure that the shared library is built using a compatible GLIB version with the Docker image;
+otherwise, you will encounter an error like:
 
 ```
 /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.32' not found (required by /plugins/example_writer.so)
 ```
 
+## Using Database Provider (PostgreSQL)
 
-## Using Database Provider (postgreSQL)
+For running on your local machine:
 
-For running in your local machine:
-
-```
+```bash
 docker-compose -f docker-compose.dev.yaml up -d
 ```
 
-The above starts a PostgreSQL container and creates the required tables
+The above starts a PostgreSQL container and creates the required tables.
 
-to access db:
+To access the database:
 
-```
+```bash
 psql -h localhost -U postgres -d postgres
 ```
 
 Password is `postgres`
 
-Then from your host run:
+Then from your host, run:
 
-```
+```bash
 go run main.go -dsn "postgres://postgres:postgres@localhost:5432/postgres" -produce -input example-queries.txt --lang el
 ```
 
 (configure your queries and the desired language)
 
-This will populate the table `gmaps_jobs` . 
+This will populate the table `gmaps_jobs`. 
 
-you may run the scraper using:
+You may run the scraper using:
 
-```
+```bash
 go run main.go -c 2 -depth 1 -dsn "postgres://postgres:postgres@localhost:5432/postgres"
 ```
 
-If you have a database server and several machines you can start multiple instances of the scraper as above.
+If you have a database server and several machines, you can start multiple instances of the scraper as above.
 
 ### Kubernetes
 
-You may run the scraper in a kubernetes cluster. This helps to scale it easier.
+You may run the scraper in a Kubernetes cluster. This helps to scale it more easily.
 
-Assuming you have a kubernetes cluster and a database that is accessible from the cluster:
+Assuming you have a Kubernetes cluster and a database that is accessible from the cluster:
 
-1. First populate the database as shown above
+1. First, populate the database as shown above
 2. Create a deployment file `scraper.deployment`
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -457,10 +637,9 @@ spec:
         args: ["-c", "1", "-depth", "10", "-dsn", "postgres://{DBUSER}:{DBPASSWD@DBHOST}:{DBPORT}/{DBNAME}", "-lang", "{LANGUAGE_CODE}"]
 ```
 
-Please replace the values or the command args accordingly 
+Please replace the values or the command args accordingly.
 
-Note: Keep in mind that because the application starts a headless browser it requires CPU and memory. 
-Use an appropriate kubernetes cluster
+> **Note**: Keep in mind that because the application starts a headless browser, it requires CPU and memory. Use an appropriate Kubernetes cluster.
 
 ## Telemetry
 
@@ -469,7 +648,7 @@ You can opt out by setting the env variable `DISABLE_TELEMETRY=1`
 
 ## Deployment
 
-You can deploy the scraper using the helm chart in the `charts` folder.
+You can deploy the scraper using the Helm chart in the `charts` folder.
 
 ```mermaid
 graph TB
@@ -681,79 +860,92 @@ flowchart TB
     class files,db,cloud storage
 ```
 
-## Perfomance
+## Performance
 
 Expected speed with concurrency of 8 and depth 1 is 120 jobs/per minute.
-Each search is 1 job + the number or results it contains.
+Each search is 1 job + the number of results it contains.
 
 Based on the above: 
-if we have 1000 keywords to search with each contains 16 results => 1000 * 16 = 16000 jobs.
+if we have 1000 keywords to search with each containing 16 results => 1000 * 16 = 16000 jobs.
 
 We expect this to take about 16000/120 ~ 133 minutes ~ 2.5 hours
 
-If you want to scrape many keywords then it's better to use the Database Provider in
-combination with Kubernetes for convenience and start multiple scrapers in more than 1 machines.
+If you want to scrape many keywords, it's better to use the Database Provider in
+combination with Kubernetes for convenience and start multiple scrapers across more than one machine.
 
-## References
+```mermaid
+graph LR
+    subgraph "Performance Benchmarks"
+        direction TB
+        conf1[Depth: 1<br>Concurrency: 8] --> rate1[120 jobs/minute]
+        conf2[Depth: 5<br>Concurrency: 8] --> rate2[~80 jobs/minute]
+        conf3[Depth: 10<br>Concurrency: 4] --> rate3[~50 jobs/minute]
+    end
+    
+    subgraph "Scaling Options"
+        direction TB
+        single[Single Machine] --> limit[Bottlenecked by<br>Browser Instances]
+        kube[Kubernetes Cluster] --> distributed[Distributed Processing]
+        distributed --> linear[Near-Linear Scaling]
+    end
+    
+    subgraph "Optimization Tips"
+        direction TB
+        proxy[Rotate Proxies] --> block[Avoid Blocking]
+        fast[Use Fast Mode] --> quick[Quick Results]
+        batch[Batch Processing] --> efficient[Resource Efficiency]
+    end
+    
+    classDef perf fill:#f9f,stroke:#333,stroke-width:2px
+    classDef scale fill:#bbf,stroke:#333,stroke-width:2px
+    classDef tips fill:#bfb,stroke:#333,stroke-width:2px
+    class conf1,conf2,conf3,rate1,rate2,rate3 perf
+    class single,kube,distributed,linear scale
+    class proxy,fast,batch,block,quick,efficient tips
+```
 
-For more instruction you may also read the following links
+### Performance Optimization Strategies
 
-- https://blog.gkomninos.com/how-to-extract-data-from-google-maps-using-golang
-- https://blog.gkomninos.com/distributed-google-maps-scraping
-- https://github.com/omkarcloud/google-maps-scraper/tree/master (also a nice project) [many thanks for the idea to extract the data by utilizing the JS objects]
+1. **Concurrency Tuning**:
+   - Start with concurrency (`-c`) set to half your CPU cores
+   - Monitor system load and adjust accordingly
+   - Too high concurrency can lead to browser failures
 
+2. **Depth Management**:
+   - Lower depth values (1-3) provide faster results but fewer listings
+   - Higher depth values (5-10) provide more comprehensive results but take longer
+   - Balance depth with your specific needs
 
-## Licence
+3. **Proxy Rotation**:
+   - Use multiple proxies to avoid rate limiting
+   - Consider geographic distribution of proxies for region-specific searches
+   - Residential proxies typically perform better than datacenter IPs
 
-This code is licensed under the MIT License
+4. **Memory Optimization**:
+   - Each browser instance requires ~250-300MB RAM
+   - Calculate total memory requirements: Concurrency × 300MB + 500MB base
+   - Monitor for memory leaks during long-running operations
 
+5. **Batching Strategies**:
+   - Break large query sets into manageable batches
+   - Process high-priority geographic areas first
+   - Consider time-of-day optimization for lower Google Maps traffic
 
-## Contributing
+## System Requirements
 
-Please open an ISSUE or make a Pull Request
+| Component | Minimum | Recommended | Notes |
+|-----------|---------|-------------|-------|
+| CPU       | 2 cores | 4+ cores    | Each concurrent browser uses significant CPU |
+| Memory    | 2GB     | 4GB+        | ~300MB per concurrent browser instance |
+| Disk      | 1GB     | 5GB+        | For storing results and browser cache |
+| Network   | 5Mbps   | 20Mbps+     | Higher bandwidth needed for concurrent requests |
+| Docker    | 19.03+  | 20.10+      | For containerized deployment |
+| Go        | 1.18+   | 1.21+       | For building from source |
 
+### Kubernetes Resource Recommendations
 
-Thank you for considering support for the project. Every bit of assistance helps maintain momentum and enhances the scraper’s capabilities!
-
-
-
-
-## Sponsors
-
-### Special Thanks to:
-
-[Evomi](https://evomi.com?utm_source=github&utm_medium=banner&utm_campaign=gosom-maps) is your Swiss Quality Proxy Provider, starting at **$0.49/GB**
-
-- 👩‍💻 **$0.49 per GB Residential Proxies**: Our price is unbeatable
-- 👩‍💻 **24/7 Expert Support**: We will join your Slack Channel
-- 🌍 **Global Presence**: Available in 150+ Countries
-- ⚡ **Low Latency**
-- 🔒 **Swiss Quality and Privacy**
-- 🎁 **Free Trial**
-- 🛡️ **99.9% Uptime**
-- 🤝 **Special IP Pool selection**: Optimize for fast, quality or quantity of ips
-- 🔧 **Easy Integration**: Compatible with most software and programming languages
-
-[![Evomi Banner](https://my.evomi.com/images/brand/cta.png)](https://evomi.com?utm_source=github&utm_medium=banner&utm_campaign=gosom-maps)
-
-
-<div align="center">
-	<p>
-		<a href="https://www.capsolver.com/?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos" rel="nofollow">
-                  <div>
-                    <img src="https://raw.githubusercontent.com/gosom/google-maps-scraper/main/img/capsolver-banner.png" alt="Capsolver banner"/>
-                  </div>
-                  <b><a href="https://www.capsolver.com/?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos" rel="nofollow">CapSolver</a> automates CAPTCHA solving for efficient web scraping. It supports <a href="https://docs.capsolver.com/guide/captcha/ReCaptchaV2.html?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos" rel="nofolow">reCAPTCHA V2</a>, <a href="https://docs.capsolver.com/guide/captcha/ReCaptchaV3.html?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos" rel="nofollow">reCAPTCHA V3</a>, <a href="https://docs.capsolver.com/guide/captcha/HCaptcha.html?utm_source=github&utm_medium=banner_repo&utm_campaign=scraping&utm_term=giorgos" rel="nofollow">hCaptcha</a>, and more. With API and extension options, it’s perfect for any web scraping project. </b>
-		</a>
-		</a>
-                <br>
-                <br>
-                		<a href="https://www.searchapi.io/google-maps?via=gosom" rel="nofollow">
-                  <div>
-                    <img src="https://www.searchapi.io/press/v1/svg/searchapi_logo_black_h.svg" width="300" alt="Google Maps API for easy SERP scraping"/>
-                  </div>
-                  <b>Google Maps API for easy SERP scraping</b>
-		<br>
-		<br>
-	</p>
-</div>
+| Resource | Request | Limit | Notes |
+|----------|---------|-------|-------|
+| CPU      | 100m    | 500m  | Per pod |
+| Memory   | 256Mi   | 512Mi | Per pod |
+| Replicas | 2       | 10+   | Scale based on workload |

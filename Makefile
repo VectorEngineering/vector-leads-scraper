@@ -408,3 +408,40 @@ deploy-local-grpc: check-docker clean-local ## Deploy to local kind cluster with
 	./scripts/deploy-local.sh --enable-grpc $(if $(ENABLE_TESTS),--enable-tests)
 
 .PHONY: run-grpc-dev deploy-local-grpc
+
+# Integration test dependencies
+.PHONY: install-integration-test-deps
+install-integration-test-deps: ## Install dependencies for integration tests
+	go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+	which kind || (echo "Installing kind..." && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/') && chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind)
+	which kubectl || (echo "Installing kubectl..." && curl -LO "https://dl.k8s.io/release/$(shell curl -L -s https://dl.k8s.io/release/stable.txt)/bin/$(shell uname -s | tr '[:upper:]' '[:lower:]')/$(shell uname -m | sed 's/x86_64/amd64/')/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/)
+	which helm || (echo "Installing helm..." && curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && chmod 700 get_helm.sh && ./get_helm.sh && rm get_helm.sh)
+
+# Integration test targets
+.PHONY: build-integration-tests
+build-integration-tests: ## Build the integration tests
+	go build -o bin/integration-tests ./cmd/integration-tests
+
+.PHONY: run-integration-tests
+run-integration-tests: install-integration-test-deps build-integration-tests ## Run all integration tests
+	./bin/integration-tests
+
+.PHONY: run-integration-tests-grpc
+run-integration-tests-grpc: build-integration-tests ## Run only gRPC integration tests
+	./bin/integration-tests --test-grpc --test-worker=false
+
+.PHONY: run-integration-tests-worker
+run-integration-tests-worker: build-integration-tests ## Run only worker integration tests
+	./bin/integration-tests --test-grpc=false --test-worker
+
+.PHONY: run-integration-tests-verbose
+run-integration-tests-verbose: build-integration-tests ## Run integration tests with verbose logging
+	./bin/integration-tests --verbose
+
+.PHONY: run-integration-tests-keep-alive
+run-integration-tests-keep-alive: build-integration-tests ## Run integration tests and keep the cluster alive
+	./bin/integration-tests --keep-alive
+
+.PHONY: clean-integration-tests
+clean-integration-tests: ## Clean up integration test resources
+	kind delete cluster --name gmaps-integration-test || true
