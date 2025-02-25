@@ -1,6 +1,6 @@
 module github.com/Vector/vector-leads-scraper
 
-go 1.23.4
+go 1.24.0
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
