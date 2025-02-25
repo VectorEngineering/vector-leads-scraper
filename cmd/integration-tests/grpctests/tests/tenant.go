@@ -26,7 +26,7 @@ func TestCreateTenant(ctx context.Context, client lead_scraper.LeadScraperServic
 
 	// Create the request
 	req := &lead_scraper.CreateTenantRequest{
-		Tenant: tenant,
+		Tenant:         tenant,
 		OrganizationId: orgIDUint,
 	}
 
@@ -54,4 +54,4 @@ func TestCreateTenant(ctx context.Context, client lead_scraper.LeadScraperServic
 	tenantID := strconv.FormatUint(resp.GetTenantId(), 10)
 	l.Success("Create tenant test passed, ID: %s", tenantID)
 	return tenantID, nil
-} 
+}

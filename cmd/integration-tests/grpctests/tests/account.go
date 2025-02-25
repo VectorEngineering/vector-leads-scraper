@@ -32,7 +32,7 @@ func TestCreateAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 
 	// Create the request
 	req := &lead_scraper.CreateAccountRequest{
-		Account: 			  account,
+		Account:              account,
 		OrganizationId:       orgIDUint,
 		TenantId:             tenantIDUint,
 		InitialWorkspaceName: "Test Workspace",
@@ -94,9 +94,9 @@ func TestGetAccount(ctx context.Context, client lead_scraper.LeadScraperServiceC
 
 	// Create the request
 	req := &lead_scraper.GetAccountRequest{
-		Id: accountIDUint,
+		Id:             accountIDUint,
 		OrganizationId: orgIDUint,
-		TenantId: tenantIDUint,
+		TenantId:       tenantIDUint,
 	}
 
 	// Set up metadata
@@ -192,11 +192,11 @@ func TestUpdateAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 	account.Id = accountIDUint
 	account.AuthPlatformUserId = "auth0|123456789" // Set a valid Auth0 user ID format
 	account.Email = "updated@example.com"
-	
+
 	// Create the request
 	req := &lead_scraper.UpdateAccountRequest{
 		Payload: &lead_scraper.UpdateAccountRequestPayload{
-			Account: account,
+			Account:        account,
 			OrganizationId: orgIDUint,
 			TenantId:       tenantIDUint,
 		},
@@ -261,9 +261,9 @@ func TestDeleteAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 
 	// Create the request
 	req := &lead_scraper.DeleteAccountRequest{
-		Id: accountIDUint,
+		Id:             accountIDUint,
 		OrganizationId: orgIDUint,
-		TenantId: tenantIDUint,
+		TenantId:       tenantIDUint,
 	}
 
 	// Set up metadata
@@ -285,9 +285,9 @@ func TestDeleteAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 
 	// Verify the account was deleted by trying to get it
 	getReq := &lead_scraper.GetAccountRequest{
-		Id: accountIDUint,
+		Id:             accountIDUint,
 		OrganizationId: orgIDUint,
-		TenantId: tenantIDUint,
+		TenantId:       tenantIDUint,
 	}
 
 	_, err = client.GetAccount(ctx, getReq)
@@ -297,4 +297,4 @@ func TestDeleteAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 
 	l.Success("Delete account test passed")
 	return nil
-} 
+}

@@ -69,13 +69,13 @@ func testInsertJob(ctx context.Context, clusterManager *cluster.Manager, redisPo
 
 	// Create a test job
 	job := map[string]interface{}{
-		"id":        "test-job-" + time.Now().Format("20060102150405"),
-		"query":     "restaurants in New York",
-		"latitude":  40.7128,
-		"longitude": -74.0060,
-		"radius":    5000,
-		"language":  "en",
-		"depth":     2,
+		"id":         "test-job-" + time.Now().Format("20060102150405"),
+		"query":      "restaurants in New York",
+		"latitude":   40.7128,
+		"longitude":  -74.0060,
+		"radius":     5000,
+		"language":   "en",
+		"depth":      2,
 		"created_at": time.Now().Format(time.RFC3339),
 	}
 
@@ -111,7 +111,7 @@ func testCheckResults(ctx context.Context, db *sql.DB, l *logger.Logger) error {
 
 	// Query the database for results
 	query := `SELECT COUNT(*) FROM entries WHERE query = 'restaurants in New York'`
-	
+
 	var count int
 	err := db.QueryRowContext(ctx, query).Scan(&count)
 	if err != nil {
@@ -134,8 +134,8 @@ func connectToDatabase(ctx context.Context, clusterManager *cluster.Manager, l *
 	l.Info("Connecting to database")
 
 	// Port-forward to the PostgreSQL service
-	endpoint, err := clusterManager.GetServiceEndpoint(ctx, 
-		fmt.Sprintf("%s-postgresql", clusterManager.GetConfig().ReleaseName), 
+	endpoint, err := clusterManager.GetServiceEndpoint(ctx,
+		fmt.Sprintf("%s-postgresql", clusterManager.GetConfig().ReleaseName),
 		fmt.Sprintf("%d", clusterManager.GetConfig().PostgresPort))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get PostgreSQL endpoint: %w", err)
@@ -168,4 +168,4 @@ func connectToDatabase(ctx context.Context, clusterManager *cluster.Manager, l *
 	}
 
 	return nil, fmt.Errorf("failed to connect to database after retries: %w", lastErr)
-} 
+}

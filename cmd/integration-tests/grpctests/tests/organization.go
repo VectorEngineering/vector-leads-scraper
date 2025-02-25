@@ -21,7 +21,7 @@ func TestCreateOrganization(ctx context.Context, client lead_scraper.LeadScraper
 	org := testutils.GenerateRandomizedOrganization()
 	// Create the request
 	req := &lead_scraper.CreateOrganizationRequest{
-		Organization: 	org,
+		Organization: org,
 	}
 
 	// Set up metadata
@@ -48,4 +48,4 @@ func TestCreateOrganization(ctx context.Context, client lead_scraper.LeadScraper
 	orgID := strconv.FormatUint(resp.GetOrganization().GetId(), 10)
 	l.Success("Create organization test passed, ID: %s", orgID)
 	return orgID, nil
-} 
+}

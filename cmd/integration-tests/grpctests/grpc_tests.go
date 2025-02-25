@@ -49,4 +49,4 @@ func RunTests(ctx context.Context, clusterManager *cluster.Manager, l *logger.Lo
 
 	l.Success("All gRPC tests passed")
 	return nil
-} 
+}

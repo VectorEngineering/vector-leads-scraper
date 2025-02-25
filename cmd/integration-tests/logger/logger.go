@@ -9,8 +9,8 @@ import (
 
 // Logger is a simple logger for the integration tests
 type Logger struct {
-	verbose bool
-	infoLog *log.Logger
+	verbose  bool
+	infoLog  *log.Logger
 	errorLog *log.Logger
 	debugLog *log.Logger
 }
@@ -53,10 +53,10 @@ func (l *Logger) StartTimer(name string) func() {
 	if !l.verbose {
 		return func() {}
 	}
-	
+
 	start := time.Now()
 	l.Debug("Starting %s", name)
-	
+
 	return func() {
 		l.Debug("%s completed in %v", name, time.Since(start))
 	}
@@ -82,4 +82,4 @@ func (l *Logger) Success(format string, v ...interface{}) {
 func (l *Logger) Failure(format string, v ...interface{}) {
 	msg := fmt.Sprintf(format, v...)
 	l.errorLog.Printf("\033[1;31m✗ %s\033[0m", msg)
-} 
+}
