@@ -64,7 +64,7 @@ config:
     serviceName: "vector-leads-scraper"
     environment: "development"
   database:
-    dsn: "postgres://postgres:postgres@gmaps-scraper-leads-scraper-service-postgresql:5432/leads_scraper?sslmode=disable"
+    dsn: "postgres://postgres:postgres@gmaps-service-postgresql:5432/leads_scraper?sslmode=disable"
     maxIdleConnections: 10
     maxOpenConnections: 100
     maxConnectionLifetime: "10m"
@@ -74,10 +74,10 @@ config:
     maxConnectionRetries: 3
   redis:
     enabled: true
-    host: "gmaps-scraper-leads-scraper-service-redis-master"
+    host: "gmaps-service-redis-master"
     port: 6379
     password: "redispass"
-    dsn: "redis://:redispass@gmaps-scraper-leads-scraper-service-redis-master:6379/0"
+    dsn: "redis://:redispass@gmaps-service-redis-master:6379/0"
     workers: 10
     retryInterval: "5s"
     maxRetries: 3

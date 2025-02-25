@@ -51,7 +51,7 @@ func DefaultConfig() *Config {
 		KeepAlive:          false,
 		ClusterName:        "gmaps-integration-test",
 		Namespace:          "default",
-		ReleaseName:        "gmaps-scraper-leads-scraper-service",
+		ReleaseName:        "gmaps-service",
 		ChartPath:          "./charts/leads-scraper-service",
 		ImageName:          "gosom/google-maps-scraper",
 		ImageTag:           "latest",

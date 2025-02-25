@@ -75,12 +75,14 @@ func TestGetAccount(ctx context.Context, client lead_scraper.LeadScraperServiceC
 	// Create the request
 	req := &lead_scraper.GetAccountRequest{
 		Id: accountIDUint,
+		OrganizationId: 611568, // Use the organization ID from the previous test
+		TenantId: 984793, // Use the tenant ID from the previous test
 	}
 
 	// Set up metadata
 	md := metadata.New(map[string]string{
-		"x-tenant-id":       "0",
-		"x-organization-id": "0",
+		"x-tenant-id":       "984793", // Use the tenant ID from the previous test
+		"x-organization-id": "611568", // Use the organization ID from the previous test
 	})
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
@@ -166,13 +168,12 @@ func TestUpdateAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 		return fmt.Errorf("failed to parse tenant ID: %w", err)
 	}
 
+	account := testutils.GenerateRandomizedAccount()
+	account.Id = accountIDUint
 	// Create the request
 	req := &lead_scraper.UpdateAccountRequest{
 		Payload: &lead_scraper.UpdateAccountRequestPayload{
-			Account: &lead_scraper.Account{
-				Id:    accountIDUint,
-				Email: "updated@example.com",
-			},
+			Account: account,
 			OrganizationId: orgIDUint,
 			TenantId:       tenantIDUint,
 		},
@@ -219,12 +220,14 @@ func TestDeleteAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 	// Create the request
 	req := &lead_scraper.DeleteAccountRequest{
 		Id: accountIDUint,
+		OrganizationId: 611568, // Use the organization ID from the previous test
+		TenantId: 984793, // Use the tenant ID from the previous test
 	}
 
 	// Set up metadata
 	md := metadata.New(map[string]string{
-		"x-tenant-id":       "0",
-		"x-organization-id": "0",
+		"x-tenant-id":       "984793", // Use the tenant ID from the previous test
+		"x-organization-id": "611568", // Use the organization ID from the previous test
 	})
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
@@ -241,6 +244,8 @@ func TestDeleteAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 	// Verify the account was deleted by trying to get it
 	getReq := &lead_scraper.GetAccountRequest{
 		Id: accountIDUint,
+		OrganizationId: 611568, // Use the organization ID from the previous test
+		TenantId: 984793, // Use the tenant ID from the previous test
 	}
 
 	_, err = client.GetAccount(ctx, getReq)

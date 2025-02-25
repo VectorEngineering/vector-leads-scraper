@@ -72,7 +72,7 @@ func parseFlags() *config.Config {
 	flag.BoolVar(&cfg.KeepAlive, "keep-alive", false, "Keep the cluster alive after tests complete")
 	flag.StringVar(&cfg.ClusterName, "cluster-name", "gmaps-integration-test", "Name of the Kind cluster")
 	flag.StringVar(&cfg.Namespace, "namespace", "default", "Kubernetes namespace for deployment")
-	flag.StringVar(&cfg.ReleaseName, "release-name", "gmaps-scraper-leads-scraper-service", "Helm release name")
+	flag.StringVar(&cfg.ReleaseName, "release-name", "gmaps-service", "Helm release name")
 	flag.StringVar(&cfg.ChartPath, "chart-path", "./charts/leads-scraper-service", "Path to the Helm chart")
 	flag.StringVar(&cfg.ImageName, "image-name", "gosom/google-maps-scraper", "Docker image name")
 	flag.StringVar(&cfg.ImageTag, "image-tag", "latest", "Docker image tag")

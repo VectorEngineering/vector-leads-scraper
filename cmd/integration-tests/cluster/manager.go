@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,6 +18,7 @@ import (
 type Manager struct {
 	cfg    *config.Config
 	logger *logger.Logger
+	portForwardCancels []context.CancelFunc
 }
 
 // NewManager creates a new cluster manager
@@ -69,6 +71,13 @@ func NewManager(ctx context.Context, cfg *config.Config, l *logger.Logger) (*Man
 func (m *Manager) Cleanup(ctx context.Context) error {
 	m.logger.Info("Cleaning up resources")
 
+	// Cancel all port-forwarding processes
+	m.logger.Debug("Cancelling port-forwarding processes")
+	for _, cancel := range m.portForwardCancels {
+		cancel()
+	}
+	m.portForwardCancels = nil
+
 	// Delete the Helm release
 	m.logger.Debug("Deleting Helm release: %s", m.cfg.ReleaseName)
 	cmd := exec.CommandContext(ctx, "helm", "uninstall", m.cfg.ReleaseName, "--namespace", m.cfg.Namespace)
@@ -107,17 +116,61 @@ func (m *Manager) GetServiceEndpoint(ctx context.Context, serviceName, portName 
 	}
 
 	// Start port-forwarding in the background
-	cmd := exec.CommandContext(ctx, "kubectl", "port-forward", 
+	m.logger.Info("Setting up port-forwarding for service %s on port %d -> %s", serviceName, freePort, portName)
+	
+	// Create a context with cancellation for the port-forwarding command
+	portForwardCtx, cancel := context.WithCancel(ctx)
+	
+	// Store the cancel function to be able to stop port-forwarding later
+	m.portForwardCancels = append(m.portForwardCancels, cancel)
+	
+	cmd := exec.CommandContext(portForwardCtx, "kubectl", "port-forward", 
 		fmt.Sprintf("svc/%s", serviceName), 
 		fmt.Sprintf("%d:%s", freePort, portName),
 		"--namespace", m.cfg.Namespace)
 	
+	// Capture stdout and stderr
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	
 	if err := cmd.Start(); err != nil {
+		cancel() // Clean up the context
 		return "", fmt.Errorf("failed to start port-forwarding: %w", err)
 	}
+	
+	// Run a goroutine to log any output from the port-forwarding command
+	go func() {
+		if err := cmd.Wait(); err != nil && portForwardCtx.Err() == nil {
+			// Only log if the context wasn't cancelled (which would be normal shutdown)
+			m.logger.Error("Port-forwarding command exited with error: %v", err)
+			m.logger.Debug("Stdout: %s", stdout.String())
+			m.logger.Debug("Stderr: %s", stderr.String())
+		}
+	}()
 
-	// Give it a moment to establish the connection
-	time.Sleep(2 * time.Second)
+	// Wait for the port-forwarding to be established
+	m.logger.Debug("Waiting for port-forwarding to be established...")
+	
+	// Try to connect to the forwarded port to verify it's working
+	connected := false
+	for i := 0; i < 10; i++ {
+		time.Sleep(1 * time.Second)
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("localhost:%d", freePort), 1*time.Second)
+		if err == nil {
+			conn.Close()
+			connected = true
+			break
+		}
+		m.logger.Debug("Waiting for port-forwarding to be ready (attempt %d/10): %v", i+1, err)
+	}
+	
+	if !connected {
+		cancel() // Clean up the context
+		return "", fmt.Errorf("failed to establish port-forwarding after multiple attempts")
+	}
+	
+	m.logger.Success("Port-forwarding established successfully for service %s on port %d", serviceName, freePort)
 
 	// Return the local endpoint
 	return fmt.Sprintf("localhost:%d", freePort), nil
@@ -125,7 +178,36 @@ func (m *Manager) GetServiceEndpoint(ctx context.Context, serviceName, portName 
 
 // GetGRPCEndpoint returns the gRPC endpoint
 func (m *Manager) GetGRPCEndpoint(ctx context.Context) (string, error) {
-	return m.GetServiceEndpoint(ctx, m.cfg.ReleaseName, fmt.Sprintf("%d", m.cfg.GRPCPort))
+	// The service name includes the release name and the chart name with a -grpc suffix
+	serviceName := fmt.Sprintf("%s-leads-scraper-service-grpc", m.cfg.ReleaseName)
+	
+	// Get all services to debug
+	cmd := exec.CommandContext(ctx, "kubectl", "get", "services", "-n", m.cfg.Namespace, "-o", "wide")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		m.logger.Debug("Failed to get services: %v", err)
+		m.logger.Debug("Stderr: %s", stderr.String())
+	} else {
+		m.logger.Debug("Available services:\n%s", stdout.String())
+	}
+	
+	// Get the specific service to check its ports
+	cmd = exec.CommandContext(ctx, "kubectl", "get", "service", serviceName, "-n", m.cfg.Namespace, "-o", "yaml")
+	stdout.Reset()
+	stderr.Reset()
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		m.logger.Debug("Failed to get service %s: %v", serviceName, err)
+		m.logger.Debug("Stderr: %s", stderr.String())
+	} else {
+		m.logger.Debug("Service %s details:\n%s", serviceName, stdout.String())
+	}
+	
+	// Use the named port "grpc" instead of a port number
+	return m.GetServiceEndpoint(ctx, serviceName, "grpc")
 }
 
 // ExecuteInPod executes a command in a pod
@@ -151,10 +233,13 @@ func (m *Manager) ExecuteInPod(ctx context.Context, podName, containerName, comm
 
 // WaitForDeployment waits for a deployment to be ready
 func (m *Manager) WaitForDeployment(ctx context.Context, deploymentName string, timeout time.Duration) error {
-	m.logger.Debug("Waiting for deployment %s to be ready", deploymentName)
+	// The deployment name includes the release name and the chart name
+	fullDeploymentName := fmt.Sprintf("%s-leads-scraper-service", deploymentName)
+	
+	m.logger.Debug("Waiting for deployment %s to be ready", fullDeploymentName)
 	
 	cmd := exec.CommandContext(ctx, "kubectl", "rollout", "status", 
-		fmt.Sprintf("deployment/%s", deploymentName),
+		fmt.Sprintf("deployment/%s-grpc", fullDeploymentName),
 		"--namespace", m.cfg.Namespace,
 		fmt.Sprintf("--timeout=%s", timeout))
 	
@@ -545,13 +630,13 @@ redis:
 	
 	// Wait for PostgreSQL to be ready
 	m.logger.Info("Waiting for PostgreSQL to be ready")
-	if err := m.WaitForDeployment(ctx, fmt.Sprintf("%s-postgresql", m.cfg.ReleaseName), 5*time.Minute); err != nil {
+	if err := m.WaitForStatefulSet(ctx, fmt.Sprintf("%s-postgresql", m.cfg.ReleaseName), 5*time.Minute); err != nil {
 		return fmt.Errorf("failed to wait for PostgreSQL: %w", err)
 	}
 	
 	// Wait for Redis to be ready
 	m.logger.Info("Waiting for Redis to be ready")
-	if err := m.WaitForDeployment(ctx, fmt.Sprintf("%s-redis-master", m.cfg.ReleaseName), 5*time.Minute); err != nil {
+	if err := m.WaitForStatefulSet(ctx, fmt.Sprintf("%s-redis-master", m.cfg.ReleaseName), 5*time.Minute); err != nil {
 		return fmt.Errorf("failed to wait for Redis: %w", err)
 	}
 	
@@ -583,12 +668,33 @@ func (m *Manager) runCommand(cmd *exec.Cmd) error {
 
 // findFreePort finds a free port
 func (m *Manager) findFreePort() (int, error) {
-	// For simplicity, we'll use a fixed port for now
-	// In a real implementation, you would use net.Listen to find a free port
-	return 8081, nil
+	// Listen on port 0 to get a free port assigned by the OS
+	listener, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		return 0, fmt.Errorf("failed to find free port: %w", err)
+	}
+	defer listener.Close()
+
+	// Get the port from the listener's address
+	addr := listener.Addr().(*net.TCPAddr)
+	m.logger.Debug("Found free port: %d", addr.Port)
+	
+	return addr.Port, nil
 }
 
 // GetConfig returns the configuration
 func (m *Manager) GetConfig() *config.Config {
 	return m.cfg
+}
+
+// WaitForStatefulSet waits for a statefulset to be ready
+func (m *Manager) WaitForStatefulSet(ctx context.Context, statefulSetName string, timeout time.Duration) error {
+	m.logger.Debug("Waiting for statefulset %s to be ready", statefulSetName)
+	
+	cmd := exec.CommandContext(ctx, "kubectl", "rollout", "status", 
+		fmt.Sprintf("statefulset/%s", statefulSetName),
+		"--namespace", m.cfg.Namespace,
+		fmt.Sprintf("--timeout=%s", timeout))
+	
+	return m.runCommand(cmd)
 } 
