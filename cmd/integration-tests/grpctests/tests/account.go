@@ -28,6 +28,7 @@ func TestCreateAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 	}
 
 	account := testutils.GenerateRandomizedAccount()
+	account.AuthPlatformUserId = "auth0|123456789" // Set a valid Auth0 user ID format
 
 	// Create the request
 	req := &lead_scraper.CreateAccountRequest{
@@ -72,17 +73,36 @@ func TestGetAccount(ctx context.Context, client lead_scraper.LeadScraperServiceC
 		return fmt.Errorf("failed to parse account ID: %w", err)
 	}
 
+	// Get the organization and tenant IDs from the metadata
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		return fmt.Errorf("failed to get metadata from context")
+	}
+
+	orgIDStr := md.Get("x-organization-id")[0]
+	tenantIDStr := md.Get("x-tenant-id")[0]
+
+	orgIDUint, err := strconv.ParseUint(orgIDStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse organization ID: %w", err)
+	}
+
+	tenantIDUint, err := strconv.ParseUint(tenantIDStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse tenant ID: %w", err)
+	}
+
 	// Create the request
 	req := &lead_scraper.GetAccountRequest{
 		Id: accountIDUint,
-		OrganizationId: 611568, // Use the organization ID from the previous test
-		TenantId: 984793, // Use the tenant ID from the previous test
+		OrganizationId: orgIDUint,
+		TenantId: tenantIDUint,
 	}
 
 	// Set up metadata
-	md := metadata.New(map[string]string{
-		"x-tenant-id":       "984793", // Use the tenant ID from the previous test
-		"x-organization-id": "611568", // Use the organization ID from the previous test
+	md = metadata.New(map[string]string{
+		"x-tenant-id":       tenantIDStr,
+		"x-organization-id": orgIDStr,
 	})
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
@@ -170,6 +190,9 @@ func TestUpdateAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 
 	account := testutils.GenerateRandomizedAccount()
 	account.Id = accountIDUint
+	account.AuthPlatformUserId = "auth0|123456789" // Set a valid Auth0 user ID format
+	account.Email = "updated@example.com"
+	
 	// Create the request
 	req := &lead_scraper.UpdateAccountRequest{
 		Payload: &lead_scraper.UpdateAccountRequestPayload{
@@ -217,17 +240,36 @@ func TestDeleteAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 		return fmt.Errorf("failed to parse account ID: %w", err)
 	}
 
+	// Get the organization and tenant IDs from the metadata
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		return fmt.Errorf("failed to get metadata from context")
+	}
+
+	orgIDStr := md.Get("x-organization-id")[0]
+	tenantIDStr := md.Get("x-tenant-id")[0]
+
+	orgIDUint, err := strconv.ParseUint(orgIDStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse organization ID: %w", err)
+	}
+
+	tenantIDUint, err := strconv.ParseUint(tenantIDStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse tenant ID: %w", err)
+	}
+
 	// Create the request
 	req := &lead_scraper.DeleteAccountRequest{
 		Id: accountIDUint,
-		OrganizationId: 611568, // Use the organization ID from the previous test
-		TenantId: 984793, // Use the tenant ID from the previous test
+		OrganizationId: orgIDUint,
+		TenantId: tenantIDUint,
 	}
 
 	// Set up metadata
-	md := metadata.New(map[string]string{
-		"x-tenant-id":       "984793", // Use the tenant ID from the previous test
-		"x-organization-id": "611568", // Use the organization ID from the previous test
+	md = metadata.New(map[string]string{
+		"x-tenant-id":       tenantIDStr,
+		"x-organization-id": orgIDStr,
 	})
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
@@ -244,8 +286,8 @@ func TestDeleteAccount(ctx context.Context, client lead_scraper.LeadScraperServi
 	// Verify the account was deleted by trying to get it
 	getReq := &lead_scraper.GetAccountRequest{
 		Id: accountIDUint,
-		OrganizationId: 611568, // Use the organization ID from the previous test
-		TenantId: 984793, // Use the tenant ID from the previous test
+		OrganizationId: orgIDUint,
+		TenantId: tenantIDUint,
 	}
 
 	_, err = client.GetAccount(ctx, getReq)

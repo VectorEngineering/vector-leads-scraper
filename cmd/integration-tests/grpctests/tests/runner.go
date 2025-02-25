@@ -6,6 +6,7 @@ import (
 
 	"github.com/Vector/vector-leads-scraper/cmd/integration-tests/logger"
 	lead_scraper "github.com/VectorEngineering/vector-protobuf-definitions/api-definitions/pkg/generated/lead_scraper_service/v1"
+	"google.golang.org/grpc/metadata"
 )
 
 // TestRunner runs all the gRPC tests
@@ -49,25 +50,32 @@ func (r *TestRunner) RunAll() error {
 	}
 	r.state.TenantID = tenantID
 
+	// Set up metadata for subsequent tests
+	md := metadata.New(map[string]string{
+		"x-tenant-id":       r.state.TenantID,
+		"x-organization-id": r.state.OrganizationID,
+	})
+	ctx := metadata.NewOutgoingContext(r.ctx, md)
+
 	// Run account tests
-	accountID, err := TestCreateAccount(r.ctx, r.client, r.state.OrganizationID, r.state.TenantID, r.logger)
+	accountID, err := TestCreateAccount(ctx, r.client, r.state.OrganizationID, r.state.TenantID, r.logger)
 	if err != nil {
 		return fmt.Errorf("create account test failed: %w", err)
 	}
 	r.state.AccountID = accountID
 
-	if err := TestGetAccount(r.ctx, r.client, r.state.AccountID, r.logger); err != nil {
+	if err := TestGetAccount(ctx, r.client, r.state.AccountID, r.logger); err != nil {
 		return fmt.Errorf("get account test failed: %w", err)
 	}
 
 	// Skip ListAccounts test as it's not implemented
 	r.logger.Info("Skipping ListAccounts test as it's not implemented")
 
-	if err := TestUpdateAccount(r.ctx, r.client, r.state.AccountID, r.state.OrganizationID, r.state.TenantID, r.logger); err != nil {
+	if err := TestUpdateAccount(ctx, r.client, r.state.AccountID, r.state.OrganizationID, r.state.TenantID, r.logger); err != nil {
 		return fmt.Errorf("update account test failed: %w", err)
 	}
 
-	if err := TestDeleteAccount(r.ctx, r.client, r.state.AccountID, r.logger); err != nil {
+	if err := TestDeleteAccount(ctx, r.client, r.state.AccountID, r.logger); err != nil {
 		return fmt.Errorf("delete account test failed: %w", err)
 	}
 
