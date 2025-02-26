@@ -137,7 +137,7 @@ jobs:
       - name: Deploy to cluster
         run: |
           HELM_CMD="helm"
-          RELEASE_STATUS=$(helm status ${{ inputs.release_name }} -n ${{ inputs.namespace }} 2>&1 || true)
+          RELEASE_STATUS=$(helm status ${{ inputs.release_name }} -n ${{ inputs.namespace }}  --insecure-skip-tls-verify --kube-insecure-skip-tls-verify 2>&1 || true)
 
           if echo "$RELEASE_STATUS" | grep -q "not found"; then
             echo "🚀 Performing fresh installation..."
@@ -181,8 +181,7 @@ jobs:
           kubectl rollout status deployment/${{ inputs.release_name }} \
             -n ${{ inputs.namespace }} \
             --timeout=${{ env.HELM_TIMEOUT }} \
-            --insecure-skip-tls-verify \
-            --kube-insecure-skip-tls-verify
+            --insecure-skip-tls-verify
 
       - name: Deployment summary
         if: always()
