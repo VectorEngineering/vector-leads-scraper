@@ -67,6 +67,9 @@ jobs:
       CHART_NAME: ${{ inputs.chart_name }}
       HELM_TIMEOUT: ${{ inputs.helm_timeout }}
       KUBECTL_INSECURE_SKIP_TLS_VERIFY: "true"
+      HELM_EXPERIMENTAL_OCI: 1
+      HELM_KUBECONTEXT: default
+      HELM_KUBETOKEN: ""
 
     steps:
       - name: Checkout code
@@ -125,6 +128,12 @@ jobs:
           sed -i '/certificate-authority-data/d' ~/.kube/config
           sed -i '/user:/a\    insecure-skip-tls-verify: true' ~/.kube/config
           
+          # Make kubeconfig more secure
+          chmod 600 ~/.kube/config
+          
+          # Export environment variables for Helm
+          echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
+          
           # Test connection to the cluster
           echo "Testing Kubernetes connection..."
           kubectl cluster-info --insecure-skip-tls-verify
@@ -136,6 +145,9 @@ jobs:
 
       - name: Deploy to cluster
         run: |
+          # Export HELM_DEBUG to see more detailed output
+          export HELM_DEBUG=1
+          
           HELM_CMD="helm"
           RELEASE_STATUS=$(helm status ${{ inputs.release_name }} -n ${{ inputs.namespace }} 2>&1 || true)
 
@@ -183,7 +195,7 @@ jobs:
 
           # Print debug information (with sensitive values redacted)
           echo "🔍 Debug: Helm command structure (sensitive values redacted)"
-          echo "Command: $HELM_CMD [CHART_DIR] --values [BASE_VALUES] --values [VALUES_FILE] [HELM_SET_ARGS] --namespace ${{ inputs.namespace }} --create-namespace --timeout ${{ env.HELM_TIMEOUT }} --insecure-skip-tls-verify --wait"
+          echo "Command: $HELM_CMD [CHART_DIR] --values [BASE_VALUES] --values [VALUES_FILE] [HELM_SET_ARGS] --namespace ${{ inputs.namespace }} --create-namespace --timeout ${{ env.HELM_TIMEOUT }} --insecure-skip-tls-verify --kube-insecure-skip-tls-verify --wait"
           echo "Chart directory: ${{ steps.config.outputs.CHARTS_DIR }}"
           echo "Base values file: ${{ steps.config.outputs.BASE_VALUES }}"
           echo "Environment values file: ${{ steps.config.outputs.VALUES_FILE }}"
@@ -209,6 +221,7 @@ jobs:
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
             --insecure-skip-tls-verify \
+            --kube-insecure-skip-tls-verify \
             --wait"
 
           $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
@@ -219,6 +232,7 @@ jobs:
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
             --insecure-skip-tls-verify \
+            --kube-insecure-skip-tls-verify \
             --wait
 
       - name: Verify deployment
