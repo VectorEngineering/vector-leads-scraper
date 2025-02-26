@@ -68,8 +68,6 @@ jobs:
       HELM_TIMEOUT: ${{ inputs.helm_timeout }}
       KUBECTL_INSECURE_SKIP_TLS_VERIFY: "true"
       HELM_EXPERIMENTAL_OCI: 1
-      HELM_KUBECONTEXT: default
-      HELM_KUBETOKEN: ""
 
     steps:
       - name: Checkout code
