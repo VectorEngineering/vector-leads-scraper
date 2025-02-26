@@ -165,9 +165,35 @@ jobs:
             HELM_SET_ARGS="$HELM_SET_ARGS --set config.redis.dsn='${{ secrets.REDIS_URL }}'"
           fi
           if [ ! -z "${{ secrets.PROXIES }}" ]; then
-            # Escape the proxies value by replacing colons with \:
-            ESCAPED_PROXIES=$(echo "${{ secrets.PROXIES }}" | sed 's/:/\\:/g')
-            HELM_SET_ARGS="$HELM_SET_ARGS --set config.scraper.proxies='${ESCAPED_PROXIES}'"
+            # Double quote the proxies value to handle special characters
+            HELM_SET_ARGS="$HELM_SET_ARGS --set-string config.scraper.proxies=\"${{ secrets.PROXIES }}\""
+            
+            # Create a safe version of the proxies for debugging (replace actual IPs with placeholders)
+            # This keeps the format but hides the actual values
+            PROXIES_DEBUG=$(echo "${{ secrets.PROXIES }}" | sed 's/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/x.x.x.x/g')
+            echo "Proxies format (with IPs redacted): $PROXIES_DEBUG"
+            
+            # Count the number of proxies
+            PROXY_COUNT=$(echo "${{ secrets.PROXIES }}" | tr ',' '\n' | wc -l)
+            echo "Number of proxies: $PROXY_COUNT"
+          fi
+
+          # Print debug information (with sensitive values redacted)
+          echo "🔍 Debug: Helm command structure (sensitive values redacted)"
+          echo "Command: $HELM_CMD [CHART_DIR] --values [BASE_VALUES] --values [VALUES_FILE] [HELM_SET_ARGS] --namespace ${{ inputs.namespace }} --create-namespace --timeout ${{ env.HELM_TIMEOUT }} --insecure-skip-tls-verify --wait"
+          echo "Chart directory: ${{ steps.config.outputs.CHARTS_DIR }}"
+          echo "Base values file: ${{ steps.config.outputs.BASE_VALUES }}"
+          echo "Environment values file: ${{ steps.config.outputs.VALUES_FILE }}"
+          
+          # Print which secret values are being set (without showing the actual values)
+          echo "Secret values being set:"
+          if [ ! -z "${{ secrets.DATABASE_DSN }}" ]; then echo "- config.database.dsn"; fi
+          if [ ! -z "${{ secrets.AWS_ACCESS_KEY }}" ]; then echo "- config.aws.accessKey"; fi
+          if [ ! -z "${{ secrets.AWS_SECRET_KEY }}" ]; then echo "- config.aws.secretKey"; fi
+          if [ ! -z "${{ secrets.AWS_REGION }}" ]; then echo "- config.aws.region"; fi
+          if [ ! -z "${{ secrets.REDIS_URL }}" ]; then echo "- config.redis.dsn"; fi
+          if [ ! -z "${{ secrets.PROXIES }}" ]; then 
+            echo "- config.scraper.proxies (using --set-string)"
           fi
 
           $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
