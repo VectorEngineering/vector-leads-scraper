@@ -125,6 +125,11 @@ jobs:
           sed -i '/certificate-authority-data/d' ~/.kube/config
           sed -i '/user:/a\    insecure-skip-tls-verify: true' ~/.kube/config
           
+          # Set environment variables for kubectl and helm
+          echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
+          echo "HELM_KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
+          echo "HELM_KUBECONTEXT=default" >> $GITHUB_ENV
+          
           # Test connection to the cluster
           echo "Testing Kubernetes connection..."
           kubectl cluster-info --insecure-skip-tls-verify
@@ -183,7 +188,7 @@ jobs:
 
           # Print debug information (with sensitive values redacted)
           echo "🔍 Debug: Helm command structure (sensitive values redacted)"
-          echo "Command: $HELM_CMD [CHART_DIR] --values [BASE_VALUES] --values [VALUES_FILE] [HELM_SET_ARGS] --namespace ${{ inputs.namespace }} --create-namespace --timeout ${{ env.HELM_TIMEOUT }} --insecure-skip-tls-verify --wait"
+          echo "Command: $HELM_CMD [CHART_DIR] --values [BASE_VALUES] --values [VALUES_FILE] [HELM_SET_ARGS] --namespace ${{ inputs.namespace }} --create-namespace --timeout ${{ env.HELM_TIMEOUT }} --kube-insecure-skip-tls-verify --wait"
           echo "Chart directory: ${{ steps.config.outputs.CHARTS_DIR }}"
           echo "Base values file: ${{ steps.config.outputs.BASE_VALUES }}"
           echo "Environment values file: ${{ steps.config.outputs.VALUES_FILE }}"
@@ -208,7 +213,7 @@ jobs:
             --namespace ${{ inputs.namespace }} \
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
-            --insecure-skip-tls-verify \
+            --kube-insecure-skip-tls-verify \
             --wait"
 
           $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
@@ -218,7 +223,7 @@ jobs:
             --namespace ${{ inputs.namespace }} \
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
-            --insecure-skip-tls-verify \
+            --kube-insecure-skip-tls-verify \
             --wait
 
       - name: Verify deployment
