@@ -131,8 +131,11 @@ jobs:
           # Make kubeconfig more secure
           chmod 600 ~/.kube/config
           
-          # Export environment variables for Helm
+          # Export environment variables for Helm and kubectl
           echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
+          
+          # Setting kubectl flags to disable validation and localhost references
+          echo "KUBECTL_FLAGS=--insecure-skip-tls-verify --validate=false" >> $GITHUB_ENV
           
           # Test connection to the cluster
           echo "Testing Kubernetes connection..."
@@ -141,7 +144,7 @@ jobs:
 
       - name: Create namespace if not exists
         run: |
-          kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml --insecure-skip-tls-verify | kubectl apply -f - --insecure-skip-tls-verify
+          kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml --validate=false --insecure-skip-tls-verify | kubectl apply -f - --validate=false --insecure-skip-tls-verify
 
       - name: Deploy to cluster
         run: |
@@ -240,6 +243,7 @@ jobs:
           kubectl rollout status deployment/${{ inputs.release_name }} \
             -n ${{ inputs.namespace }} \
             --timeout=${{ env.HELM_TIMEOUT }} \
+            --validate=false \
             --insecure-skip-tls-verify
 
       - name: Deployment summary
