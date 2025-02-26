@@ -108,139 +108,74 @@ jobs:
           # Add host key checking exception
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
           
-          echo "Executing kubectl commands on Hetzner server..."
+          echo "Copying kubeconfig from Hetzner server..."
           
-          # Test connection and kubernetes access
+          # Create local kubeconfig directory
+          mkdir -p ~/.kube
+          
+          # Copy kubeconfig from server to runner
+          scp root@${CONTROL_PLANE_IP}:/etc/rancher/k3s/k3s.yaml ~/.kube/config
+          
+          # Update server address in kubeconfig to use the external IP
+          sed -i "s/127.0.0.1/${CONTROL_PLANE_IP}/g" ~/.kube/config
+          
+          # Test connection to the cluster
           echo "Testing Kubernetes connection..."
-          ssh root@${CONTROL_PLANE_IP} << 'EOF'
-            set -e
-            
-            # Print cluster information
-            echo "Kubernetes cluster information:"
-            kubectl cluster-info
-            kubectl get nodes
-            
-            # Create namespace if it doesn't exist
-            echo "Creating namespace ${{ inputs.namespace }} if it doesn't exist..."
-            kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml | kubectl apply -f -
-            
-            # Check if Helm is installed, install if not
-            if ! command -v helm &> /dev/null; then
-              echo "Helm not found, installing Helm..."
-              curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-            fi
-            
-            # Verify Helm installation
-            helm version
-            
-            # Setup Helm repositories
-            echo "Setting up Helm repositories..."
-            helm repo add bitnami https://charts.bitnami.com/bitnami || true
-            helm repo update
-            
-            # Apply any deployment configs (example command - customize as needed)
-            echo "Applying deployments..."
-            HELM_CMD="helm"
-            RELEASE_STATUS=$(helm status ${{ inputs.release_name }} -n ${{ inputs.namespace }} 2>&1 || true)
+          kubectl cluster-info
+          kubectl get nodes
 
-            if echo "$RELEASE_STATUS" | grep -q "not found"; then
-              echo "🚀 Performing fresh installation..."
-              HELM_CMD="$HELM_CMD install ${{ inputs.release_name }}"
-            else
-              echo "🔄 Performing upgrade..."
-              HELM_CMD="$HELM_CMD upgrade ${{ inputs.release_name }}"
-            fi
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml | kubectl apply -f -
 
-            # Build helm set arguments for secrets
-            HELM_SET_ARGS=""
-            if [ ! -z "${{ secrets.DATABASE_DSN }}" ]; then
-              HELM_SET_ARGS="$HELM_SET_ARGS --set config.database.dsn='${{ secrets.DATABASE_DSN }}'"
-            fi
-            if [ ! -z "${{ secrets.AWS_ACCESS_KEY }}" ]; then
-              HELM_SET_ARGS="$HELM_SET_ARGS --set config.aws.accessKey='${{ secrets.AWS_ACCESS_KEY }}'"
-            fi
-            if [ ! -z "${{ secrets.AWS_SECRET_KEY }}" ]; then
-              HELM_SET_ARGS="$HELM_SET_ARGS --set config.aws.secretKey='${{ secrets.AWS_SECRET_KEY }}'"
-            fi
-            if [ ! -z "${{ secrets.AWS_REGION }}" ]; then
-              HELM_SET_ARGS="$HELM_SET_ARGS --set config.aws.region='${{ secrets.AWS_REGION }}'"
-            fi
-            if [ ! -z "${{ secrets.REDIS_URL }}" ]; then
-              HELM_SET_ARGS="$HELM_SET_ARGS --set config.redis.dsn='${{ secrets.REDIS_URL }}'"
-            fi
-            if [ ! -z "${{ secrets.PROXIES }}" ]; then
-              HELM_SET_ARGS="$HELM_SET_ARGS --set config.scraper.proxies='${{ secrets.PROXIES }}'"
-            fi
+      - name: Deploy to cluster
+        run: |
+          HELM_CMD="helm"
+          RELEASE_STATUS=$(helm status ${{ inputs.release_name }} -n ${{ inputs.namespace }} 2>&1 || true)
 
-            $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
-              --values ${{ steps.config.outputs.BASE_VALUES }} \
-              --values ${{ steps.config.outputs.VALUES_FILE }} \
-              $HELM_SET_ARGS \
-              --namespace ${{ inputs.namespace }} \
-              --create-namespace \
-              --timeout ${{ env.HELM_TIMEOUT }} \
-              --wait
-            
-            # Verify deployment status
-            echo "Verifying deployment status..."
-            kubectl rollout status deployment/${{ inputs.release_name }} \
-              -n ${{ inputs.namespace }} \
-              --timeout=${{ env.HELM_TIMEOUT }}
-            
-            echo "✅ Deployment completed successfully!"
-          EOF
-      # - name: Create namespace if not exists
-      #   run: |
-      #     kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml | kubectl apply -f -
+          if echo "$RELEASE_STATUS" | grep -q "not found"; then
+            echo "🚀 Performing fresh installation..."
+            HELM_CMD="$HELM_CMD install ${{ inputs.release_name }}"
+          else
+            echo "🔄 Performing upgrade..."
+            HELM_CMD="$HELM_CMD upgrade ${{ inputs.release_name }}"
+          fi
 
-      # - name: Deploy to cluster
-      #   run: |
-      #     HELM_CMD="helm"
-      #     RELEASE_STATUS=$(helm status ${{ inputs.release_name }} -n ${{ inputs.namespace }} 2>&1 || true)
+          # Build helm set arguments for secrets
+          HELM_SET_ARGS=""
+          if [ ! -z "${{ secrets.DATABASE_DSN }}" ]; then
+            HELM_SET_ARGS="$HELM_SET_ARGS --set config.database.dsn='${{ secrets.DATABASE_DSN }}'"
+          fi
+          if [ ! -z "${{ secrets.AWS_ACCESS_KEY }}" ]; then
+            HELM_SET_ARGS="$HELM_SET_ARGS --set config.aws.accessKey='${{ secrets.AWS_ACCESS_KEY }}'"
+          fi
+          if [ ! -z "${{ secrets.AWS_SECRET_KEY }}" ]; then
+            HELM_SET_ARGS="$HELM_SET_ARGS --set config.aws.secretKey='${{ secrets.AWS_SECRET_KEY }}'"
+          fi
+          if [ ! -z "${{ secrets.AWS_REGION }}" ]; then
+            HELM_SET_ARGS="$HELM_SET_ARGS --set config.aws.region='${{ secrets.AWS_REGION }}'"
+          fi
+          if [ ! -z "${{ secrets.REDIS_URL }}" ]; then
+            HELM_SET_ARGS="$HELM_SET_ARGS --set config.redis.dsn='${{ secrets.REDIS_URL }}'"
+          fi
+          if [ ! -z "${{ secrets.PROXIES }}" ]; then
+            HELM_SET_ARGS="$HELM_SET_ARGS --set config.scraper.proxies='${{ secrets.PROXIES }}'"
+          fi
 
-      #     if echo "$RELEASE_STATUS" | grep -q "not found"; then
-      #       echo "🚀 Performing fresh installation..."
-      #       HELM_CMD="$HELM_CMD install ${{ inputs.release_name }}"
-      #     else
-      #       echo "🔄 Performing upgrade..."
-      #       HELM_CMD="$HELM_CMD upgrade ${{ inputs.release_name }}"
-      #     fi
+          $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
+            --values ${{ steps.config.outputs.BASE_VALUES }} \
+            --values ${{ steps.config.outputs.VALUES_FILE }} \
+            $HELM_SET_ARGS \
+            --namespace ${{ inputs.namespace }} \
+            --create-namespace \
+            --timeout ${{ env.HELM_TIMEOUT }} \
+            --wait
 
-      #     # Build helm set arguments for secrets
-      #     HELM_SET_ARGS=""
-      #     if [ ! -z "${{ secrets.DATABASE_DSN }}" ]; then
-      #       HELM_SET_ARGS="$HELM_SET_ARGS --set config.database.dsn='${{ secrets.DATABASE_DSN }}'"
-      #     fi
-      #     if [ ! -z "${{ secrets.AWS_ACCESS_KEY }}" ]; then
-      #       HELM_SET_ARGS="$HELM_SET_ARGS --set config.aws.accessKey='${{ secrets.AWS_ACCESS_KEY }}'"
-      #     fi
-      #     if [ ! -z "${{ secrets.AWS_SECRET_KEY }}" ]; then
-      #       HELM_SET_ARGS="$HELM_SET_ARGS --set config.aws.secretKey='${{ secrets.AWS_SECRET_KEY }}'"
-      #     fi
-      #     if [ ! -z "${{ secrets.AWS_REGION }}" ]; then
-      #       HELM_SET_ARGS="$HELM_SET_ARGS --set config.aws.region='${{ secrets.AWS_REGION }}'"
-      #     fi
-      #     if [ ! -z "${{ secrets.REDIS_URL }}" ]; then
-      #       HELM_SET_ARGS="$HELM_SET_ARGS --set config.redis.dsn='${{ secrets.REDIS_URL }}'"
-      #     fi
-      #     if [ ! -z "${{ secrets.PROXIES }}" ]; then
-      #       HELM_SET_ARGS="$HELM_SET_ARGS --set config.scraper.proxies='${{ secrets.PROXIES }}'"
-      #     fi
-
-      #     $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
-      #       --values ${{ steps.config.outputs.BASE_VALUES }} \
-      #       --values ${{ steps.config.outputs.VALUES_FILE }} \
-      #       $HELM_SET_ARGS \
-      #       --namespace ${{ inputs.namespace }} \
-      #       --create-namespace \
-      #       --timeout ${{ env.HELM_TIMEOUT }} \
-      #       --wait
-
-      # - name: Verify deployment
-      #   run: |
-      #     kubectl rollout status deployment/${{ inputs.release_name }} \
-      #       -n ${{ inputs.namespace }} \
-      #       --timeout=${{ env.HELM_TIMEOUT }}
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/${{ inputs.release_name }} \
+            -n ${{ inputs.namespace }} \
+            --timeout=${{ env.HELM_TIMEOUT }}
 
       - name: Deployment summary
         if: always()
