@@ -125,9 +125,10 @@ jobs:
           sed -i '/certificate-authority-data/d' ~/.kube/config
           sed -i '/user:/a\    insecure-skip-tls-verify: true' ~/.kube/config
           
-          # Set environment variables for kubectl and helm
-          echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
-          echo "HELM_KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
+          # Set environment variables for kubectl and helm with absolute paths
+          KUBECONFIG_PATH="$HOME/.kube/config"
+          echo "KUBECONFIG=$KUBECONFIG_PATH" >> $GITHUB_ENV
+          echo "HELM_KUBECONFIG=$KUBECONFIG_PATH" >> $GITHUB_ENV
           echo "HELM_KUBECONTEXT=default" >> $GITHUB_ENV
           
           # Test connection to the cluster
@@ -137,7 +138,7 @@ jobs:
 
       - name: Create namespace if not exists
         run: |
-          kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml --insecure-skip-tls-verify | kubectl apply -f - --insecure-skip-tls-verify
+          kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml --insecure-skip-tls-verify | kubectl apply --validate=false -f - --insecure-skip-tls-verify
 
       - name: Deploy to cluster
         run: |
@@ -188,7 +189,7 @@ jobs:
 
           # Print debug information (with sensitive values redacted)
           echo "🔍 Debug: Helm command structure (sensitive values redacted)"
-          echo "Command: $HELM_CMD [CHART_DIR] --values [BASE_VALUES] --values [VALUES_FILE] [HELM_SET_ARGS] --namespace ${{ inputs.namespace }} --create-namespace --timeout ${{ env.HELM_TIMEOUT }} --kube-insecure-skip-tls-verify --wait"
+          echo "Command: $HELM_CMD [CHART_DIR] --values [BASE_VALUES] --values [VALUES_FILE] [HELM_SET_ARGS] --namespace ${{ inputs.namespace }} --create-namespace --timeout ${{ env.HELM_TIMEOUT }} --kube-insecure-skip-tls-verify --kubeconfig $KUBECONFIG --wait"
           echo "Chart directory: ${{ steps.config.outputs.CHARTS_DIR }}"
           echo "Base values file: ${{ steps.config.outputs.BASE_VALUES }}"
           echo "Environment values file: ${{ steps.config.outputs.VALUES_FILE }}"
@@ -214,6 +215,7 @@ jobs:
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
             --kube-insecure-skip-tls-verify \
+            --kubeconfig $KUBECONFIG \
             --wait"
 
           $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
@@ -224,6 +226,7 @@ jobs:
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
             --kube-insecure-skip-tls-verify \
+            --kubeconfig $KUBECONFIG \
             --wait
 
       - name: Verify deployment
@@ -231,7 +234,8 @@ jobs:
           kubectl rollout status deployment/${{ inputs.release_name }} \
             -n ${{ inputs.namespace }} \
             --timeout=${{ env.HELM_TIMEOUT }} \
-            --insecure-skip-tls-verify
+            --insecure-skip-tls-verify \
+            --kubeconfig $KUBECONFIG
 
       - name: Deployment summary
         if: always()
