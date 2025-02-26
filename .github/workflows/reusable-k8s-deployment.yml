@@ -134,17 +134,30 @@ jobs:
           # Export environment variables for Helm and kubectl
           echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
           
+          # Extract and save server URL for explicit use in kubectl commands
+          SERVER_URL=$(grep -o "server: https://[^\"]*" ~/.kube/config | sed 's/server: //')
+          echo "K8S_SERVER_URL=$SERVER_URL" >> $GITHUB_ENV
+          
           # Setting kubectl flags to disable validation and localhost references
           echo "KUBECTL_FLAGS=--insecure-skip-tls-verify --validate=false" >> $GITHUB_ENV
           
           # Test connection to the cluster
           echo "Testing Kubernetes connection..."
-          kubectl cluster-info --insecure-skip-tls-verify
-          kubectl get nodes --insecure-skip-tls-verify
+          kubectl cluster-info --insecure-skip-tls-verify --server="$SERVER_URL"
+          kubectl get nodes --insecure-skip-tls-verify --server="$SERVER_URL"
 
       - name: Create namespace if not exists
         run: |
-          kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml --validate=false --insecure-skip-tls-verify | kubectl apply -f - --validate=false --insecure-skip-tls-verify
+          # Direct kubectl namespace creation
+          kubectl create namespace ${{ inputs.namespace }} \
+            --dry-run=client \
+            -o yaml \
+            --server="$K8S_SERVER_URL" \
+            --insecure-skip-tls-verify > namespace.yaml
+            
+          kubectl apply -f namespace.yaml \
+            --server="$K8S_SERVER_URL" \
+            --insecure-skip-tls-verify
 
       - name: Deploy to cluster
         run: |
@@ -243,7 +256,7 @@ jobs:
           kubectl rollout status deployment/${{ inputs.release_name }} \
             -n ${{ inputs.namespace }} \
             --timeout=${{ env.HELM_TIMEOUT }} \
-            --validate=false \
+            --server="$K8S_SERVER_URL" \
             --insecure-skip-tls-verify
 
       - name: Deployment summary
