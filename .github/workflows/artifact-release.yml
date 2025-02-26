@@ -104,8 +104,6 @@ jobs:
     if: github.event_name != 'pull_request'
     name: Deploy Lead Scraper Service To DigitalOcean Kubernetes cluster ${{ inputs.environment }}
     uses: ./.github/workflows/reusable-k8s-deployment.yml
-    needs:
-      - build-leads-scraper
     with:
       environment: ${{ github.ref == 'refs/heads/staging' && 'staging' || 'production' }}
       namespace: vector
