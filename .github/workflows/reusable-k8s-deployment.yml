@@ -165,7 +165,9 @@ jobs:
             HELM_SET_ARGS="$HELM_SET_ARGS --set config.redis.dsn='${{ secrets.REDIS_URL }}'"
           fi
           if [ ! -z "${{ secrets.PROXIES }}" ]; then
-            HELM_SET_ARGS="$HELM_SET_ARGS --set config.scraper.proxies='${{ secrets.PROXIES }}'"
+            # Escape the proxies value by replacing colons with \:
+            ESCAPED_PROXIES=$(echo "${{ secrets.PROXIES }}" | sed 's/:/\\:/g')
+            HELM_SET_ARGS="$HELM_SET_ARGS --set config.scraper.proxies='${ESCAPED_PROXIES}'"
           fi
 
           $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
