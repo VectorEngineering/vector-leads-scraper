@@ -124,6 +124,20 @@ jobs:
             echo "Creating namespace ${{ inputs.namespace }} if it doesn't exist..."
             kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml | kubectl apply -f -
             
+            # Check if Helm is installed, install if not
+            if ! command -v helm &> /dev/null; then
+              echo "Helm not found, installing Helm..."
+              curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+            fi
+            
+            # Verify Helm installation
+            helm version
+            
+            # Setup Helm repositories
+            echo "Setting up Helm repositories..."
+            helm repo add bitnami https://charts.bitnami.com/bitnami || true
+            helm repo update
+            
             # Apply any deployment configs (example command - customize as needed)
             echo "Applying deployments..."
             HELM_CMD="helm"
