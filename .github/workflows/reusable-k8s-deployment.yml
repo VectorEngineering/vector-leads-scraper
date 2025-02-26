@@ -139,7 +139,8 @@ jobs:
           HELM_CMD="helm"
           RELEASE_STATUS=$(helm status ${{ inputs.release_name }} -n ${{ inputs.namespace }}  --insecure-skip-tls-verify --kube-insecure-skip-tls-verify 2>&1 || true)
 
-          if echo "$RELEASE_STATUS" | grep -q "not found"; then
+          # Check if the release doesn't exist or has no deployed releases
+          if echo "$RELEASE_STATUS" | grep -q "not found" || echo "$RELEASE_STATUS" | grep -q "has no deployed releases"; then
             echo "🚀 Performing fresh installation..."
             HELM_CMD="$HELM_CMD install ${{ inputs.release_name }}"
           else
