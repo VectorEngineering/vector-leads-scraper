@@ -66,6 +66,7 @@ jobs:
       APP_ROOT: ${{ inputs.app_root }}
       CHART_NAME: ${{ inputs.chart_name }}
       HELM_TIMEOUT: ${{ inputs.helm_timeout }}
+      KUBECTL_INSECURE_SKIP_TLS_VERIFY: "true"
 
     steps:
       - name: Checkout code
@@ -119,14 +120,19 @@ jobs:
           # Update server address in kubeconfig to use the external IP
           sed -i "s/127.0.0.1/${CONTROL_PLANE_IP}/g" ~/.kube/config
           
+          # Add insecure-skip-tls-verify: true to the kubeconfig
+          echo "Setting insecure-skip-tls-verify in kubeconfig..."
+          sed -i '/certificate-authority-data/d' ~/.kube/config
+          sed -i '/user:/a\    insecure-skip-tls-verify: true' ~/.kube/config
+          
           # Test connection to the cluster
           echo "Testing Kubernetes connection..."
-          kubectl cluster-info
-          kubectl get nodes
+          kubectl cluster-info --insecure-skip-tls-verify
+          kubectl get nodes --insecure-skip-tls-verify
 
       - name: Create namespace if not exists
         run: |
-          kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml --insecure-skip-tls-verify | kubectl apply -f - --insecure-skip-tls-verify
 
       - name: Deploy to cluster
         run: |
@@ -169,13 +175,15 @@ jobs:
             --namespace ${{ inputs.namespace }} \
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
+            --kube-insecure-skip-tls-verify \
             --wait
 
       - name: Verify deployment
         run: |
           kubectl rollout status deployment/${{ inputs.release_name }} \
             -n ${{ inputs.namespace }} \
-            --timeout=${{ env.HELM_TIMEOUT }}
+            --timeout=${{ env.HELM_TIMEOUT }} \
+            --insecure-skip-tls-verify
 
       - name: Deployment summary
         if: always()
