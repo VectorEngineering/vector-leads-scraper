@@ -1,4 +1,4 @@
-name: Reusable Kubernetes Deployment
+name: Reusable Kubernetes Deployment for Hetzner
 
 on:
   workflow_call:
@@ -38,9 +38,9 @@ on:
         type: string
         description: "Additional Helm values to set during deployment"
     secrets:
-      DIGITALOCEAN_TOKEN:
+      SSH_PRIVATE_KEY:
         required: true
-      CLUSTER_ID:
+      HETZNER_CONTROL_PLANE_IP:
         required: true
       DATABASE_DSN:
         required: false
@@ -57,7 +57,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to DigitalOcean Kubernetes cluster ${{ inputs.environment }}
+    name: Deploy to Hetzner Kubernetes cluster ${{ inputs.environment }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -66,7 +66,6 @@ jobs:
       APP_ROOT: ${{ inputs.app_root }}
       CHART_NAME: ${{ inputs.chart_name }}
       HELM_TIMEOUT: ${{ inputs.helm_timeout }}
-      KUBECONFIG_EXPIRY: ${{ inputs.kubeconfig_expiry }}
 
     steps:
       - name: Checkout code
@@ -93,14 +92,34 @@ jobs:
           helm repo update
           helm dependency build ${{ steps.config.outputs.CHARTS_DIR }}
 
-      - name: Setup DigitalOcean access
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITALOCEAN_TOKEN }}
-
-      - name: Configure Kubernetes context
+      - name: Set up SSH and get kubeconfig
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          CONTROL_PLANE_IP: ${{ secrets.HETZNER_CONTROL_PLANE_IP }}
         run: |
-          doctl kubernetes cluster kubeconfig save --expiry-seconds ${{ env.KUBECONFIG_EXPIRY }} ${{ secrets.CLUSTER_ID }}
+          # Create SSH directory and set permissions
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Save the private key to a file
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
+          # Add host key checking exception
+          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+          
+          # Create a local directory for kubeconfig
+          mkdir -p ~/.kube
+          
+          # Copy kubeconfig from Hetzner control plane
+          scp root@${CONTROL_PLANE_IP}:/etc/kubernetes/admin.conf ~/.kube/config
+          
+          # Test connection and kubernetes access
+          echo "Testing Kubernetes connection..."
+          kubectl get nodes
+
+      - name: Create namespace if not exists
+        run: |
           kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy to cluster
@@ -130,11 +149,9 @@ jobs:
           if [ ! -z "${{ secrets.AWS_REGION }}" ]; then
             HELM_SET_ARGS="$HELM_SET_ARGS --set config.aws.region='${{ secrets.AWS_REGION }}'"
           fi
-
           if [ ! -z "${{ secrets.REDIS_URL }}" ]; then
             HELM_SET_ARGS="$HELM_SET_ARGS --set config.redis.dsn='${{ secrets.REDIS_URL }}'"
           fi
-
           if [ ! -z "${{ secrets.PROXIES }}" ]; then
             HELM_SET_ARGS="$HELM_SET_ARGS --set config.scraper.proxies='${{ secrets.PROXIES }}'"
           fi
@@ -162,3 +179,4 @@ jobs:
           echo "Namespace: ${{ inputs.namespace }}"
           echo "Release: ${{ inputs.release_name }}"
           echo "Chart: ${{ steps.config.outputs.CHARTS_DIR }}"
+          echo "Target: Hetzner Kubernetes"

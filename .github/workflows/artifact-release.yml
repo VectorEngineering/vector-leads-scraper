@@ -128,3 +128,5 @@ jobs:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       REDIS_URL: ${{ secrets.REDIS_URL }}
       PROXIES: ${{ secrets.PROXIES }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      HETZNER_CONTROL_PLANE_IP: ${{ secrets.CONTROL_PLANE_IP }}
