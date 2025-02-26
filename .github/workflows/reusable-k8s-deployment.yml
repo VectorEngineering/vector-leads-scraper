@@ -62,12 +62,11 @@ jobs:
     timeout-minutes: 15
 
     env:
-      HELM_VERSION: 3.13.1
+      HELM_VERSION: 3.8.1
       APP_ROOT: ${{ inputs.app_root }}
       CHART_NAME: ${{ inputs.chart_name }}
       HELM_TIMEOUT: ${{ inputs.helm_timeout }}
       KUBECTL_INSECURE_SKIP_TLS_VERIFY: "true"
-      HELM_EXPERIMENTAL_OCI: 1
 
     steps:
       - name: Checkout code
@@ -126,50 +125,19 @@ jobs:
           sed -i '/certificate-authority-data/d' ~/.kube/config
           sed -i '/user:/a\    insecure-skip-tls-verify: true' ~/.kube/config
           
-          # Make kubeconfig more secure
-          chmod 600 ~/.kube/config
-          
-          # Export environment variables for Helm and kubectl
-          echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
-          
-          # Extract and save server URL for explicit use in kubectl commands
-          SERVER_URL=$(grep -o "server: https://[^\"]*" ~/.kube/config | sed 's/server: //')
-          echo "K8S_SERVER_URL=$SERVER_URL" >> $GITHUB_ENV
-          
-          # Setting kubectl flags to disable validation and localhost references
-          echo "KUBECTL_FLAGS=--insecure-skip-tls-verify --validate=false" >> $GITHUB_ENV
-          
           # Test connection to the cluster
           echo "Testing Kubernetes connection..."
-          kubectl cluster-info --insecure-skip-tls-verify --server="$SERVER_URL"
-          kubectl get nodes --insecure-skip-tls-verify --server="$SERVER_URL"
+          kubectl cluster-info --insecure-skip-tls-verify
+          kubectl get nodes --insecure-skip-tls-verify
 
       - name: Create namespace if not exists
         run: |
-          # Direct kubectl namespace creation
-          kubectl create namespace ${{ inputs.namespace }} \
-            --dry-run=client \
-            -o yaml \
-            --server="$K8S_SERVER_URL" \
-            --insecure-skip-tls-verify > namespace.yaml
-            
-          kubectl apply -f namespace.yaml \
-            --server="$K8S_SERVER_URL" \
-            --insecure-skip-tls-verify
+          kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml --insecure-skip-tls-verify | kubectl apply -f - --insecure-skip-tls-verify
 
       - name: Deploy to cluster
         run: |
-          # Export HELM_DEBUG to see more detailed output
-          export HELM_DEBUG=1
-          
-          # Tell Helm to use the correct kube apiserver
-          export HELM_KUBEAPISERVER="${K8S_SERVER_URL}"
-          
           HELM_CMD="helm"
-          RELEASE_STATUS=$(helm status ${{ inputs.release_name }} \
-            -n ${{ inputs.namespace }} \
-            --kube-apiserver="${K8S_SERVER_URL}" \
-            --kube-insecure-skip-tls-verify 2>&1 || true)
+          RELEASE_STATUS=$(helm status ${{ inputs.release_name }} -n ${{ inputs.namespace }} 2>&1 || true)
 
           if echo "$RELEASE_STATUS" | grep -q "not found"; then
             echo "🚀 Performing fresh installation..."
@@ -197,53 +165,8 @@ jobs:
             HELM_SET_ARGS="$HELM_SET_ARGS --set config.redis.dsn='${{ secrets.REDIS_URL }}'"
           fi
           if [ ! -z "${{ secrets.PROXIES }}" ]; then
-            # Create a temporary file to store the proxies value
-            PROXIES_FILE=$(mktemp)
-            echo "${{ secrets.PROXIES }}" > $PROXIES_FILE
-            
-            # Use the file to pass the proxies value to Helm
-            HELM_SET_ARGS="$HELM_SET_ARGS --set-file config.scraper.proxies=$PROXIES_FILE"
-            
-            # Print debugging information
-            echo "Proxies stored in temporary file: $PROXIES_FILE"
-            echo "First few characters of proxies: $(head -c 50 $PROXIES_FILE)..."
-            
-            # Count the number of proxies
-            PROXY_COUNT=$(echo "${{ secrets.PROXIES }}" | tr ',' '\n' | wc -l)
-            echo "Number of proxies: $PROXY_COUNT"
+            HELM_SET_ARGS="$HELM_SET_ARGS --set config.scraper.proxies='${{ secrets.PROXIES }}'"
           fi
-
-          # Print debug information (with sensitive values redacted)
-          echo "🔍 Debug: Helm command structure (sensitive values redacted)"
-          echo "Command: $HELM_CMD [CHART_DIR] --values [BASE_VALUES] --values [VALUES_FILE] [HELM_SET_ARGS] --namespace ${{ inputs.namespace }} --create-namespace --timeout ${{ env.HELM_TIMEOUT }} --insecure-skip-tls-verify --kube-apiserver ${K8S_SERVER_URL} --kube-insecure-skip-tls-verify --wait"
-          echo "Chart directory: ${{ steps.config.outputs.CHARTS_DIR }}"
-          echo "Base values file: ${{ steps.config.outputs.BASE_VALUES }}"
-          echo "Environment values file: ${{ steps.config.outputs.VALUES_FILE }}"
-          
-          # Print which secret values are being set (without showing the actual values)
-          echo "Secret values being set:"
-          if [ ! -z "${{ secrets.DATABASE_DSN }}" ]; then echo "- config.database.dsn"; fi
-          if [ ! -z "${{ secrets.AWS_ACCESS_KEY }}" ]; then echo "- config.aws.accessKey"; fi
-          if [ ! -z "${{ secrets.AWS_SECRET_KEY }}" ]; then echo "- config.aws.secretKey"; fi
-          if [ ! -z "${{ secrets.AWS_REGION }}" ]; then echo "- config.aws.region"; fi
-          if [ ! -z "${{ secrets.REDIS_URL }}" ]; then echo "- config.redis.dsn"; fi
-          if [ ! -z "${{ secrets.PROXIES }}" ]; then 
-            echo "- config.scraper.proxies (using --set-file)"
-          fi
-          
-          # Print the full command with all values for debugging
-          echo "🔍 FULL COMMAND FOR DEBUGGING:"
-          echo "$HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
-            --values ${{ steps.config.outputs.BASE_VALUES }} \
-            --values ${{ steps.config.outputs.VALUES_FILE }} \
-            $HELM_SET_ARGS \
-            --namespace ${{ inputs.namespace }} \
-            --create-namespace \
-            --timeout ${{ env.HELM_TIMEOUT }} \
-            --insecure-skip-tls-verify \
-            --kube-apiserver ${K8S_SERVER_URL} \
-            --kube-insecure-skip-tls-verify \
-            --wait"
 
           $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
             --values ${{ steps.config.outputs.BASE_VALUES }} \
@@ -253,8 +176,6 @@ jobs:
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
             --insecure-skip-tls-verify \
-            --kube-apiserver "${K8S_SERVER_URL}" \
-            --kube-insecure-skip-tls-verify \
             --wait
 
       - name: Verify deployment
@@ -262,7 +183,6 @@ jobs:
           kubectl rollout status deployment/${{ inputs.release_name }} \
             -n ${{ inputs.namespace }} \
             --timeout=${{ env.HELM_TIMEOUT }} \
-            --server="$K8S_SERVER_URL" \
             --insecure-skip-tls-verify
 
       - name: Deployment summary
