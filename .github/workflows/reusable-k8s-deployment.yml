@@ -165,11 +165,16 @@ jobs:
             HELM_SET_ARGS="$HELM_SET_ARGS --set config.redis.dsn='${{ secrets.REDIS_URL }}'"
           fi
           if [ ! -z "${{ secrets.PROXIES }}" ]; then
-            # Double quote the proxies value to handle special characters
-            HELM_SET_ARGS="$HELM_SET_ARGS --set-string config.scraper.proxies=\"${{ secrets.PROXIES }}\""
+            # Create a temporary file to store the proxies value
+            PROXIES_FILE=$(mktemp)
+            echo "${{ secrets.PROXIES }}" > $PROXIES_FILE
             
-            # Print the full proxies string for debugging
-            echo "Full proxies string: ${{ secrets.PROXIES }}"
+            # Use the file to pass the proxies value to Helm
+            HELM_SET_ARGS="$HELM_SET_ARGS --set-file config.scraper.proxies=$PROXIES_FILE"
+            
+            # Print debugging information
+            echo "Proxies stored in temporary file: $PROXIES_FILE"
+            echo "First few characters of proxies: $(head -c 50 $PROXIES_FILE)..."
             
             # Count the number of proxies
             PROXY_COUNT=$(echo "${{ secrets.PROXIES }}" | tr ',' '\n' | wc -l)
@@ -191,7 +196,7 @@ jobs:
           if [ ! -z "${{ secrets.AWS_REGION }}" ]; then echo "- config.aws.region"; fi
           if [ ! -z "${{ secrets.REDIS_URL }}" ]; then echo "- config.redis.dsn"; fi
           if [ ! -z "${{ secrets.PROXIES }}" ]; then 
-            echo "- config.scraper.proxies (using --set-string)"
+            echo "- config.scraper.proxies (using --set-file)"
           fi
           
           # Print the full command with all values for debugging
