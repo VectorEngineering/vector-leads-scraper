@@ -102,6 +102,7 @@ jobs:
       DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
   deploy-leads-scraper:
     if: github.event_name != 'pull_request'
+    needs: build-leads-scraper
     name: Deploy Lead Scraper Service To DigitalOcean Kubernetes cluster ${{ inputs.environment }}
     uses: ./.github/workflows/reusable-k8s-deployment.yml
     with:
