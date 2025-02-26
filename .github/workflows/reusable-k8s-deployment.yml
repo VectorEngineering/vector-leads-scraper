@@ -136,16 +136,28 @@ jobs:
 
       - name: Deploy to cluster
         run: |
-          HELM_CMD="helm"
-          RELEASE_STATUS=$(helm status ${{ inputs.release_name }} -n ${{ inputs.namespace }}  --insecure-skip-tls-verify --kube-insecure-skip-tls-verify 2>&1 || true)
-
-          # Check if the release doesn't exist or has no deployed releases
-          if echo "$RELEASE_STATUS" | grep -q "not found" || echo "$RELEASE_STATUS" | grep -q "has no deployed releases"; then
-            echo "🚀 Performing fresh installation..."
-            HELM_CMD="$HELM_CMD install ${{ inputs.release_name }}"
+          # Check if release exists by listing all releases
+          RELEASE_EXISTS=$(helm list -n ${{ inputs.namespace }} --filter "${{ inputs.release_name }}" --short --insecure-skip-tls-verify --kube-insecure-skip-tls-verify | wc -l)
+          
+          if [ "$RELEASE_EXISTS" -eq "0" ]; then
+            echo "🚀 Release does not exist. Performing fresh installation..."
+            HELM_CMD="helm install ${{ inputs.release_name }}"
           else
-            echo "🔄 Performing upgrade..."
-            HELM_CMD="$HELM_CMD upgrade ${{ inputs.release_name }}"
+            # Try to check release status
+            RELEASE_STATUS=$(helm status ${{ inputs.release_name }} -n ${{ inputs.namespace }} --insecure-skip-tls-verify --kube-insecure-skip-tls-verify 2>&1 || true)
+            
+            if echo "$RELEASE_STATUS" | grep -q "no deployed releases" || echo "$RELEASE_STATUS" | grep -q "not found"; then
+              echo "🚀 Release exists but has no deployments. Performing fresh installation..."
+              
+              # First try to uninstall the broken release
+              echo "Attempting to clean up broken release first..."
+              helm uninstall ${{ inputs.release_name }} -n ${{ inputs.namespace }} --insecure-skip-tls-verify --kube-insecure-skip-tls-verify || true
+              
+              HELM_CMD="helm install ${{ inputs.release_name }}"
+            else
+              echo "🔄 Release exists and has deployments. Performing upgrade..."
+              HELM_CMD="helm upgrade ${{ inputs.release_name }}"
+            fi
           fi
 
           # Build helm set arguments for secrets
