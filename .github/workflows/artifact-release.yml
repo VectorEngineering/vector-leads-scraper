@@ -88,9 +88,8 @@ jobs:
       - name: Go Build
         run: go build -o /dev/null ./...
       - name: Test
-        run: go test -v -timeout 5m ./...
+        run: go test -timeout 5m ./...
   build-leads-scraper:
-    needs: run
     name: Build leads scraper images for ${{ inputs.environment }}
     uses: ./.github/workflows/reusable-deploy-docker-artifacts.yml
     with:
