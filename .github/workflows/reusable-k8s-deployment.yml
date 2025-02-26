@@ -164,9 +164,6 @@ jobs:
           if [ ! -z "${{ secrets.REDIS_URL }}" ]; then
             HELM_SET_ARGS="$HELM_SET_ARGS --set config.redis.dsn='${{ secrets.REDIS_URL }}'"
           fi
-          if [ ! -z "${{ secrets.PROXIES }}" ]; then
-            HELM_SET_ARGS="$HELM_SET_ARGS --set config.scraper.proxies='${{ secrets.PROXIES }}'"
-          fi
 
           $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
             --values ${{ steps.config.outputs.BASE_VALUES }} \
