@@ -146,19 +146,6 @@ jobs:
           kubectl cluster-info --insecure-skip-tls-verify --server="$SERVER_URL"
           kubectl get nodes --insecure-skip-tls-verify --server="$SERVER_URL"
 
-      - name: Create namespace if not exists
-        run: |
-          # Direct kubectl namespace creation
-          kubectl create namespace ${{ inputs.namespace }} \
-            --dry-run=client \
-            -o yaml \
-            --server="$K8S_SERVER_URL" \
-            --insecure-skip-tls-verify > namespace.yaml
-            
-          kubectl apply -f namespace.yaml \
-            --server="$K8S_SERVER_URL" \
-            --insecure-skip-tls-verify
-
       - name: Deploy to cluster
         run: |
           # Export HELM_DEBUG to see more detailed output
