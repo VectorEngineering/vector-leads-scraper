@@ -175,7 +175,7 @@ jobs:
             --namespace ${{ inputs.namespace }} \
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
-            --kube-insecure-skip-tls-verify \
+            --insecure-skip-tls-verify \
             --wait
 
       - name: Verify deployment
