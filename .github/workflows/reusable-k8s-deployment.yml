@@ -62,7 +62,7 @@ jobs:
     timeout-minutes: 15
 
     env:
-      HELM_VERSION: 3.8.1
+      HELM_VERSION: 3.13.1
       APP_ROOT: ${{ inputs.app_root }}
       CHART_NAME: ${{ inputs.chart_name }}
       HELM_TIMEOUT: ${{ inputs.helm_timeout }}
