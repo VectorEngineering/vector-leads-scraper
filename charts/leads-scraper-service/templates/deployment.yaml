@@ -136,7 +136,7 @@ spec:
             {{- end }}
           {{- if .Values.web.livenessProbe }}
           livenessProbe:
-            {{- if .Values.web.livenessProbe.http }}
+            {{- if and (not .Values.config.grpc.enabled) .Values.web.livenessProbe.http }}
             httpGet:
               path: {{ .Values.web.livenessProbe.http.path }}
               port: {{ .Values.web.livenessProbe.http.port }}
@@ -152,7 +152,7 @@ spec:
           {{- end }}
           {{- if .Values.web.readinessProbe }}
           readinessProbe:
-            {{- if .Values.web.readinessProbe.http }}
+            {{- if and (not .Values.config.grpc.enabled) .Values.web.readinessProbe.http }}
             httpGet:
               path: {{ .Values.web.readinessProbe.http.path }}
               port: {{ .Values.web.readinessProbe.http.port }}
