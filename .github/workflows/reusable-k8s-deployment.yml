@@ -168,10 +168,8 @@ jobs:
             # Double quote the proxies value to handle special characters
             HELM_SET_ARGS="$HELM_SET_ARGS --set-string config.scraper.proxies=\"${{ secrets.PROXIES }}\""
             
-            # Create a safe version of the proxies for debugging (replace actual IPs with placeholders)
-            # This keeps the format but hides the actual values
-            PROXIES_DEBUG=$(echo "${{ secrets.PROXIES }}" | sed 's/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/x.x.x.x/g')
-            echo "Proxies format (with IPs redacted): $PROXIES_DEBUG"
+            # Print the full proxies string for debugging
+            echo "Full proxies string: ${{ secrets.PROXIES }}"
             
             # Count the number of proxies
             PROXY_COUNT=$(echo "${{ secrets.PROXIES }}" | tr ',' '\n' | wc -l)
@@ -195,6 +193,18 @@ jobs:
           if [ ! -z "${{ secrets.PROXIES }}" ]; then 
             echo "- config.scraper.proxies (using --set-string)"
           fi
+          
+          # Print the full command with all values for debugging
+          echo "🔍 FULL COMMAND FOR DEBUGGING:"
+          echo "$HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
+            --values ${{ steps.config.outputs.BASE_VALUES }} \
+            --values ${{ steps.config.outputs.VALUES_FILE }} \
+            $HELM_SET_ARGS \
+            --namespace ${{ inputs.namespace }} \
+            --create-namespace \
+            --timeout ${{ env.HELM_TIMEOUT }} \
+            --insecure-skip-tls-verify \
+            --wait"
 
           $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
             --values ${{ steps.config.outputs.BASE_VALUES }} \
