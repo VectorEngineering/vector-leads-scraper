@@ -62,7 +62,7 @@ jobs:
     timeout-minutes: 15
 
     env:
-      HELM_VERSION: 3.8.1
+      HELM_VERSION: 3.17.1
       APP_ROOT: ${{ inputs.app_root }}
       CHART_NAME: ${{ inputs.chart_name }}
       HELM_TIMEOUT: ${{ inputs.helm_timeout }}
@@ -173,6 +173,7 @@ jobs:
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
             --insecure-skip-tls-verify \
+            --kube-insecure-skip-tls-verify  \
             --wait
 
       - name: Verify deployment
@@ -180,7 +181,8 @@ jobs:
           kubectl rollout status deployment/${{ inputs.release_name }} \
             -n ${{ inputs.namespace }} \
             --timeout=${{ env.HELM_TIMEOUT }} \
-            --insecure-skip-tls-verify
+            --insecure-skip-tls-verify \
+            --kube-insecure-skip-tls-verify
 
       - name: Deployment summary
         if: always()
