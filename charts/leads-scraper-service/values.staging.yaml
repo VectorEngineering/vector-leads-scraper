@@ -179,6 +179,8 @@ config:
     maxRetries: 3
     # -- Number of days to retain task history
     retentionDays: 7
+    # -- Enable StatefulSet
+    enableStatefulSet: false
   # Database Configuration (Required)
   database:
     # Database connection string (Required)

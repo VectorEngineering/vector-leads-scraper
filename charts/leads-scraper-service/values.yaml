@@ -213,6 +213,7 @@ config:
     maxRetries: 3
     # -- Number of days to retain task history
     retentionDays: 7
+    enableStatefulSet: false
 
   # New Relic Configuration
   newrelic:
