@@ -209,7 +209,6 @@ jobs:
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
             --insecure-skip-tls-verify \
-            --kube-insecure-skip-tls-verify \
             --wait"
 
           $HELM_CMD ${{ steps.config.outputs.CHARTS_DIR }} \
@@ -220,7 +219,6 @@ jobs:
             --create-namespace \
             --timeout ${{ env.HELM_TIMEOUT }} \
             --insecure-skip-tls-verify \
-            --kube-insecure-skip-tls-verify \
             --wait
 
       - name: Verify deployment
